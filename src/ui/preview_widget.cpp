@@ -32,10 +32,14 @@ QPainter::CompositionMode composition_mode(const document::BlendMode mode)
     case SoftLight: return QPainter::CompositionMode_SoftLight;
     case Difference: return QPainter::CompositionMode_Difference;
     case Exclusion: return QPainter::CompositionMode_Exclusion;
-    case Hue: return QPainter::CompositionMode_Hue;
-    case Saturation: return QPainter::CompositionMode_Saturation;
-    case Color: return QPainter::CompositionMode_Color;
-    case Luminosity: return QPainter::CompositionMode_Luminosity;
+    // QPainter has no HSL blend modes. They remain part of the document/SVG
+    // model but are not offered by the Qt preview until a custom compositor
+    // is implemented.
+    case Hue:
+    case Saturation:
+    case Color:
+    case Luminosity:
+        return QPainter::CompositionMode_SourceOver;
     }
     return QPainter::CompositionMode_SourceOver;
 }
