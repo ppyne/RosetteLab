@@ -7,7 +7,11 @@
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
+#include <QSignalBlocker>
 #include <QSpinBox>
 #include <QVBoxLayout>
 
@@ -45,6 +49,14 @@ ColorEditorDialog::ColorEditorDialog(QColor initial_color, QString title, QWidge
     format_->addItem("HSLA", static_cast<int>(Format::Hsla));
     form->addRow("Color model", format_);
 
+    hex_ = new QLineEdit(this);
+    hex_->setMaxLength(9);
+    hex_->setPlaceholderText("#RRGGBBAA");
+    hex_->setToolTip("Web hexadecimal color: #RRGGBB or #RRGGBBAA. Opaque FF is added to RGB values.");
+    hex_->setValidator(new QRegularExpressionValidator(
+        QRegularExpression(QStringLiteral("#?[0-9A-Fa-f]{0,8}")), hex_));
+    form->addRow("Hex color", hex_);
+
     for (std::size_t index = 0; index < channels_.size(); ++index) {
         channel_labels_[index] = new QLabel(this);
         channels_[index] = new QSpinBox(this);
@@ -65,6 +77,8 @@ ColorEditorDialog::ColorEditorDialog(QColor initial_color, QString title, QWidge
         configure_fields();
         update_fields_from_color();
     });
+    connect(hex_, &QLineEdit::textChanged, this,
+        [this](const QString& text) { update_color_from_hex(text); });
     for (auto* channel : channels_) {
         connect(channel, &QSpinBox::valueChanged, this, [this] {
             if (!updating_) {
@@ -110,12 +124,15 @@ void ColorEditorDialog::update_color_from_fields()
             static_cast<double>(channels_[2]->value()) / 100.0,
             static_cast<double>(channels_[3]->value()) / 100.0);
     }
+    const QSignalBlocker blocker(hex_);
+    hex_->setText(rgba_hex(color_));
     update_preview();
 }
 
 void ColorEditorDialog::update_fields_from_color()
 {
     updating_ = true;
+    hex_->setText(rgba_hex(color_));
     const auto model = static_cast<Format>(format_->currentData().toInt());
     if (model == Format::Rgba) {
         channels_[0]->setValue(color_.red());
@@ -130,6 +147,45 @@ void ColorEditorDialog::update_fields_from_color()
     }
     updating_ = false;
     update_preview();
+}
+
+void ColorEditorDialog::update_color_from_hex(QString text)
+{
+    if (updating_) {
+        return;
+    }
+
+    text = text.trimmed().toUpper();
+    if (text.isEmpty()) {
+        return;
+    }
+    if (!text.startsWith('#')) {
+        text.prepend('#');
+    }
+    if (text.size() == 7) {
+        text.append("FF");
+    }
+
+    if (hex_->text() != text) {
+        const QSignalBlocker blocker(hex_);
+        hex_->setText(text);
+        hex_->setCursorPosition(text.size());
+    }
+    if (text.size() != 9) {
+        return;
+    }
+
+    bool valid = false;
+    const auto value = text.sliced(1).toULongLong(&valid, 16);
+    if (!valid) {
+        return;
+    }
+    color_.setRgb(
+        static_cast<int>((value >> 24) & 0xff),
+        static_cast<int>((value >> 16) & 0xff),
+        static_cast<int>((value >> 8) & 0xff),
+        static_cast<int>(value & 0xff));
+    update_fields_from_color();
 }
 
 void ColorEditorDialog::update_preview()
