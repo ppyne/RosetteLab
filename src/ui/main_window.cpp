@@ -96,7 +96,8 @@ MainWindow::MainWindow(QWidget* parent)
 
     auto* parameters_panel = new QWidget(splitter);
     auto* parameters_layout = new QVBoxLayout(parameters_panel);
-    parameters_layout->addWidget(new QLabel("Polar rose", parameters_panel));
+    curve_type_label_ = new QLabel("Polar rose", parameters_panel);
+    parameters_layout->addWidget(curve_type_label_);
 
     auto* document_group = new QGroupBox("Document", parameters_panel);
     auto* document_form = new QFormLayout(document_group);
@@ -162,6 +163,32 @@ MainWindow::MainWindow(QWidget* parent)
     form->addRow("Curve tolerance", tolerance_);
     parameters_layout->addWidget(curve_group_);
     refresh_k_mode_controls();
+
+    ellipse_group_ = new QGroupBox("Ellipse parameters", parameters_panel);
+    auto* ellipse_form = new QFormLayout(ellipse_group_);
+    ellipse_radius_x_ = new QDoubleSpinBox(ellipse_group_);
+    ellipse_radius_x_->setRange(0.01, 100000.0);
+    ellipse_radius_x_->setValue(80.0);
+    ellipse_radius_x_->setDecimals(2);
+    ellipse_radius_y_ = new QDoubleSpinBox(ellipse_group_);
+    ellipse_radius_y_->setRange(0.01, 100000.0);
+    ellipse_radius_y_->setValue(50.0);
+    ellipse_radius_y_->setDecimals(2);
+    ellipse_rotation_ = angle_control(ellipse_group_);
+    ellipse_tolerance_ = new QDoubleSpinBox(ellipse_group_);
+    ellipse_tolerance_->setRange(0.001, 10.0);
+    ellipse_tolerance_->setValue(0.05);
+    ellipse_tolerance_->setDecimals(3);
+    ellipse_tolerance_->setSingleStep(0.01);
+    ellipse_tolerance_->setSuffix(" units");
+    ellipse_tolerance_->setToolTip(
+        "Maximum geometric deviation from the mathematical ellipse; smaller values are more precise.");
+    ellipse_form->addRow("Horizontal radius", ellipse_radius_x_);
+    ellipse_form->addRow("Vertical radius", ellipse_radius_y_);
+    ellipse_form->addRow("Rotation", ellipse_rotation_);
+    ellipse_form->addRow("Curve tolerance", ellipse_tolerance_);
+    ellipse_group_->hide();
+    parameters_layout->addWidget(ellipse_group_);
 
     appearance_group_ = new QGroupBox("Appearance", parameters_panel);
     auto* appearance_form = new QFormLayout(appearance_group_);
@@ -239,6 +266,7 @@ MainWindow::MainWindow(QWidget* parent)
     auto* add_button = new QPushButton("Add...", layers_panel);
     auto* add_menu = new QMenu(add_button);
     add_menu->addAction("Polar rose", this, [this] { add_polar_rose(); });
+    add_menu->addAction("Ellipse", this, [this] { add_ellipse(); });
     for (const auto* unavailable : {
              "Hypotrochoid", "Epitrochoid", "Lissajous", "Harmonograph", "Spirograph"}) {
         add_menu->addAction(unavailable)->setEnabled(false);
@@ -274,6 +302,10 @@ MainWindow::MainWindow(QWidget* parent)
     connect(phase_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(ellipse_radius_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(ellipse_radius_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(ellipse_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(ellipse_tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(stroke_color_button_, &QPushButton::clicked, this, [this] { choose_stroke_color(); });
     connect(fill_color_button_, &QPushButton::clicked, this, [this] { choose_fill_color(); });
     connect(stroke_width_, &QDoubleSpinBox::valueChanged, this, [this] { update_appearance(); });
@@ -362,7 +394,7 @@ void MainWindow::rebuild_layer_list()
     layers_->clear();
     active_layer_id_ = 0;
     for (const auto& layer : document_.layers()) {
-        add_layer_row(layer);
+        add_layer_row(layer, 0);
     }
     if (layers_->count() > 0) {
         layers_->setCurrentRow(0);
@@ -420,13 +452,30 @@ void MainWindow::add_polar_rose()
     preview_->update();
 }
 
+void MainWindow::add_ellipse()
+{
+    const auto suggested = QString::fromStdString(
+        document_.suggested_default_name(document::CurveType::Ellipse));
+    bool accepted = false;
+    const auto name = QInputDialog::getText(
+        this, "New ellipse", "Layer name", QLineEdit::Normal, suggested, &accepted).trimmed();
+    if (!accepted || name.isEmpty()) {
+        return;
+    }
+
+    auto& layer = document_.add_ellipse({}, name.toStdString());
+    auto* item = add_layer_row(layer);
+    layers_->setCurrentItem(item);
+    preview_->update();
+}
+
 QListWidgetItem* MainWindow::add_layer_row(const document::CurveLayer& layer, const int row)
 {
     auto* item = new QListWidgetItem;
     item->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(layer.id));
     item->setSizeHint(QSize(220, 32));
     if (row < 0) {
-        layers_->addItem(item);
+        layers_->insertItem(0, item);
     } else {
         layers_->insertItem(row, item);
     }
@@ -474,10 +523,11 @@ void MainWindow::load_active_layer()
     if (layer == nullptr) {
         return;
     }
+    curve_type_label_->setText(QString::fromStdString(document::curve_type_name(layer->type)));
     const auto* parameters = std::get_if<curves::PolarRoseParameters>(&layer->parameters);
-    if (parameters == nullptr) {
-        return;
-    }
+    const auto* ellipse_parameters = std::get_if<curves::EllipseParameters>(&layer->parameters);
+    curve_group_->setVisible(parameters != nullptr);
+    ellipse_group_->setVisible(ellipse_parameters != nullptr);
 
     const QSignalBlocker radius_blocker(radius_);
     const QSignalBlocker k_mode_blocker(k_mode_);
@@ -487,19 +537,30 @@ void MainWindow::load_active_layer()
     const QSignalBlocker phase_blocker(phase_);
     const QSignalBlocker rotation_blocker(rotation_);
     const QSignalBlocker tolerance_blocker(tolerance_);
+    const QSignalBlocker ellipse_radius_x_blocker(ellipse_radius_x_);
+    const QSignalBlocker ellipse_radius_y_blocker(ellipse_radius_y_);
+    const QSignalBlocker ellipse_rotation_blocker(ellipse_rotation_);
+    const QSignalBlocker ellipse_tolerance_blocker(ellipse_tolerance_);
     const QSignalBlocker stroke_width_blocker(stroke_width_);
     const QSignalBlocker fill_enabled_blocker(fill_enabled_);
     const QSignalBlocker fill_rule_blocker(fill_rule_);
     const QSignalBlocker opacity_blocker(layer_opacity_);
     const QSignalBlocker blend_blocker(blend_mode_);
-    radius_->setValue(parameters->radius);
-    k_mode_->setCurrentIndex(k_mode_->findData(static_cast<int>(parameters->k_mode)));
-    k_->setValue(parameters->k);
-    numerator_->setValue(parameters->numerator);
-    denominator_->setValue(parameters->denominator);
-    phase_->setValue(parameters->phase_degrees);
-    rotation_->setValue(parameters->rotation_degrees);
-    tolerance_->setValue(parameters->bezier_tolerance);
+    if (parameters != nullptr) {
+        radius_->setValue(parameters->radius);
+        k_mode_->setCurrentIndex(k_mode_->findData(static_cast<int>(parameters->k_mode)));
+        k_->setValue(parameters->k);
+        numerator_->setValue(parameters->numerator);
+        denominator_->setValue(parameters->denominator);
+        phase_->setValue(parameters->phase_degrees);
+        rotation_->setValue(parameters->rotation_degrees);
+        tolerance_->setValue(parameters->bezier_tolerance);
+    } else if (ellipse_parameters != nullptr) {
+        ellipse_radius_x_->setValue(ellipse_parameters->radius_x);
+        ellipse_radius_y_->setValue(ellipse_parameters->radius_y);
+        ellipse_rotation_->setValue(ellipse_parameters->rotation_degrees);
+        ellipse_tolerance_->setValue(ellipse_parameters->bezier_tolerance);
+    }
     stroke_color_ = qcolor_from_rgba(layer->appearance.stroke);
     fill_color_ = qcolor_from_rgba(layer->appearance.fill);
     stroke_width_->setValue(layer->appearance.stroke_width);
@@ -601,7 +662,7 @@ void MainWindow::duplicate_active_layer()
         return;
     }
 
-    auto* item = add_layer_row(*duplicate, source_row + 1);
+    auto* item = add_layer_row(*duplicate, source_row);
     layers_->setCurrentItem(item);
     preview_->update();
 }
@@ -647,6 +708,7 @@ void MainWindow::refresh_layer_actions()
     duplicate_button_->setEnabled(has_layer);
     delete_button_->setEnabled(has_layer);
     curve_group_->setEnabled(has_layer && !layer->locked);
+    ellipse_group_->setEnabled(has_layer && !layer->locked);
     appearance_group_->setEnabled(has_layer && !layer->locked);
 }
 
@@ -654,7 +716,7 @@ void MainWindow::sync_layer_order()
 {
     for (int target = 0; target < layers_->count(); ++target) {
         const auto id = static_cast<document::LayerId>(
-            layers_->item(target)->data(Qt::UserRole).toULongLong());
+            layers_->item(layers_->count() - 1 - target)->data(Qt::UserRole).toULongLong());
         const auto& layers = document_.layers();
         const auto iterator = std::find_if(layers.begin(), layers.end(),
             [id](const document::CurveLayer& layer) { return layer.id == id; });
@@ -673,18 +735,21 @@ void MainWindow::update_preview()
     if (layer == nullptr || layer->locked) {
         return;
     }
-    auto* parameters = std::get_if<curves::PolarRoseParameters>(&layer->parameters);
-    if (parameters == nullptr) {
-        return;
+    if (auto* parameters = std::get_if<curves::PolarRoseParameters>(&layer->parameters)) {
+        parameters->radius = radius_->value();
+        parameters->k_mode = static_cast<curves::PolarKMode>(k_mode_->currentData().toInt());
+        parameters->k = k_->value();
+        parameters->numerator = numerator_->value();
+        parameters->denominator = denominator_->value();
+        parameters->phase_degrees = phase_->value();
+        parameters->rotation_degrees = rotation_->value();
+        parameters->bezier_tolerance = tolerance_->value();
+    } else if (auto* parameters = std::get_if<curves::EllipseParameters>(&layer->parameters)) {
+        parameters->radius_x = ellipse_radius_x_->value();
+        parameters->radius_y = ellipse_radius_y_->value();
+        parameters->rotation_degrees = ellipse_rotation_->value();
+        parameters->bezier_tolerance = ellipse_tolerance_->value();
     }
-    parameters->radius = radius_->value();
-    parameters->k_mode = static_cast<curves::PolarKMode>(k_mode_->currentData().toInt());
-    parameters->k = k_->value();
-    parameters->numerator = numerator_->value();
-    parameters->denominator = denominator_->value();
-    parameters->phase_degrees = phase_->value();
-    parameters->rotation_degrees = rotation_->value();
-    parameters->bezier_tolerance = tolerance_->value();
     preview_->update();
 }
 
