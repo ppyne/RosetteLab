@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <functional>
+#include <numeric>
 #include <numbers>
 #include <stdexcept>
 
@@ -20,7 +21,7 @@ core::Point point_at(const PolarRoseParameters& parameters, const double theta)
 {
     const double phase = radians(parameters.phase_degrees);
     const double rotation = radians(parameters.rotation_degrees);
-    const double radius = parameters.radius * std::cos(parameters.k * theta + phase);
+    const double radius = parameters.radius * std::cos(effective_k(parameters) * theta + phase);
     const double angle = theta + rotation;
     return {radius * std::cos(angle), radius * std::sin(angle)};
 }
@@ -29,9 +30,10 @@ core::Point derivative_at(const PolarRoseParameters& parameters, const double th
 {
     const double phase = radians(parameters.phase_degrees);
     const double rotation = radians(parameters.rotation_degrees);
-    const double argument = parameters.k * theta + phase;
+    const double k = effective_k(parameters);
+    const double argument = k * theta + phase;
     const double radius = parameters.radius * std::cos(argument);
-    const double radius_derivative = -parameters.radius * parameters.k * std::sin(argument);
+    const double radius_derivative = -parameters.radius * k * std::sin(argument);
     const double angle = theta + rotation;
     return {
         radius_derivative * std::cos(angle) - radius * std::sin(angle),
@@ -94,8 +96,13 @@ void validate(const PolarRoseParameters& parameters)
     if (!std::isfinite(parameters.radius) || parameters.radius <= 0.0) {
         throw std::invalid_argument("Polar rose radius must be finite and positive");
     }
-    if (!std::isfinite(parameters.k) || parameters.k == 0.0) {
-        throw std::invalid_argument("Polar rose k must be finite and non-zero");
+    if (parameters.k_mode == PolarKMode::Decimal &&
+        (!std::isfinite(parameters.k) || parameters.k == 0.0)) {
+        throw std::invalid_argument("Decimal polar rose k must be finite and non-zero");
+    }
+    if (parameters.k_mode == PolarKMode::Fraction &&
+        (parameters.numerator == 0 || parameters.denominator == 0)) {
+        throw std::invalid_argument("Fractional polar rose numerator and denominator must be non-zero");
     }
     if (!std::isfinite(parameters.phase_degrees) ||
         !std::isfinite(parameters.rotation_degrees)) {
@@ -108,17 +115,57 @@ void validate(const PolarRoseParameters& parameters)
 
 } // namespace
 
+double effective_k(const PolarRoseParameters& parameters)
+{
+    if (parameters.k_mode == PolarKMode::Fraction) {
+        if (parameters.denominator == 0) {
+            throw std::invalid_argument("Polar rose denominator must be non-zero");
+        }
+        return static_cast<double>(parameters.numerator) /
+               static_cast<double>(parameters.denominator);
+    }
+    return parameters.k;
+}
+
+double polar_rose_period(const PolarRoseParameters& parameters)
+{
+    if (parameters.k_mode == PolarKMode::Decimal) {
+        return 2.0 * std::numbers::pi;
+    }
+
+    const auto numerator = std::abs(parameters.numerator);
+    const auto denominator = std::abs(parameters.denominator);
+    if (numerator == 0 || denominator == 0) {
+        throw std::invalid_argument("Polar rose fraction must contain non-zero integers");
+    }
+    const auto divisor = std::gcd(numerator, denominator);
+    const auto reduced_numerator = numerator / divisor;
+    const auto reduced_denominator = denominator / divisor;
+    const bool both_odd = reduced_numerator % 2 != 0 && reduced_denominator % 2 != 0;
+    return (both_odd ? 1.0 : 2.0) * static_cast<double>(reduced_denominator) *
+           std::numbers::pi;
+}
+
+bool polar_rose_is_closed(const PolarRoseParameters& parameters)
+{
+    if (parameters.k_mode == PolarKMode::Fraction) {
+        return parameters.numerator != 0 && parameters.denominator != 0;
+    }
+    return std::isfinite(parameters.k) &&
+           std::abs(parameters.k - std::round(parameters.k)) < 1e-12;
+}
+
 core::Polyline generate_polar_rose(const PolarRoseParameters& parameters)
 {
     validate(parameters);
 
     core::Polyline result;
-    result.closed = true;
+    result.closed = polar_rose_is_closed(parameters);
     result.points.reserve(parameters.samples + 1);
 
     const double phase = radians(parameters.phase_degrees);
     const double rotation = radians(parameters.rotation_degrees);
-    const double full_turn = 2.0 * std::numbers::pi;
+    const double full_turn = polar_rose_period(parameters);
 
     for (std::size_t index = 0; index <= parameters.samples; ++index) {
         const double theta = full_turn * static_cast<double>(index) /
@@ -128,8 +175,10 @@ core::Polyline generate_polar_rose(const PolarRoseParameters& parameters)
         result.points.push_back({radius * std::cos(angle), radius * std::sin(angle)});
     }
 
-    // Enforce exact topological closure despite floating-point trigonometry.
-    result.points.back() = result.points.front();
+    if (result.closed) {
+        // Enforce exact topological closure despite floating-point trigonometry.
+        result.points.back() = result.points.front();
+    }
     return result;
 }
 
@@ -143,12 +192,16 @@ core::BezierPath generate_polar_rose_bezier(
     }
 
     core::BezierPath result;
-    result.closed = true;
+    result.closed = polar_rose_is_closed(parameters);
 
     constexpr std::size_t maximum_segments = 250'000;
     constexpr int maximum_depth = 20;
     const auto initial_intervals = std::clamp<std::size_t>(
-        static_cast<std::size_t>(std::ceil(std::abs(parameters.k) * 8.0)), 8, 4096);
+        static_cast<std::size_t>(std::ceil(std::max(
+            polar_rose_period(parameters) / (2.0 * std::numbers::pi),
+            std::abs(effective_k(parameters)) * polar_rose_period(parameters) /
+                (2.0 * std::numbers::pi)) * 8.0)),
+        8, 4096);
     result.segments.reserve(initial_intervals);
 
     const auto append_interval = [&](auto&& self, const double start, const double end, const int depth) -> void {
@@ -166,7 +219,7 @@ core::BezierPath generate_polar_rose_bezier(
         self(self, middle, end, depth + 1);
     };
 
-    const double full_turn = 2.0 * std::numbers::pi;
+    const double full_turn = polar_rose_period(parameters);
     for (std::size_t index = 0; index < initial_intervals; ++index) {
         const double start = full_turn * static_cast<double>(index) /
                              static_cast<double>(initial_intervals);
@@ -175,7 +228,7 @@ core::BezierPath generate_polar_rose_bezier(
         append_interval(append_interval, start, end, 0);
     }
 
-    if (!result.segments.empty()) {
+    if (result.closed && !result.segments.empty()) {
         result.segments.back().end = result.segments.front().start;
     }
     return result;
