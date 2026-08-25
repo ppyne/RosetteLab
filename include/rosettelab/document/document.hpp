@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rosettelab/curves/polar_rose.hpp"
+#include "rosettelab/document/appearance.hpp"
 
 #include <array>
 #include <cstddef>
@@ -34,6 +35,7 @@ struct CurveLayer {
     CurveParameters parameters{curves::PolarRoseParameters{}};
     bool visible{true};
     bool locked{false};
+    LayerAppearance appearance{};
 };
 
 class Document {
