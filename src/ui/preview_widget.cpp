@@ -5,6 +5,7 @@
 #include <QPalette>
 
 #include <algorithm>
+#include <cmath>
 #include <exception>
 
 namespace rosettelab::ui {
@@ -12,8 +13,8 @@ namespace rosettelab::ui {
 PreviewWidget::PreviewWidget(QWidget* parent)
     : QWidget(parent)
 {
-    setMinimumSize(360, 360);
     setAutoFillBackground(true);
+    update_canvas_size();
 }
 
 void PreviewWidget::set_parameters(const curves::PolarRoseParameters& parameters)
@@ -22,9 +23,25 @@ void PreviewWidget::set_parameters(const curves::PolarRoseParameters& parameters
     update();
 }
 
+void PreviewWidget::set_curve_tolerance(const double tolerance)
+{
+    curve_tolerance_ = std::clamp(tolerance, 0.001, 10.0);
+    update();
+}
+
 void PreviewWidget::set_zoom_percent(const double zoom_percent)
 {
     zoom_percent_ = std::clamp(zoom_percent, 10.0, 800.0);
+    update_canvas_size();
+}
+
+void PreviewWidget::update_canvas_size()
+{
+    constexpr double margin = 40.0;
+    const double scale = pixels_per_unit_ * zoom_percent_ / 100.0;
+    setFixedSize(
+        static_cast<int>(std::ceil(page_width_ * scale + margin)),
+        static_cast<int>(std::ceil(page_height_ * scale + margin)));
     update();
 }
 
@@ -34,10 +51,7 @@ void PreviewWidget::paintEvent(QPaintEvent*)
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.fillRect(rect(), palette().brush(QPalette::Window));
 
-    const double fit_scale = 0.9 * std::min(
-        static_cast<double>(width()) / page_width_,
-        static_cast<double>(height()) / page_height_);
-    const double document_scale = fit_scale * zoom_percent_ / 100.0;
+    const double document_scale = pixels_per_unit_ * zoom_percent_ / 100.0;
     const QSizeF page_size(page_width_ * document_scale, page_height_ * document_scale);
     const QRectF page_rect(
         (width() - page_size.width()) / 2.0,
@@ -50,7 +64,7 @@ void PreviewWidget::paintEvent(QPaintEvent*)
     painter.drawRect(page_rect);
     core::BezierPath curve;
     try {
-        curve = curves::generate_polar_rose_bezier(parameters_);
+        curve = curves::generate_polar_rose_bezier(parameters_, curve_tolerance_);
     } catch (const std::exception&) {
         return;
     }
