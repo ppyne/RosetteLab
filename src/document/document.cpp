@@ -66,6 +66,22 @@ CurveLayer& Document::add_ellipse(
     return layers_.back();
 }
 
+CurveLayer& Document::add_trochoid(
+    const CurveType type,
+    const curves::TrochoidParameters& parameters,
+    std::optional<std::string> name)
+{
+    if (type != CurveType::Hypotrochoid && type != CurveType::Epitrochoid) {
+        throw std::invalid_argument("Trochoid layer requires a trochoid curve type");
+    }
+    const auto default_name = next_default_name(type);
+    if (!name.has_value() || name->empty()) {
+        name = default_name;
+    }
+    layers_.push_back({next_id_++, std::move(*name), type, parameters, true, false, {}});
+    return layers_.back();
+}
+
 std::string Document::suggested_default_name(const CurveType type) const
 {
     const auto index = static_cast<std::size_t>(type);
@@ -114,7 +130,9 @@ bool Document::import_layer(CurveLayer layer)
         (layer.type == CurveType::PolarRose &&
          std::holds_alternative<curves::PolarRoseParameters>(layer.parameters)) ||
         (layer.type == CurveType::Ellipse &&
-         std::holds_alternative<curves::EllipseParameters>(layer.parameters));
+         std::holds_alternative<curves::EllipseParameters>(layer.parameters)) ||
+        ((layer.type == CurveType::Hypotrochoid || layer.type == CurveType::Epitrochoid) &&
+         std::holds_alternative<curves::TrochoidParameters>(layer.parameters));
     if (!compatible) {
         return false;
     }
