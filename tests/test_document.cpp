@@ -98,6 +98,19 @@ void test_layer_duplication()
     require(document.duplicate_layer(999999) == nullptr, "missing layer should not be duplicated");
 }
 
+void test_controlled_layer_import()
+{
+    rosettelab::document::Document document;
+    rosettelab::document::CurveLayer imported;
+    imported.id = 42;
+    imported.name = "Polar rose 12";
+    require(document.import_layer(imported), "valid native layer should be importable");
+    require(!document.import_layer(imported), "duplicate imported ID should be rejected");
+    const auto& next = document.add_polar_rose();
+    require(next.id == 43, "new ID should follow the greatest imported ID");
+    require(next.name == "Polar rose 13", "default name should follow imported sequence");
+}
+
 } // namespace
 
 int main()
@@ -107,6 +120,7 @@ int main()
         test_custom_name_and_layer_state();
         test_layer_reordering();
         test_layer_duplication();
+        test_controlled_layer_import();
         std::cout << "All RosetteLab document tests passed\n";
         return 0;
     } catch (const std::exception& error) {
