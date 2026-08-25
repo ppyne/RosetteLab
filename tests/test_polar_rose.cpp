@@ -59,6 +59,25 @@ void test_invalid_parameters_are_rejected()
     }
 }
 
+void test_bezier_curve_is_closed_and_compact()
+{
+    const auto curve = rosettelab::curves::generate_polar_rose_bezier({});
+    require(curve.closed, "Bezier rose should be marked closed");
+    require(!curve.segments.empty(), "Bezier rose should contain segments");
+    require(curve.segments.front().start == curve.segments.back().end,
+            "Bezier rose should close exactly");
+    require(curve.segments.size() < 720,
+            "Bezier rose should use fewer primitives than the reference polyline");
+}
+
+void test_tighter_bezier_tolerance_adds_detail()
+{
+    const auto normal = rosettelab::curves::generate_polar_rose_bezier({}, 0.05);
+    const auto precise = rosettelab::curves::generate_polar_rose_bezier({}, 0.001);
+    require(precise.segments.size() >= normal.segments.size(),
+            "a tighter tolerance should not reduce the segment count");
+}
+
 } // namespace
 
 int main()
@@ -68,6 +87,8 @@ int main()
         test_radius_bounds();
         test_rotation();
         test_invalid_parameters_are_rejected();
+        test_bezier_curve_is_closed_and_compact();
+        test_tighter_bezier_tolerance_adds_detail();
         std::cout << "All RosetteLab core tests passed\n";
         return 0;
     } catch (const std::exception& error) {
