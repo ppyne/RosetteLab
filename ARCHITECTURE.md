@@ -2,14 +2,13 @@
 
 ## 1. Technology choice
 
-RosetteLab is planned as a native desktop application written in **modern C++** with a **GTK 4** user interface.
+RosetteLab is planned as a native desktop application written in **modern C++** with a **Qt 6 Widgets** user interface.
 
 Initial baseline:
 
 - C++20;
-- GTK 4;
-- gtkmm 4 for type-safe C++ bindings;
-- Cairo for vector preview rendering through GTK;
+- Qt 6 Widgets;
+- QPainter and QPainterPath for vector preview rendering;
 - a dedicated SVG/XML library selected after a small compatibility prototype;
 - CMake as the build system;
 - Catch2 or GoogleTest for unit tests.
@@ -132,11 +131,11 @@ The first renderer may use polylines or Cairo paths. SVG path simplification and
 
 ## 6. Preview rendering
 
-The GTK drawing area renders from the document model.
+The Qt preview widget renders from the document model.
 
 Initial strategy:
 
-- Cairo-backed GTK drawing;
+- QPainter-backed vector drawing;
 - redraw invalidated layers after edits;
 - cache sampled geometry per layer revision;
 - composite layers in document order;
@@ -193,7 +192,7 @@ Continuous control changes should be coalesced into one logical undo operation w
 
 ## 10. GUI responsibilities
 
-GTK widgets bind to the selected layer through a controller or view-model layer. Direct mutation from individual callbacks should be avoided.
+Qt widgets bind to the selected layer through a controller or view-model layer. Direct mutation from individual callbacks should be avoided.
 
 The GUI is responsible for:
 
@@ -245,8 +244,8 @@ The first supported package is a macOS application bundle.
 
 Packaging work must account for:
 
-- GTK and gtkmm runtime libraries;
-- theme assets and dark-mode behavior;
+- Qt 6 runtime libraries and plugins;
+- platform theme integration and dark-mode behavior;
 - application icons;
 - library relocation;
 - code signing and notarization when distribution begins.
@@ -257,10 +256,10 @@ Linux packaging is expected to follow after the application architecture stabili
 
 Before committing to the first implementation, short prototypes will decide:
 
-- gtkmm version available through the selected macOS toolchain;
+- Qt 6 version available through the selected macOS toolchain;
 - SVG/XML library and metadata preservation behavior;
-- Cairo support for the required blend modes;
-- best GTK color-control integration with RGBA/HSLA synchronization;
+- QPainter composition-mode coverage for the required blend modes;
+- best Qt color-control integration with RGBA/HSLA synchronization;
 - dependency packaging strategy for a self-contained macOS bundle.
 
 These decisions must be recorded as short architecture decision records under `docs/adr/`.
