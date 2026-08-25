@@ -6,10 +6,13 @@
 #include <QDoubleSpinBox>
 #include <QFormLayout>
 #include <QGroupBox>
+#include <QHBoxLayout>
 #include <QInputDialog>
 #include <QLabel>
 #include <QListWidget>
 #include <QLineEdit>
+#include <QMenu>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSignalBlocker>
@@ -47,23 +50,23 @@ MainWindow::MainWindow(QWidget* parent)
     auto* parameters_layout = new QVBoxLayout(parameters_panel);
     parameters_layout->addWidget(new QLabel("Polar rose", parameters_panel));
 
-    auto* curve_group = new QGroupBox("Curve parameters", parameters_panel);
-    auto* form = new QFormLayout(curve_group);
+    curve_group_ = new QGroupBox("Curve parameters", parameters_panel);
+    auto* form = new QFormLayout(curve_group_);
 
-    radius_ = new QDoubleSpinBox(curve_group);
+    radius_ = new QDoubleSpinBox(curve_group_);
     radius_->setRange(0.01, 100000.0);
     radius_->setValue(100.0);
     radius_->setDecimals(2);
 
-    k_ = new QDoubleSpinBox(curve_group);
+    k_ = new QDoubleSpinBox(curve_group_);
     k_->setRange(-1000.0, 1000.0);
     k_->setValue(7.0);
     k_->setDecimals(3);
 
-    phase_ = angle_control(curve_group);
-    rotation_ = angle_control(curve_group);
+    phase_ = angle_control(curve_group_);
+    rotation_ = angle_control(curve_group_);
 
-    tolerance_ = new QDoubleSpinBox(curve_group);
+    tolerance_ = new QDoubleSpinBox(curve_group_);
     tolerance_->setRange(0.001, 10.0);
     tolerance_->setValue(0.05);
     tolerance_->setDecimals(3);
@@ -76,7 +79,7 @@ MainWindow::MainWindow(QWidget* parent)
     form->addRow("Phase", phase_);
     form->addRow("Rotation", rotation_);
     form->addRow("Curve tolerance", tolerance_);
-    parameters_layout->addWidget(curve_group);
+    parameters_layout->addWidget(curve_group_);
 
     auto* view_group = new QGroupBox("View", parameters_panel);
     auto* view_form = new QFormLayout(view_group);
@@ -110,8 +113,26 @@ MainWindow::MainWindow(QWidget* parent)
     initial_layer->setCheckState(Qt::Checked);
     layers_->setCurrentItem(initial_layer);
     layers_layout->addWidget(layers_);
-    auto* add_button = new QPushButton("Add polar rose", layers_panel);
+    auto* add_button = new QPushButton("Add...", layers_panel);
+    auto* add_menu = new QMenu(add_button);
+    add_menu->addAction("Polar rose", this, [this] { add_polar_rose(); });
+    for (const auto* unavailable : {
+             "Hypotrochoid", "Epitrochoid", "Lissajous", "Harmonograph", "Spirograph"}) {
+        add_menu->addAction(unavailable)->setEnabled(false);
+    }
+    add_button->setMenu(add_menu);
     layers_layout->addWidget(add_button);
+
+    auto* layer_actions = new QHBoxLayout;
+    rename_button_ = new QPushButton("Rename", layers_panel);
+    duplicate_button_ = new QPushButton("Duplicate", layers_panel);
+    delete_button_ = new QPushButton("Delete", layers_panel);
+    lock_button_ = new QPushButton("Lock", layers_panel);
+    layer_actions->addWidget(rename_button_);
+    layer_actions->addWidget(duplicate_button_);
+    layer_actions->addWidget(delete_button_);
+    layer_actions->addWidget(lock_button_);
+    layers_layout->addLayout(layer_actions);
 
     splitter->setStretchFactor(0, 0);
     splitter->setStretchFactor(1, 1);
@@ -129,6 +150,15 @@ MainWindow::MainWindow(QWidget* parent)
         preview_->set_zoom_percent(static_cast<double>(value));
     });
     connect(add_button, &QPushButton::clicked, this, [this] { add_polar_rose(); });
+    connect(rename_button_, &QPushButton::clicked, this, [this] { rename_active_layer(); });
+    connect(duplicate_button_, &QPushButton::clicked, this, [this] { duplicate_active_layer(); });
+    connect(delete_button_, &QPushButton::clicked, this, [this] { delete_active_layer(); });
+    connect(lock_button_, &QPushButton::clicked, this, [this] {
+        const auto* layer = document_.find_layer(active_layer_id_);
+        if (layer != nullptr) {
+            set_active_layer_locked(!layer->locked);
+        }
+    });
     connect(layers_, &QListWidget::currentItemChanged, this,
         [this](QListWidgetItem* current, QListWidgetItem*) {
             if (current != nullptr) {
@@ -144,6 +174,7 @@ MainWindow::MainWindow(QWidget* parent)
         [this] { sync_layer_order(); });
 
     update_preview();
+    refresh_layer_actions();
 }
 
 void MainWindow::add_polar_rose()
@@ -170,6 +201,7 @@ void MainWindow::select_layer(const document::LayerId id)
 {
     active_layer_id_ = id;
     load_active_layer();
+    refresh_layer_actions();
 }
 
 void MainWindow::load_active_layer()
@@ -191,6 +223,92 @@ void MainWindow::load_active_layer()
     k_->setValue(parameters->k);
     phase_->setValue(parameters->phase_degrees);
     rotation_->setValue(parameters->rotation_degrees);
+}
+
+void MainWindow::rename_active_layer()
+{
+    auto* layer = document_.find_layer(active_layer_id_);
+    auto* item = layers_->currentItem();
+    if (layer == nullptr || item == nullptr) {
+        return;
+    }
+
+    bool accepted = false;
+    const auto name = QInputDialog::getText(
+        this,
+        "Rename layer",
+        "Layer name",
+        QLineEdit::Normal,
+        QString::fromStdString(layer->name),
+        &accepted).trimmed();
+    if (!accepted || name.isEmpty()) {
+        return;
+    }
+    if (document_.rename_layer(active_layer_id_, name.toStdString())) {
+        item->setText(name);
+    }
+}
+
+void MainWindow::duplicate_active_layer()
+{
+    const auto source_row = layers_->currentRow();
+    auto* duplicate = document_.duplicate_layer(active_layer_id_);
+    if (duplicate == nullptr) {
+        return;
+    }
+
+    auto* item = new QListWidgetItem(QString::fromStdString(duplicate->name));
+    item->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(duplicate->id));
+    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+    item->setCheckState(duplicate->visible ? Qt::Checked : Qt::Unchecked);
+    layers_->insertItem(source_row + 1, item);
+    layers_->setCurrentItem(item);
+    preview_->update();
+}
+
+void MainWindow::delete_active_layer()
+{
+    auto* layer = document_.find_layer(active_layer_id_);
+    const int row = layers_->currentRow();
+    if (layer == nullptr || row < 0) {
+        return;
+    }
+    const auto answer = QMessageBox::question(
+        this,
+        "Delete layer",
+        QStringLiteral("Delete layer \"%1\"?").arg(QString::fromStdString(layer->name)));
+    if (answer != QMessageBox::Yes) {
+        return;
+    }
+
+    static_cast<void>(document_.remove_layer(active_layer_id_));
+    delete layers_->takeItem(row);
+    if (layers_->count() > 0) {
+        layers_->setCurrentRow(std::min(row, layers_->count() - 1));
+    } else {
+        active_layer_id_ = 0;
+    }
+    preview_->update();
+    refresh_layer_actions();
+}
+
+void MainWindow::set_active_layer_locked(const bool locked)
+{
+    if (document_.set_layer_locked(active_layer_id_, locked)) {
+        refresh_layer_actions();
+    }
+}
+
+void MainWindow::refresh_layer_actions()
+{
+    const auto* layer = document_.find_layer(active_layer_id_);
+    const bool has_layer = layer != nullptr;
+    rename_button_->setEnabled(has_layer);
+    duplicate_button_->setEnabled(has_layer);
+    delete_button_->setEnabled(has_layer);
+    lock_button_->setEnabled(has_layer);
+    curve_group_->setEnabled(has_layer && !layer->locked);
+    lock_button_->setText(has_layer && layer->locked ? "Unlock" : "Lock");
 }
 
 void MainWindow::sync_layer_order()
