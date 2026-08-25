@@ -3,6 +3,7 @@
 #include <cmath>
 #include <exception>
 #include <iostream>
+#include <numbers>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -78,6 +79,36 @@ void test_tighter_bezier_tolerance_adds_detail()
             "a tighter tolerance should not reduce the segment count");
 }
 
+void test_fractional_k_uses_complete_period()
+{
+    auto half = rosettelab::curves::PolarRoseParameters{};
+    half.k_mode = rosettelab::curves::PolarKMode::Fraction;
+    half.numerator = 1;
+    half.denominator = 2;
+    require(std::abs(rosettelab::curves::polar_rose_period(half) - 4.0 * std::numbers::pi) < 1e-12,
+            "1/2 should require two angular turns");
+    const auto half_curve = rosettelab::curves::generate_polar_rose_bezier(half);
+    require(half_curve.closed, "fractional 1/2 curve should close");
+    require(half_curve.segments.front().start == half_curve.segments.back().end,
+            "fractional 1/2 curve should close exactly");
+
+    auto third = half;
+    third.denominator = 3;
+    require(std::abs(rosettelab::curves::polar_rose_period(third) - 3.0 * std::numbers::pi) < 1e-12,
+            "1/3 should close after three pi radians");
+}
+
+void test_decimal_fraction_is_not_forced_closed()
+{
+    auto parameters = rosettelab::curves::PolarRoseParameters{};
+    parameters.k_mode = rosettelab::curves::PolarKMode::Decimal;
+    parameters.k = 0.5;
+    const auto curve = rosettelab::curves::generate_polar_rose_bezier(parameters);
+    require(!curve.closed, "decimal 0.5 should remain a one-turn open trace");
+    require(curve.segments.front().start != curve.segments.back().end,
+            "open decimal trace must not be forcibly joined");
+}
+
 } // namespace
 
 int main()
@@ -89,6 +120,8 @@ int main()
         test_invalid_parameters_are_rejected();
         test_bezier_curve_is_closed_and_compact();
         test_tighter_bezier_tolerance_adds_detail();
+        test_fractional_k_uses_complete_period();
+        test_decimal_fraction_is_not_forced_closed();
         std::cout << "All RosetteLab core tests passed\n";
         return 0;
     } catch (const std::exception& error) {
