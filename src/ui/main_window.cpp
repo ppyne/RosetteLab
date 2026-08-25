@@ -65,6 +65,15 @@ MainWindow::MainWindow(QWidget* parent)
     form->addRow("Rotation", rotation_);
     form->addRow("Samples", samples_);
     parameters_layout->addWidget(curve_group);
+
+    auto* view_group = new QGroupBox("View", parameters_panel);
+    auto* view_form = new QFormLayout(view_group);
+    zoom_ = new QSpinBox(view_group);
+    zoom_->setRange(10, 800);
+    zoom_->setValue(100);
+    zoom_->setSuffix(" %");
+    view_form->addRow("Zoom", zoom_);
+    parameters_layout->addWidget(view_group);
     parameters_layout->addStretch();
 
     preview_ = new PreviewWidget(splitter);
@@ -88,6 +97,9 @@ MainWindow::MainWindow(QWidget* parent)
     connect(phase_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(samples_, &QSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(zoom_, &QSpinBox::valueChanged, this, [this](const int value) {
+        preview_->set_zoom_percent(static_cast<double>(value));
+    });
 
     update_preview();
 }
@@ -104,4 +116,3 @@ void MainWindow::update_preview()
 }
 
 } // namespace rosettelab::ui
-
