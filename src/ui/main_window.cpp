@@ -5,6 +5,7 @@
 #include "ui/preview_widget.hpp"
 
 #include "rosettelab/svg/svg_serializer.hpp"
+#include "svg/qt_svg_parser.hpp"
 
 #include <QAbstractItemModel>
 #include <QAction>
@@ -83,6 +84,9 @@ MainWindow::MainWindow(QWidget* parent)
     resize(1200, 760);
 
     auto* file_menu = menuBar()->addMenu("&File");
+    auto* open_action = file_menu->addAction("Open...");
+    open_action->setShortcut(QKeySequence::Open);
+    connect(open_action, &QAction::triggered, this, [this] { open_file(); });
     auto* save_as_action = file_menu->addAction("Save As...");
     save_as_action->setShortcut(QKeySequence::SaveAs);
     connect(save_as_action, &QAction::triggered, this, [this] { save_as(); });
@@ -273,6 +277,45 @@ MainWindow::MainWindow(QWidget* parent)
 
     update_preview();
     refresh_layer_actions();
+}
+
+void MainWindow::open_file()
+{
+    const auto path = QFileDialog::getOpenFileName(
+        this, "Open RosetteLab SVG", {}, "RosetteLab SVG (*.svg)");
+    if (path.isEmpty()) {
+        return;
+    }
+
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        QMessageBox::critical(this, "Unable to open", file.errorString());
+        return;
+    }
+
+    try {
+        document_ = svg::parse_rosettelab_svg(file.readAll());
+    } catch (const std::exception& error) {
+        QMessageBox::critical(this, "Unable to open", error.what());
+        return;
+    }
+    rebuild_layer_list();
+    preview_->update();
+    setWindowTitle(QStringLiteral("RosetteLab - %1").arg(QFileInfo(path).fileName()));
+}
+
+void MainWindow::rebuild_layer_list()
+{
+    layers_->clear();
+    active_layer_id_ = 0;
+    for (const auto& layer : document_.layers()) {
+        add_layer_row(layer);
+    }
+    if (layers_->count() > 0) {
+        layers_->setCurrentRow(0);
+    } else {
+        refresh_layer_actions();
+    }
 }
 
 void MainWindow::save_as()
