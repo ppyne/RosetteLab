@@ -93,12 +93,15 @@ r(\theta) = a \cos(k\theta + \phi)
 Initial parameters:
 
 - radius/amplitude (a);
-- angular multiplier (k);
+- k representation:
+  - **Decimal**, with a real-valued k, traced over one angular turn and left open unless it closes exactly;
+  - **Fraction**, with non-zero integer numerator n and denominator d, where k = n/d and the complete rational closing period is calculated exactly;
+- decimal k, or fractional n and d;
 - phase (phi);
 - angular rotation;
 - adaptive Bézier tolerance in document units.
 
-The mathematical meaning of (k), including the odd/even petal behavior, must be documented in the interface help.
+The mathematical meaning of k, including the odd/even petal behavior, must be documented in the interface help. Decimal approximations such as 0.33 must never be silently interpreted as the exact fraction 1/3. RosetteLab must not forcibly close an incomplete decimal trace.
 
 ### 5.2 Trochoid
 
