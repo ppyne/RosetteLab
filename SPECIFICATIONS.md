@@ -260,7 +260,7 @@ Two synchronized representations are required:
 - RGBA;
 - HSLA.
 
-A graphical picker may be added where the platform toolkit supports it consistently. Numeric entry must remain available. The color-preview strip at the bottom of every stroke, fill, and page-background selector displays transparent or translucent colors over a checkerboard made of alternating white and 50% grey (`RGB 127, 127, 127`) squares. Its `#RRGGBBAA - Choose visually...` label uses white text on a dark composited preview and black text on a light composited preview, taking alpha into account.
+A graphical picker may be added where the platform toolkit supports it consistently. Numeric entry must remain available. The persistent Background, Stroke color, and Fill color controls in the settings panel, as well as the color-preview strip at the bottom of every corresponding selector, display transparent or translucent colors over a checkerboard made of alternating white and 50% grey (`RGB 127, 127, 127`) squares. Its `#RRGGBBAA - Choose visually...` label uses white text on a dark composited preview and black text on a light composited preview, taking alpha into account.
 
 ### 8.4 Layer rendering
 
