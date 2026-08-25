@@ -129,6 +129,18 @@ void parse_curve_metadata(
     parameters.bezier_tolerance = parse_double(required_attribute(attributes, "bezier-tolerance"), "bezier-tolerance");
 }
 
+void parse_curve_metadata(
+    const QXmlStreamAttributes& attributes,
+    curves::EllipseParameters& parameters)
+{
+    parameters.radius_x = parse_double(required_attribute(attributes, "radius-x"), "radius-x");
+    parameters.radius_y = parse_double(required_attribute(attributes, "radius-y"), "radius-y");
+    parameters.rotation_degrees = parse_double(
+        required_attribute(attributes, "rotation-degrees"), "rotation-degrees");
+    parameters.bezier_tolerance = parse_double(
+        required_attribute(attributes, "bezier-tolerance"), "bezier-tolerance");
+}
+
 void parse_path_appearance(
     const QXmlStreamAttributes& attributes,
     document::LayerAppearance& appearance)
@@ -161,19 +173,24 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
     if (!id_ok || layer.id == 0) throw parse_error("Invalid layer ID");
     layer.name = required_metadata_attribute(group_attributes, metadata_ns, "name").toStdString();
     const auto type = required_metadata_attribute(group_attributes, metadata_ns, "type");
-    if (type != "polar-rose") throw parse_error("Unsupported RosetteLab curve type");
-    layer.type = document::CurveType::PolarRose;
+    if (type == "polar-rose") layer.type = document::CurveType::PolarRose;
+    else if (type == "ellipse") layer.type = document::CurveType::Ellipse;
+    else throw parse_error("Unsupported RosetteLab curve type");
     layer.visible = parse_boolean(
         required_metadata_attribute(group_attributes, metadata_ns, "visible"), "visible");
     layer.locked = parse_boolean(
         required_metadata_attribute(group_attributes, metadata_ns, "locked"), "locked");
 
-    curves::PolarRoseParameters parameters;
+    document::CurveParameters parameters = layer.type == document::CurveType::PolarRose
+        ? document::CurveParameters{curves::PolarRoseParameters{}}
+        : document::CurveParameters{curves::EllipseParameters{}};
     bool found_curve = false;
     bool found_path = false;
     while (reader.readNextStartElement()) {
         if (reader.namespaceUri() == metadata_ns && reader.name() == "curve") {
-            parse_curve_metadata(reader.attributes(), parameters);
+            std::visit([&reader](auto& value) {
+                parse_curve_metadata(reader.attributes(), value);
+            }, parameters);
             found_curve = true;
             reader.skipCurrentElement();
         } else if (reader.namespaceUri() == "http://www.w3.org/2000/svg" && reader.name() == "path") {
