@@ -33,6 +33,7 @@ if(ROSETTELAB_BUILD_GUI)
     if(Qt6_FOUND)
         add_executable(rosettelab
             src/app/main.cpp
+            src/ui/color_editor_dialog.cpp
             src/ui/main_window.cpp
             src/ui/layer_list_item_widget.cpp
             src/ui/preview_widget.cpp
