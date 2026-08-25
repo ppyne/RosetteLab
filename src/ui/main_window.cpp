@@ -1,6 +1,7 @@
 #include "ui/main_window.hpp"
 
 #include "ui/color_editor_dialog.hpp"
+#include "ui/color_preview_button.hpp"
 #include "ui/layer_list_item_widget.hpp"
 #include "ui/preview_widget.hpp"
 
@@ -64,7 +65,7 @@ QColor qcolor_from_rgba(const document::RgbaColor& color)
     return QColor::fromRgbF(color.red, color.green, color.blue, color.alpha);
 }
 
-void style_color_button(QPushButton* button, const QColor& color)
+void style_color_button(ColorPreviewButton* button, const QColor& color)
 {
     button->setText(QStringLiteral("#%1%2%3%4")
         .arg(color.red(), 2, 16, QLatin1Char('0'))
@@ -72,9 +73,7 @@ void style_color_button(QPushButton* button, const QColor& color)
         .arg(color.blue(), 2, 16, QLatin1Char('0'))
         .arg(color.alpha(), 2, 16, QLatin1Char('0'))
         .toUpper());
-    const auto text = color.lightnessF() < 0.5 ? QStringLiteral("white") : QStringLiteral("black");
-    button->setStyleSheet(QStringLiteral("background-color: rgba(%1, %2, %3, %4); color: %5;")
-        .arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha()).arg(text));
+    button->set_preview_color(color);
 }
 
 } // namespace
@@ -120,7 +119,7 @@ MainWindow::MainWindow(QWidget* parent)
     page_height_->setValue(210.0);
     page_height_->setDecimals(2);
     page_height_->setSuffix(" mm");
-    page_background_button_ = new QPushButton(document_group);
+    page_background_button_ = new ColorPreviewButton(document_group);
     document_form->addRow("Page width", page_width_);
     document_form->addRow("Page height", page_height_);
     document_form->addRow("Background", page_background_button_);
@@ -201,8 +200,8 @@ MainWindow::MainWindow(QWidget* parent)
 
     appearance_group_ = new QGroupBox("Appearance", parameters_panel);
     auto* appearance_form = new QFormLayout(appearance_group_);
-    stroke_color_button_ = new QPushButton(appearance_group_);
-    fill_color_button_ = new QPushButton(appearance_group_);
+    stroke_color_button_ = new ColorPreviewButton(appearance_group_);
+    fill_color_button_ = new ColorPreviewButton(appearance_group_);
 
     stroke_width_ = new QDoubleSpinBox(appearance_group_);
     stroke_width_->setRange(0.0, 1000.0);
