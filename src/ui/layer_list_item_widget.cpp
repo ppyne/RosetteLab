@@ -71,6 +71,12 @@ core::BezierPath layer_path(const document::CurveLayer& layer)
     if (const auto* parameters = std::get_if<curves::EllipseParameters>(&layer.parameters)) {
         return curves::generate_ellipse_bezier(*parameters, parameters->bezier_tolerance);
     }
+    if (const auto* parameters = std::get_if<curves::TrochoidParameters>(&layer.parameters)) {
+        const auto kind = layer.type == document::CurveType::Hypotrochoid
+            ? curves::TrochoidKind::Hypotrochoid
+            : curves::TrochoidKind::Epitrochoid;
+        return curves::generate_trochoid_bezier(kind, *parameters, parameters->bezier_tolerance);
+    }
     return {};
 }
 
