@@ -11,6 +11,7 @@ struct PolarRoseParameters {
     double k{7.0};
     double phase_degrees{0.0};
     double rotation_degrees{0.0};
+    double bezier_tolerance{0.05};
     std::size_t samples{720};
 };
 
