@@ -29,14 +29,14 @@ void PreviewWidget::paintEvent(QPaintEvent*)
     // document canvas has its own explicit appearance.
     painter.fillRect(rect(), Qt::white);
 
-    core::Polyline curve;
+    core::BezierPath curve;
     try {
-        curve = curves::generate_polar_rose(parameters_);
+        curve = curves::generate_polar_rose_bezier(parameters_);
     } catch (const std::exception&) {
         return;
     }
 
-    if (curve.points.empty()) {
+    if (curve.segments.empty()) {
         return;
     }
 
@@ -45,9 +45,16 @@ void PreviewWidget::paintEvent(QPaintEvent*)
     const double scale = diameter > 0.0 ? available / diameter : 1.0;
 
     QPainterPath path;
-    path.moveTo(curve.points.front().x * scale, curve.points.front().y * scale);
-    for (const auto& point : curve.points) {
-        path.lineTo(point.x * scale, point.y * scale);
+    const auto& first = curve.segments.front().start;
+    path.moveTo(first.x * scale, first.y * scale);
+    for (const auto& segment : curve.segments) {
+        path.cubicTo(
+            segment.control1.x * scale,
+            segment.control1.y * scale,
+            segment.control2.x * scale,
+            segment.control2.y * scale,
+            segment.end.x * scale,
+            segment.end.y * scale);
     }
     if (curve.closed) {
         path.closeSubpath();
