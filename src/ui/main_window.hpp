@@ -53,6 +53,7 @@ private:
     void refresh_color_buttons();
     void refresh_layer_actions();
     void refresh_layer_preview(document::LayerId id);
+    void refresh_all_layer_previews();
     void sync_layer_order();
     void update_preview();
 
