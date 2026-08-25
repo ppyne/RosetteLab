@@ -1,5 +1,6 @@
 #include "rosettelab/svg/svg_serializer.hpp"
 
+#include "rosettelab/curves/ellipse.hpp"
 #include "rosettelab/curves/polar_rose.hpp"
 
 #include <algorithm>
@@ -106,6 +107,24 @@ std::string path_data(const core::BezierPath& path)
     return output.str();
 }
 
+void write_rendered_path(
+    std::ostringstream& output,
+    const core::BezierPath& path,
+    const document::LayerAppearance& appearance)
+{
+    output << "    <path d=\"" << path_data(path) << "\""
+           << " stroke=\"" << rgb_hex(appearance.stroke) << "\""
+           << " stroke-opacity=\"" << number(std::clamp(appearance.stroke.alpha, 0.0, 1.0)) << "\""
+           << " stroke-width=\"" << number(std::max(0.0, appearance.stroke_width)) << "\""
+           << " fill=\"" << (appearance.fill_enabled ? rgb_hex(appearance.fill) : "none") << "\"";
+    if (appearance.fill_enabled) {
+        output << " fill-opacity=\"" << number(std::clamp(appearance.fill.alpha, 0.0, 1.0)) << "\"";
+    }
+    output << " fill-rule=\"" << fill_rule_name(appearance.fill_rule) << "\""
+           << " opacity=\"" << number(std::clamp(appearance.opacity, 0.0, 1.0)) << "\""
+           << " style=\"mix-blend-mode:" << blend_mode_name(appearance.blend_mode) << "\"/>\n";
+}
+
 void write_polar_rose(std::ostringstream& output, const document::CurveLayer& layer)
 {
     const auto* parameters = std::get_if<curves::PolarRoseParameters>(&layer.parameters);
@@ -126,18 +145,32 @@ void write_polar_rose(std::ostringstream& output, const document::CurveLayer& la
            << " rotation-degrees=\"" << number(parameters->rotation_degrees) << "\""
            << " bezier-tolerance=\"" << number(parameters->bezier_tolerance) << "\"/>\n";
 
-    const auto& appearance = layer.appearance;
-    output << "    <path d=\"" << path_data(path) << "\""
-           << " stroke=\"" << rgb_hex(appearance.stroke) << "\""
-           << " stroke-opacity=\"" << number(std::clamp(appearance.stroke.alpha, 0.0, 1.0)) << "\""
-           << " stroke-width=\"" << number(std::max(0.0, appearance.stroke_width)) << "\""
-           << " fill=\"" << (appearance.fill_enabled ? rgb_hex(appearance.fill) : "none") << "\"";
-    if (appearance.fill_enabled) {
-        output << " fill-opacity=\"" << number(std::clamp(appearance.fill.alpha, 0.0, 1.0)) << "\"";
+    write_rendered_path(output, path, layer.appearance);
+}
+
+void write_ellipse(std::ostringstream& output, const document::CurveLayer& layer)
+{
+    const auto* parameters = std::get_if<curves::EllipseParameters>(&layer.parameters);
+    if (parameters == nullptr) {
+        throw std::invalid_argument("Ellipse layer has incompatible parameters");
     }
-    output << " fill-rule=\"" << fill_rule_name(appearance.fill_rule) << "\""
-           << " opacity=\"" << number(std::clamp(appearance.opacity, 0.0, 1.0)) << "\""
-           << " style=\"mix-blend-mode:" << blend_mode_name(appearance.blend_mode) << "\"/>\n";
+    const auto path = curves::generate_ellipse_bezier(
+        *parameters, parameters->bezier_tolerance);
+    output << "    <rosettelab:curve"
+           << " radius-x=\"" << number(parameters->radius_x) << "\""
+           << " radius-y=\"" << number(parameters->radius_y) << "\""
+           << " rotation-degrees=\"" << number(parameters->rotation_degrees) << "\""
+           << " bezier-tolerance=\"" << number(parameters->bezier_tolerance) << "\"/>\n";
+    write_rendered_path(output, path, layer.appearance);
+}
+
+const char* curve_type_id(const document::CurveType type)
+{
+    switch (type) {
+    case document::CurveType::PolarRose: return "polar-rose";
+    case document::CurveType::Ellipse: return "ellipse";
+    default: throw std::invalid_argument("Unsupported curve type for SVG export");
+    }
 }
 
 } // namespace
@@ -181,14 +214,18 @@ std::string serialize_rosettelab_svg(
         output << "  <g id=\"layer-" << layer.id << "\""
                << " rosettelab:id=\"" << layer.id << "\""
                << " rosettelab:name=\"" << xml_escape(layer.name) << "\""
-               << " rosettelab:type=\"polar-rose\""
+               << " rosettelab:type=\"" << curve_type_id(layer.type) << "\""
                << " rosettelab:visible=\"" << (layer.visible ? "true" : "false") << "\""
                << " rosettelab:locked=\"" << (layer.locked ? "true" : "false") << "\"";
         if (!layer.visible) {
             output << " display=\"none\"";
         }
         output << ">\n";
-        write_polar_rose(output, layer);
+        if (layer.type == document::CurveType::PolarRose) {
+            write_polar_rose(output, layer);
+        } else if (layer.type == document::CurveType::Ellipse) {
+            write_ellipse(output, layer);
+        }
         output << "  </g>\n";
     }
     output << "</svg>\n";
