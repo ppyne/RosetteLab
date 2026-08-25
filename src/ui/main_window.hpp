@@ -19,6 +19,7 @@ class QSpinBox;
 
 namespace rosettelab::ui {
 
+class ColorPreviewButton;
 class PreviewWidget;
 
 class MainWindow final : public QMainWindow {
@@ -57,7 +58,7 @@ private:
     PreviewWidget* preview_{};
     QDoubleSpinBox* page_width_{};
     QDoubleSpinBox* page_height_{};
-    QPushButton* page_background_button_{};
+    ColorPreviewButton* page_background_button_{};
     QColor page_background_{Qt::white};
     QLabel* curve_type_label_{};
     QDoubleSpinBox* radius_{};
@@ -76,8 +77,8 @@ private:
     QDoubleSpinBox* ellipse_rotation_{};
     QDoubleSpinBox* ellipse_tolerance_{};
     QGroupBox* appearance_group_{};
-    QPushButton* stroke_color_button_{};
-    QPushButton* fill_color_button_{};
+    ColorPreviewButton* stroke_color_button_{};
+    ColorPreviewButton* fill_color_button_{};
     QDoubleSpinBox* stroke_width_{};
     QCheckBox* fill_enabled_{};
     QComboBox* fill_rule_{};
