@@ -42,6 +42,8 @@ public:
         const curves::PolarRoseParameters& parameters = {},
         std::optional<std::string> name = std::nullopt);
 
+    [[nodiscard]] std::string suggested_default_name(CurveType type) const;
+
     [[nodiscard]] bool remove_layer(LayerId id);
     [[nodiscard]] bool move_layer(std::size_t from, std::size_t to);
     [[nodiscard]] bool rename_layer(LayerId id, std::string name);
@@ -63,4 +65,3 @@ private:
 };
 
 } // namespace rosettelab::document
-
