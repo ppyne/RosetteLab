@@ -22,7 +22,6 @@ enum class CurveType : std::size_t {
     Epitrochoid,
     Lissajous,
     Harmonograph,
-    Spirograph,
     Count,
 };
 

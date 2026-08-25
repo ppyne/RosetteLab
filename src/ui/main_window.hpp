@@ -15,6 +15,7 @@ class QListWidget;
 class QListWidgetItem;
 class QLabel;
 class QPushButton;
+class QSplitter;
 class QSpinBox;
 
 namespace rosettelab::ui {
@@ -62,6 +63,7 @@ private:
     void update_preview();
 
     PreviewWidget* preview_{};
+    QSplitter* main_splitter_{};
     QDoubleSpinBox* page_width_{};
     QDoubleSpinBox* page_height_{};
     ColorPreviewButton* page_background_button_{};

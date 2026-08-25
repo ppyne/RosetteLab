@@ -42,12 +42,12 @@ The main window contains three primary regions:
    - Both glyph controls have stable dimensions, tooltips, keyboard access, and accessible names; changing state must never resize the layer panel.
    - Supports add, duplicate, rename, and delete operations.
    - The primary `Add…` command opens a curve-type selector rather than creating a predetermined family directly.
-   - The selector lists Polar rose, Ellipse, Hypotrochoid, Epitrochoid, Lissajous, Harmonograph, and Spirograph; only implemented families are enabled.
+   - The selector lists Polar rose, Ellipse, Hypotrochoid, Epitrochoid, Lissajous, and Harmonograph; only implemented families are enabled.
    - Creating a layer prompts for its name, prefilled as `Curve type N`, where the type is the English curve-family name and (N) is the next number for that family (for example, `Polar rose 1`, `Polar rose 2`, or `Lissajous 1`).
    - Default names do not change when mathematical parameters change.
    - A user-defined name remains unchanged until explicitly renamed.\n   - A name wider than the available row width is elided with a trailing ellipsis. Hovering the elided name displays its complete value in a tooltip.
 
-The layout must remain usable on laptop-sized displays. Resizable panes and sensible minimum sizes are required. The application restores the last main-window size, position, and maximized state on the next launch; Qt must keep a restored window reachable when the previous screen arrangement is no longer available.
+The layout must remain usable on laptop-sized displays. Resizable panes and sensible minimum sizes are required. The application restores the last main-window size, position, and maximized state on the next launch; Qt must keep a restored window reachable when the previous screen arrangement is no longer available. The widths of the parameter editor, preview canvas, and layer stack are persisted through the main horizontal splitter state and restored on the next launch.
 
 ## 4. Layer model
 
@@ -188,21 +188,6 @@ y(t)=A_y\sin(f_y t+\phi_y)e^{-d_y t}
 Parameters include amplitudes, frequencies, phases, damping factors, duration, and precision.
 
 More complete multi-pendulum models are explicitly deferred.
-
-### 5.6 Spirograph
-
-This mode exposes terms familiar from a physical Spirograph rather than requiring abstract radii:
-
-- fixed ring or wheel tooth count;
-- rolling wheel tooth count;
-- inside/outside rolling;
-- numbered pen hole;
-- hole radial position or a wheel-specific hole mapping;
-- number of revolutions;
-- complete or limited trace;
-- drawing scale and rotation.
-
-The corresponding equation and resolved mathematical parameters are visible to the user. Initial releases may use a generic hole-distance model. Exact commercial wheel datasets require independently verifiable measurements and are deferred.
 
 ## 6. Presets
 
@@ -417,7 +402,6 @@ Platform-specific native widgets should be avoided unless isolated behind an abs
 
 ### 13.5 Milestone 1.0 — first stable release
 
-- Spirograph mode with generic wheel/hole mapping;
 - copy-based superposition;
 - PNG and JPEG export;
 - fully vector PDF export with native PDF blend modes, with rasterization retained only as an explicit compatibility fallback;
@@ -431,7 +415,6 @@ Platform-specific native widgets should be avoided unless isolated behind an abs
 The following may wait until after 1.0 unless implementation proves inexpensive:
 
 - full multi-pendulum harmonograph;
-- exact branded Spirograph wheel and hole database;
 - arbitrary SVG import as editable geometry;
 - user-created preset libraries;
 - gradients and patterns;

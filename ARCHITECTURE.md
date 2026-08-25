@@ -97,7 +97,6 @@ Use strongly typed parameter structures rather than a string dictionary:
 - `TrochoidParameters`;
 - `LissajousParameters`;
 - `HarmonographParameters`;
-- `SpirographParameters`.
 
 A `std::variant` can represent the selected family while retaining compile-time validation.
 

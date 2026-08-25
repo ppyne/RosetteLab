@@ -106,10 +106,11 @@ MainWindow::MainWindow(QWidget* parent)
     export_menu->addAction("To JPEG...", this, [this] { export_raster(true); });
     export_menu->addAction("To PDF...", this, [this] { export_pdf(); });
 
-    auto* splitter = new QSplitter(Qt::Horizontal, this);
-    setCentralWidget(splitter);
+    main_splitter_ = new QSplitter(Qt::Horizontal, this);
+    main_splitter_->setObjectName("mainSplitter");
+    setCentralWidget(main_splitter_);
 
-    auto* parameters_scroll = new QScrollArea(splitter);
+    auto* parameters_scroll = new QScrollArea(main_splitter_);
     parameters_scroll->setWidgetResizable(true);
     parameters_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     parameters_scroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
@@ -307,7 +308,7 @@ MainWindow::MainWindow(QWidget* parent)
     parameters_layout->addWidget(view_group);
     parameters_layout->addStretch();
 
-    auto* preview_scroll = new QScrollArea(splitter);
+    auto* preview_scroll = new QScrollArea(main_splitter_);
     preview_scroll->setWidgetResizable(false);
     preview_scroll->setAlignment(Qt::AlignCenter);
     preview_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
@@ -316,7 +317,7 @@ MainWindow::MainWindow(QWidget* parent)
     preview_->set_document(&document_);
     preview_scroll->setWidget(preview_);
 
-    auto* layers_panel = new QWidget(splitter);
+    auto* layers_panel = new QWidget(main_splitter_);
     auto* layers_layout = new QVBoxLayout(layers_panel);
     layers_layout->addWidget(new QLabel("Layers", layers_panel));
     layers_ = new QListWidget(layers_panel);
@@ -336,8 +337,7 @@ MainWindow::MainWindow(QWidget* parent)
     add_menu->addAction("Epitrochoid", this, [this] {
         add_trochoid(document::CurveType::Epitrochoid);
     });
-    for (const auto* unavailable : {
-             "Lissajous", "Harmonograph", "Spirograph"}) {
+    for (const auto* unavailable : {"Lissajous", "Harmonograph"}) {
         add_menu->addAction(unavailable)->setEnabled(false);
     }
     add_button->setMenu(add_menu);
@@ -352,10 +352,10 @@ MainWindow::MainWindow(QWidget* parent)
     layer_actions->addWidget(delete_button_);
     layers_layout->addLayout(layer_actions);
 
-    splitter->setStretchFactor(0, 0);
-    splitter->setStretchFactor(1, 1);
-    splitter->setStretchFactor(2, 0);
-    splitter->setSizes({280, 640, 280});
+    main_splitter_->setStretchFactor(0, 0);
+    main_splitter_->setStretchFactor(1, 1);
+    main_splitter_->setStretchFactor(2, 0);
+    main_splitter_->setSizes({280, 640, 280});
 
     connect(radius_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(page_width_, &QDoubleSpinBox::valueChanged, this, [this] { update_document_settings(); });
@@ -417,12 +417,17 @@ MainWindow::MainWindow(QWidget* parent)
     if (!geometry.isEmpty()) {
         restoreGeometry(geometry);
     }
+    const auto splitter_state = settings.value("mainWindow/splitterState").toByteArray();
+    if (!splitter_state.isEmpty()) {
+        main_splitter_->restoreState(splitter_state);
+    }
 }
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
     QSettings settings;
     settings.setValue("mainWindow/geometry", saveGeometry());
+    settings.setValue("mainWindow/splitterState", main_splitter_->saveState());
     QMainWindow::closeEvent(event);
 }
 

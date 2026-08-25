@@ -22,8 +22,6 @@ std::string curve_type_name(const CurveType type)
         return "Lissajous";
     case CurveType::Harmonograph:
         return "Harmonograph";
-    case CurveType::Spirograph:
-        return "Spirograph";
     case CurveType::Count:
         break;
     }

@@ -11,7 +11,6 @@ It combines a live drawing canvas, an editable layer stack, and curve-specific c
 - Hypotrochoids and epitrochoids
 - Lissajous curves
 - Harmonographs
-- A physical **Spirograph** mode using wheel and hole parameters familiar to users of the drawing toy
 
 The equations and the meaning of their parameters will be shown in the interface and documented.
 
