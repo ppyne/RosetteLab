@@ -23,7 +23,7 @@ The equations and the meaning of their parameters will be shown in the interface
 4. Hide or show layers with an eye control.
 5. Lock layers to prevent accidental parameter changes.
 6. Combine stroke, fill, opacity, fill rule, and blend modes.
-7. Save the complete editable composition as a RosetteLab SVG.
+7. Save the complete editable composition as a RosetteLab SVG.\n8. Export the composition to PNG, JPEG, or vector PDF from **File → Export**.
 
 RosetteLab will only open SVG files containing the RosetteLab metadata required to reconstruct the document. Ordinary SVG files remain import/export candidates rather than editable RosetteLab project files.
 
