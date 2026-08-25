@@ -38,6 +38,8 @@ The main window contains three primary regions:
    - Recalls the selected layer's parameters in the editor.
    - Provides visibility and lock controls.
    - Supports add, duplicate, rename, and delete operations.
+   - Creating a layer prompts for its name, prefilled with a descriptive automatic name derived from the curve family and significant parameters.
+   - Automatic names track parameter changes; once the user enters a custom name, it remains unchanged until explicitly renamed.
 
 The layout must remain usable on laptop-sized displays. Resizable panes and sensible minimum sizes are required.
 
