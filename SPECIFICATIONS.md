@@ -38,8 +38,9 @@ The main window contains three primary regions:
    - Recalls the selected layer's parameters in the editor.
    - Provides visibility and lock controls.
    - Supports add, duplicate, rename, and delete operations.
-   - Creating a layer prompts for its name, prefilled with a descriptive automatic name derived from the curve family and significant parameters.
-   - Automatic names track parameter changes; once the user enters a custom name, it remains unchanged until explicitly renamed.
+   - Creating a layer prompts for its name, prefilled as `Curve type N`, where the type is the English curve-family name and (N) is the next number for that family (for example, `Polar rose 1`, `Polar rose 2`, or `Lissajous 1`).
+   - Default names do not change when mathematical parameters change.
+   - A user-defined name remains unchanged until explicitly renamed.
 
 The layout must remain usable on laptop-sized displays. Resizable panes and sensible minimum sizes are required.
 
