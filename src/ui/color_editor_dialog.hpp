@@ -12,6 +12,8 @@ class QSpinBox;
 
 namespace rosettelab::ui {
 
+class ColorPreviewButton;
+
 class ColorEditorDialog final : public QDialog {
 public:
     ColorEditorDialog(QColor initial_color, QString title, QWidget* parent = nullptr);
@@ -35,8 +37,7 @@ private:
     QComboBox* format_{};
     std::array<QLabel*, 4> channel_labels_{};
     std::array<QSpinBox*, 4> channels_{};
-    QPushButton* preview_{};
+    ColorPreviewButton* preview_{};
 };
 
 } // namespace rosettelab::ui
-
