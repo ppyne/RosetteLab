@@ -17,9 +17,9 @@ PreviewWidget::PreviewWidget(QWidget* parent)
     update_canvas_size();
 }
 
-void PreviewWidget::set_parameters(const curves::PolarRoseParameters& parameters)
+void PreviewWidget::set_document(const document::Document* document)
 {
-    parameters_ = parameters;
+    document_ = document;
     update();
 }
 
@@ -62,42 +62,54 @@ void PreviewWidget::paintEvent(QPaintEvent*)
     painter.setPen(QPen(QColor(0, 0, 0, 45), 1.0));
     painter.setBrush(Qt::white);
     painter.drawRect(page_rect);
-    core::BezierPath curve;
-    try {
-        curve = curves::generate_polar_rose_bezier(parameters_, curve_tolerance_);
-    } catch (const std::exception&) {
-        return;
-    }
-
-    if (curve.segments.empty()) {
+    if (document_ == nullptr) {
         return;
     }
 
     painter.save();
     painter.setClipRect(page_rect.adjusted(1.0, 1.0, -1.0, -1.0));
 
-    QPainterPath path;
-    const auto& first = curve.segments.front().start;
-    path.moveTo(first.x * document_scale, first.y * document_scale);
-    for (const auto& segment : curve.segments) {
-        path.cubicTo(
-            segment.control1.x * document_scale,
-            segment.control1.y * document_scale,
-            segment.control2.x * document_scale,
-            segment.control2.y * document_scale,
-            segment.end.x * document_scale,
-            segment.end.y * document_scale);
-    }
-    if (curve.closed) {
-        path.closeSubpath();
-    }
-
     painter.translate(page_rect.center());
     QPen pen(Qt::black);
     pen.setWidthF(1.5);
     painter.setPen(pen);
     painter.setBrush(Qt::NoBrush);
-    painter.drawPath(path);
+    for (const auto& layer : document_->layers()) {
+        if (!layer.visible) {
+            continue;
+        }
+        const auto* parameters = std::get_if<curves::PolarRoseParameters>(&layer.parameters);
+        if (parameters == nullptr) {
+            continue;
+        }
+
+        core::BezierPath curve;
+        try {
+            curve = curves::generate_polar_rose_bezier(*parameters, curve_tolerance_);
+        } catch (const std::exception&) {
+            continue;
+        }
+        if (curve.segments.empty()) {
+            continue;
+        }
+
+        QPainterPath path;
+        const auto& first = curve.segments.front().start;
+        path.moveTo(first.x * document_scale, first.y * document_scale);
+        for (const auto& segment : curve.segments) {
+            path.cubicTo(
+                segment.control1.x * document_scale,
+                segment.control1.y * document_scale,
+                segment.control2.x * document_scale,
+                segment.control2.y * document_scale,
+                segment.end.x * document_scale,
+                segment.end.y * document_scale);
+        }
+        if (curve.closed) {
+            path.closeSubpath();
+        }
+        painter.drawPath(path);
+    }
     painter.restore();
 }
 
