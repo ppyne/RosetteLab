@@ -44,10 +44,15 @@ void test_save_open_round_trip()
     layer.appearance.fill_enabled = true;
     layer.appearance.fill = {0.1, 0.2, 0.3, 0.4};
     layer.appearance.blend_mode = rosettelab::document::BlendMode::Multiply;
+    rosettelab::curves::EllipseParameters ellipse_parameters;
+    ellipse_parameters.radius_x = 75.0;
+    ellipse_parameters.radius_y = 25.0;
+    ellipse_parameters.rotation_degrees = 15.0;
+    source.add_ellipse(ellipse_parameters, "Tilted ellipse");
 
     const auto text = rosettelab::svg::serialize_rosettelab_svg(source);
     const auto loaded = rosettelab::svg::parse_rosettelab_svg(QByteArray::fromStdString(text));
-    require(loaded.layers().size() == 1, "one layer should round-trip");
+    require(loaded.layers().size() == 2, "both curve families should round-trip");
     require(loaded.settings().page_width == 297.0 && loaded.settings().page_height == 210.0,
             "page dimensions should round-trip");
     require(color_close(loaded.settings().background, source.settings().background),
@@ -64,6 +69,13 @@ void test_save_open_round_trip()
             "fraction mode should round-trip");
     require(restored_parameters.numerator == 2 && restored_parameters.denominator == 3,
             "exact fraction should round-trip");
+    const auto& restored_ellipse = loaded.layers()[1];
+    require(restored_ellipse.type == rosettelab::document::CurveType::Ellipse,
+            "ellipse type should round-trip");
+    const auto& ellipse = std::get<rosettelab::curves::EllipseParameters>(restored_ellipse.parameters);
+    require(ellipse.radius_x == 75.0 && ellipse.radius_y == 25.0 &&
+            ellipse.rotation_degrees == 15.0,
+            "ellipse parameters should round-trip");
 }
 
 void test_rejects_ordinary_or_unsafe_svg()
