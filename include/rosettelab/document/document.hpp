@@ -48,6 +48,7 @@ public:
     [[nodiscard]] CurveLayer* duplicate_layer(
         LayerId id,
         std::optional<std::string> name = std::nullopt);
+    [[nodiscard]] bool import_layer(CurveLayer layer);
 
     [[nodiscard]] bool remove_layer(LayerId id);
     [[nodiscard]] bool move_layer(std::size_t from, std::size_t to);
