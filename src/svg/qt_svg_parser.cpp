@@ -141,6 +141,29 @@ void parse_curve_metadata(
         required_attribute(attributes, "bezier-tolerance"), "bezier-tolerance");
 }
 
+void parse_curve_metadata(
+    const QXmlStreamAttributes& attributes,
+    curves::TrochoidParameters& parameters)
+{
+    parameters.fixed_radius = parse_double(
+        required_attribute(attributes, "fixed-radius"), "fixed-radius");
+    parameters.rolling_radius = parse_double(
+        required_attribute(attributes, "rolling-radius"), "rolling-radius");
+    parameters.pen_offset = parse_double(
+        required_attribute(attributes, "pen-offset"), "pen-offset");
+    parameters.rotation_degrees = parse_double(
+        required_attribute(attributes, "rotation-degrees"), "rotation-degrees");
+    const auto mode = required_attribute(attributes, "trace-mode");
+    if (mode == "complete") parameters.trace_mode = curves::TraceMode::Complete;
+    else if (mode == "limited") parameters.trace_mode = curves::TraceMode::Limited;
+    else throw parse_error("Unsupported trochoid trace mode");
+    parameters.turns = parse_double(required_attribute(attributes, "turns"), "turns");
+    parameters.close_limited_path = parse_boolean(
+        required_attribute(attributes, "close-limited-path"), "close-limited-path");
+    parameters.bezier_tolerance = parse_double(
+        required_attribute(attributes, "bezier-tolerance"), "bezier-tolerance");
+}
+
 void parse_path_appearance(
     const QXmlStreamAttributes& attributes,
     document::LayerAppearance& appearance)
@@ -175,15 +198,22 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
     const auto type = required_metadata_attribute(group_attributes, metadata_ns, "type");
     if (type == "polar-rose") layer.type = document::CurveType::PolarRose;
     else if (type == "ellipse") layer.type = document::CurveType::Ellipse;
+    else if (type == "hypotrochoid") layer.type = document::CurveType::Hypotrochoid;
+    else if (type == "epitrochoid") layer.type = document::CurveType::Epitrochoid;
     else throw parse_error("Unsupported RosetteLab curve type");
     layer.visible = parse_boolean(
         required_metadata_attribute(group_attributes, metadata_ns, "visible"), "visible");
     layer.locked = parse_boolean(
         required_metadata_attribute(group_attributes, metadata_ns, "locked"), "locked");
 
-    document::CurveParameters parameters = layer.type == document::CurveType::PolarRose
-        ? document::CurveParameters{curves::PolarRoseParameters{}}
-        : document::CurveParameters{curves::EllipseParameters{}};
+    document::CurveParameters parameters;
+    if (layer.type == document::CurveType::PolarRose) {
+        parameters = curves::PolarRoseParameters{};
+    } else if (layer.type == document::CurveType::Ellipse) {
+        parameters = curves::EllipseParameters{};
+    } else {
+        parameters = curves::TrochoidParameters{};
+    }
     bool found_curve = false;
     bool found_path = false;
     while (reader.readNextStartElement()) {
