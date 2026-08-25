@@ -255,12 +255,15 @@ User-facing precision presets map to documented geometric tolerances, with an op
 
 ### 8.3 Color input
 
-Two synchronized representations are required:
+Three synchronized representations are required:
 
 - RGBA;
-- HSLA.
+- HSLA;
+- web hexadecimal as `#RRGGBB` or `#RRGGBBAA`.
 
-The hexadecimal field supports typing and clipboard copy/paste. A missing leading `#` is inserted automatically, and a six-digit RGB value is normalized to eight digits by appending the opaque alpha component `FF`. Whenever a complete valid hexadecimal value changes, the RGBA or HSLA channels and the visual preview update immediately; edits made through numeric channels or the graphical picker update the hexadecimal field in return.\n\nA graphical picker may be added where the platform toolkit supports it consistently. Numeric entry must remain available. The persistent Background, Stroke color, and Fill color controls in the settings panel, as well as the color-preview strip at the bottom of every corresponding selector, display transparent or translucent colors over a checkerboard made of alternating white and 50% grey (`RGB 127, 127, 127`) squares. Its `#RRGGBBAA - Choose visually...` label uses white text on a dark composited preview and black text on a light composited preview, taking alpha into account.
+The hexadecimal field supports typing and clipboard copy/paste. A missing leading `#` is inserted automatically, and a six-digit RGB value is normalized to eight digits by appending the opaque alpha component `FF`. Whenever a complete valid hexadecimal value changes, the RGBA or HSLA channels and the visual preview update immediately; edits made through numeric channels or the graphical picker update the hexadecimal field in return.
+
+A graphical picker may be added where the platform toolkit supports it consistently. Numeric entry must remain available. The persistent Background, Stroke color, and Fill color controls in the settings panel, as well as the color-preview strip at the bottom of every corresponding selector, display transparent or translucent colors over a checkerboard made of alternating white and 50% grey (`RGB 127, 127, 127`) squares. Its `#RRGGBBAA - Choose visually...` label uses white text on a dark composited preview and black text on a light composited preview, taking alpha into account.
 
 ### 8.4 Layer rendering
 
