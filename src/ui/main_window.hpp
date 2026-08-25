@@ -7,6 +7,7 @@
 #include <QMainWindow>
 
 class QCheckBox;
+class QCloseEvent;
 class QComboBox;
 class QDoubleSpinBox;
 class QGroupBox;
@@ -23,6 +24,9 @@ class PreviewWidget;
 class MainWindow final : public QMainWindow {
 public:
     explicit MainWindow(QWidget* parent = nullptr);
+
+protected:
+    void closeEvent(QCloseEvent* event) override;
 
 private:
     void add_polar_rose();
