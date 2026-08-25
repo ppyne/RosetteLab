@@ -23,7 +23,7 @@ private:
     QDoubleSpinBox* k_{};
     QDoubleSpinBox* phase_{};
     QDoubleSpinBox* rotation_{};
-    QSpinBox* samples_{};
+    QDoubleSpinBox* tolerance_{};
     QSpinBox* zoom_{};
 };
 
