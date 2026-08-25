@@ -48,7 +48,7 @@ void test_save_open_round_trip()
     ellipse_parameters.radius_x = 75.0;
     ellipse_parameters.radius_y = 25.0;
     ellipse_parameters.rotation_degrees = 15.0;
-    source.add_ellipse(ellipse_parameters, "Tilted ellipse");
+    static_cast<void>(source.add_ellipse(ellipse_parameters, "Tilted ellipse"));
 
     const auto text = rosettelab::svg::serialize_rosettelab_svg(source);
     const auto loaded = rosettelab::svg::parse_rosettelab_svg(QByteArray::fromStdString(text));
