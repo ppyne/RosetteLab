@@ -28,7 +28,7 @@ RosetteLab will only open SVG files containing the RosetteLab metadata required 
 
 ## Interface
 
-The application and its documentation are written in English. The planned desktop interface uses **GTK 4** and follows the host operating system theme where supported.
+The application and its documentation are written in English. The planned desktop interface uses **Qt 6 Widgets** and follows the host operating system theme where supported.
 
 The main window is divided into three working areas:
 
@@ -56,7 +56,7 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for the product requirements and stag
 
 ## Status
 
-The project is currently in specification and architecture setup. The first implementation milestone will establish the GTK application shell, the document model, SVG metadata round-tripping, and a live polar-rose preview.
+The project is currently in specification and architecture setup. The first implementation milestone will establish the Qt application shell, the document model, SVG metadata round-tripping, and a live polar-rose preview.
 
 ## License
 
