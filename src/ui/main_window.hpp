@@ -32,6 +32,7 @@ protected:
 private:
     void add_polar_rose();
     void add_ellipse();
+    void add_trochoid(document::CurveType type);
     void open_file();
     void save_as();
     void rebuild_layer_list();
@@ -50,6 +51,7 @@ private:
     void update_document_settings();
     void load_document_settings();
     void refresh_k_mode_controls();
+    void refresh_trochoid_trace_controls();
     void refresh_color_buttons();
     void refresh_layer_actions();
     void refresh_layer_preview(document::LayerId id);
@@ -78,6 +80,15 @@ private:
     QDoubleSpinBox* ellipse_radius_y_{};
     QDoubleSpinBox* ellipse_rotation_{};
     QDoubleSpinBox* ellipse_tolerance_{};
+    QGroupBox* trochoid_group_{};
+    QDoubleSpinBox* trochoid_fixed_radius_{};
+    QDoubleSpinBox* trochoid_rolling_radius_{};
+    QDoubleSpinBox* trochoid_pen_offset_{};
+    QDoubleSpinBox* trochoid_rotation_{};
+    QComboBox* trochoid_trace_mode_{};
+    QDoubleSpinBox* trochoid_turns_{};
+    QCheckBox* trochoid_close_limited_{};
+    QDoubleSpinBox* trochoid_tolerance_{};
     QGroupBox* appearance_group_{};
     ColorPreviewButton* stroke_color_button_{};
     ColorPreviewButton* fill_color_button_{};
