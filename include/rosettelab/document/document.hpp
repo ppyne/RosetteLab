@@ -2,6 +2,7 @@
 
 #include "rosettelab/curves/ellipse.hpp"
 #include "rosettelab/curves/polar_rose.hpp"
+#include "rosettelab/curves/trochoid.hpp"
 #include "rosettelab/document/appearance.hpp"
 
 #include <array>
@@ -28,7 +29,10 @@ enum class CurveType : std::size_t {
 [[nodiscard]] std::string curve_type_name(CurveType type);
 
 using LayerId = std::uint64_t;
-using CurveParameters = std::variant<curves::PolarRoseParameters, curves::EllipseParameters>;
+using CurveParameters = std::variant<
+    curves::PolarRoseParameters,
+    curves::EllipseParameters,
+    curves::TrochoidParameters>;
 
 struct CurveLayer {
     LayerId id{};
@@ -56,6 +60,10 @@ public:
         std::optional<std::string> name = std::nullopt);
     [[nodiscard]] CurveLayer& add_ellipse(
         const curves::EllipseParameters& parameters = {},
+        std::optional<std::string> name = std::nullopt);
+    [[nodiscard]] CurveLayer& add_trochoid(
+        CurveType type,
+        const curves::TrochoidParameters& parameters = {},
         std::optional<std::string> name = std::nullopt);
 
     [[nodiscard]] std::string suggested_default_name(CurveType type) const;
