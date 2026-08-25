@@ -88,6 +88,26 @@ void test_ellipse_contains_editable_metadata_and_beziers()
     require(contains(svg, " C "), "ellipse should render as cubic Bezier segments");
 }
 
+void test_trochoid_contains_trace_metadata()
+{
+    rosettelab::document::Document document;
+    rosettelab::curves::TrochoidParameters parameters;
+    parameters.fixed_radius = 32.0;
+    parameters.rolling_radius = 63.0;
+    parameters.pen_offset = 44.5;
+    parameters.trace_mode = rosettelab::curves::TraceMode::Limited;
+    parameters.turns = 2.0;
+    static_cast<void>(document.add_trochoid(
+        rosettelab::document::CurveType::Epitrochoid, parameters));
+    const auto svg = rosettelab::svg::serialize_rosettelab_svg(document);
+    require(contains(svg, "rosettelab:type=\"epitrochoid\""), "trochoid type should be stored");
+    require(contains(svg, "fixed-radius=\"32\""), "fixed radius should be stored");
+    require(contains(svg, "rolling-radius=\"63\""), "rolling radius should be stored");
+    require(contains(svg, "pen-offset=\"44.5\""), "pen offset should be stored");
+    require(contains(svg, "trace-mode=\"limited\""), "trace mode should be stored");
+    require(contains(svg, "turns=\"2\""), "limited turn count should be stored");
+}
+
 } // namespace
 
 int main()
@@ -96,6 +116,7 @@ int main()
         test_native_svg_contains_geometry_and_metadata();
         test_hidden_layer_remains_in_project();
         test_ellipse_contains_editable_metadata_and_beziers();
+        test_trochoid_contains_trace_metadata();
         std::cout << "All RosetteLab SVG serializer tests passed\n";
         return 0;
     } catch (const std::exception& error) {
