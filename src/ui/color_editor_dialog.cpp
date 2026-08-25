@@ -55,13 +55,12 @@ ColorEditorDialog::ColorEditorDialog(QColor initial_color, QString title, QWidge
     hex_->setToolTip("Web hexadecimal color: #RRGGBB or #RRGGBBAA. Opaque FF is added to RGB values.");
     hex_->setValidator(new QRegularExpressionValidator(
         QRegularExpression(QStringLiteral("#?[0-9A-Fa-f]{0,8}")), hex_));
-    form->addRow("Hex color", hex_);
-
     for (std::size_t index = 0; index < channels_.size(); ++index) {
         channel_labels_[index] = new QLabel(this);
         channels_[index] = new QSpinBox(this);
         form->addRow(channel_labels_[index], channels_[index]);
     }
+    form->addRow("Hex color", hex_);
     root->addLayout(form);
 
     preview_ = new ColorPreviewButton(this);
