@@ -1,11 +1,11 @@
 #include "ui/main_window.hpp"
 
+#include "ui/color_editor_dialog.hpp"
 #include "ui/layer_list_item_widget.hpp"
 #include "ui/preview_widget.hpp"
 
 #include <QAbstractItemModel>
 #include <QCheckBox>
-#include <QColorDialog>
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
@@ -343,10 +343,9 @@ void MainWindow::load_active_layer()
 
 void MainWindow::choose_stroke_color()
 {
-    const auto color = QColorDialog::getColor(
-        stroke_color_, this, "Stroke color", QColorDialog::ShowAlphaChannel);
-    if (color.isValid()) {
-        stroke_color_ = color;
+    ColorEditorDialog dialog(stroke_color_, "Stroke color", this);
+    if (dialog.exec() == QDialog::Accepted) {
+        stroke_color_ = dialog.color();
         refresh_color_buttons();
         update_appearance();
     }
@@ -354,10 +353,9 @@ void MainWindow::choose_stroke_color()
 
 void MainWindow::choose_fill_color()
 {
-    const auto color = QColorDialog::getColor(
-        fill_color_, this, "Fill color", QColorDialog::ShowAlphaChannel);
-    if (color.isValid()) {
-        fill_color_ = color;
+    ColorEditorDialog dialog(fill_color_, "Fill color", this);
+    if (dialog.exec() == QDialog::Accepted) {
+        fill_color_ = dialog.color();
         refresh_color_buttons();
         update_appearance();
     }
