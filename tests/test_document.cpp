@@ -64,6 +64,27 @@ void test_layer_reordering()
     require(!document.move_layer(3, 0), "out-of-range move should fail");
 }
 
+void test_layer_duplication()
+{
+    rosettelab::document::Document document;
+    auto parameters = rosettelab::curves::PolarRoseParameters{};
+    parameters.k = 11.0;
+    const auto source_id = document.add_polar_rose(parameters, "Source").id;
+    static_cast<void>(document.set_layer_visible(source_id, false));
+    static_cast<void>(document.set_layer_locked(source_id, true));
+
+    const auto* duplicate = document.duplicate_layer(source_id);
+    require(duplicate != nullptr, "existing layer should be duplicable");
+    require(duplicate->id != source_id, "duplicate should receive a new ID");
+    require(duplicate->name == "Polar rose 2", "duplicate should receive the next default name");
+    require(!duplicate->visible, "duplicate should preserve visibility");
+    require(!duplicate->locked, "duplicate should start unlocked");
+    require(std::get<rosettelab::curves::PolarRoseParameters>(duplicate->parameters).k == 11.0,
+            "duplicate should preserve mathematical parameters");
+    require(document.layers()[1].id == duplicate->id, "duplicate should follow its source");
+    require(document.duplicate_layer(999999) == nullptr, "missing layer should not be duplicated");
+}
+
 } // namespace
 
 int main()
@@ -72,6 +93,7 @@ int main()
         test_default_names_and_stable_ids();
         test_custom_name_and_layer_state();
         test_layer_reordering();
+        test_layer_duplication();
         std::cout << "All RosetteLab document tests passed\n";
         return 0;
     } catch (const std::exception& error) {
