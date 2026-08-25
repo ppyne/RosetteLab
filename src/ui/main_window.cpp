@@ -5,6 +5,7 @@
 #include "ui/layer_list_item_widget.hpp"
 #include "ui/preview_widget.hpp"
 
+#include "render/document_renderer.hpp"
 #include "rosettelab/svg/svg_serializer.hpp"
 #include "svg/qt_svg_parser.hpp"
 
@@ -21,6 +22,7 @@
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QInputDialog>
+#include <QImage>
 #include <QKeySequence>
 #include <QLabel>
 #include <QListWidget>
@@ -28,6 +30,10 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPageLayout>
+#include <QPageSize>
+#include <QPainter>
+#include <QPdfWriter>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSettings>
@@ -91,6 +97,10 @@ MainWindow::MainWindow(QWidget* parent)
     auto* save_as_action = file_menu->addAction("Save As...");
     save_as_action->setShortcut(QKeySequence::SaveAs);
     connect(save_as_action, &QAction::triggered, this, [this] { save_as(); });
+    auto* export_menu = file_menu->addMenu("Export");
+    export_menu->addAction("To PNG...", this, [this] { export_raster(false); });
+    export_menu->addAction("To JPEG...", this, [this] { export_raster(true); });
+    export_menu->addAction("To PDF...", this, [this] { export_pdf(); });
 
     auto* splitter = new QSplitter(Qt::Horizontal, this);
     setCentralWidget(splitter);
@@ -514,6 +524,90 @@ void MainWindow::save_as()
         return;
     }
     setWindowTitle(QStringLiteral("RosetteLab - %1").arg(QFileInfo(path).fileName()));
+}
+
+void MainWindow::export_raster(const bool jpeg)
+{
+    bool accepted = false;
+    const int dpi = QInputDialog::getInt(
+        this, jpeg ? "Export JPEG" : "Export PNG", "Resolution", 300, 72, 1200, 1, &accepted);
+    if (!accepted) {
+        return;
+    }
+
+    constexpr double millimetres_per_inch = 25.4;
+    const auto width = static_cast<int>(std::lround(
+        document_.settings().page_width / millimetres_per_inch * dpi));
+    const auto height = static_cast<int>(std::lround(
+        document_.settings().page_height / millimetres_per_inch * dpi));
+    constexpr qint64 maximum_pixels = 100'000'000;
+    if (width <= 0 || height <= 0 || width > 32767 || height > 32767 ||
+        static_cast<qint64>(width) * height > maximum_pixels) {
+        QMessageBox::warning(
+            this, "Export dimensions too large",
+            QStringLiteral("The requested export would be %1 × %2 pixels. Reduce the DPI or page size.")
+                .arg(width).arg(height));
+        return;
+    }
+
+    auto path = QFileDialog::getSaveFileName(
+        this,
+        jpeg ? "Export JPEG" : "Export PNG",
+        {},
+        jpeg ? "JPEG image (*.jpg *.jpeg)" : "PNG image (*.png)");
+    if (path.isEmpty()) {
+        return;
+    }
+    if (jpeg && !path.endsWith(".jpg", Qt::CaseInsensitive) &&
+        !path.endsWith(".jpeg", Qt::CaseInsensitive)) {
+        path += ".jpg";
+    } else if (!jpeg && !path.endsWith(".png", Qt::CaseInsensitive)) {
+        path += ".png";
+    }
+
+    QImage image(width, height, QImage::Format_ARGB32_Premultiplied);
+    image.fill(jpeg ? Qt::white : Qt::transparent);
+    image.setDotsPerMeterX(static_cast<int>(std::lround(dpi / 0.0254)));
+    image.setDotsPerMeterY(static_cast<int>(std::lround(dpi / 0.0254)));
+    {
+        QPainter painter(&image);
+        render::render_document(painter, document_, QRectF(0, 0, width, height));
+    }
+    if (!image.save(path, jpeg ? "JPEG" : "PNG", jpeg ? 95 : -1)) {
+        QMessageBox::critical(this, "Unable to export", "Qt could not write the selected image file.");
+    }
+}
+
+void MainWindow::export_pdf()
+{
+    auto path = QFileDialog::getSaveFileName(this, "Export PDF", {}, "PDF document (*.pdf)");
+    if (path.isEmpty()) {
+        return;
+    }
+    if (!path.endsWith(".pdf", Qt::CaseInsensitive)) {
+        path += ".pdf";
+    }
+
+    QPdfWriter writer(path);
+    writer.setTitle("RosetteLab export");
+    writer.setCreator("RosetteLab");
+    writer.setResolution(300);
+    const QPageSize page_size(
+        QSizeF(document_.settings().page_width, document_.settings().page_height),
+        QPageSize::Millimeter,
+        "RosetteLab page",
+        QPageSize::ExactMatch);
+    writer.setPageLayout(QPageLayout(
+        page_size, QPageLayout::Portrait, QMarginsF(0, 0, 0, 0), QPageLayout::Millimeter));
+
+    QPainter painter;
+    if (!painter.begin(&writer)) {
+        QMessageBox::critical(this, "Unable to export", "Qt could not create the selected PDF file.");
+        return;
+    }
+    render::render_document(
+        painter, document_, QRectF(0, 0, writer.width(), writer.height()));
+    painter.end();
 }
 
 void MainWindow::add_polar_rose()
