@@ -16,6 +16,26 @@ QColor to_qcolor(const document::RgbaColor& color)
     return QColor::fromRgbF(color.red, color.green, color.blue, color.alpha);
 }
 
+void draw_checkerboard(QPainter& painter, const QRectF& area)
+{
+    constexpr int square = 12;
+    painter.save();
+    painter.setClipRect(area);
+    const int left = static_cast<int>(std::floor(area.left()));
+    const int top = static_cast<int>(std::floor(area.top()));
+    const int right = static_cast<int>(std::ceil(area.right()));
+    const int bottom = static_cast<int>(std::ceil(area.bottom()));
+    for (int y = top; y < bottom; y += square) {
+        for (int x = left; x < right; x += square) {
+            const bool grey = ((x - left) / square + (y - top) / square) % 2 != 0;
+            painter.fillRect(
+                QRect(x, y, square, square),
+                grey ? QColor(127, 127, 127) : QColor(255, 255, 255));
+        }
+    }
+    painter.restore();
+}
+
 QPainter::CompositionMode composition_mode(const document::BlendMode mode)
 {
     using enum document::BlendMode;
@@ -98,10 +118,15 @@ void PreviewWidget::paintEvent(QPaintEvent*)
         page_size.width(),
         page_size.height());
 
+    const auto page_background = document_ != nullptr
+        ? to_qcolor(document_->settings().background)
+        : QColor(Qt::white);
+    if (page_background.alpha() < 255) {
+        draw_checkerboard(painter, page_rect);
+    }
+    painter.fillRect(page_rect, page_background);
     painter.setPen(QPen(QColor(0, 0, 0, 45), 1.0));
-    painter.setBrush(document_ != nullptr
-        ? QBrush(to_qcolor(document_->settings().background))
-        : QBrush(Qt::white));
+    painter.setBrush(Qt::NoBrush);
     painter.drawRect(page_rect);
     if (document_ == nullptr) {
         return;
