@@ -74,22 +74,16 @@ core::BezierPath layer_path(const document::CurveLayer& layer)
     return {};
 }
 
-QPixmap layer_preview(const document::CurveLayer& layer)
+QPixmap layer_preview(
+    const document::CurveLayer& layer,
+    const document::RgbaColor& document_background)
 {
     constexpr int size = 28;
-    constexpr int square = 4;
     QPixmap pixmap(size, size);
-    pixmap.fill(Qt::transparent);
+    auto background = to_qcolor(document_background);
+    background.setAlpha(255);
+    pixmap.fill(background);
     QPainter painter(&pixmap);
-    for (int y = 0; y < size; y += square) {
-        for (int x = 0; x < size; x += square) {
-            painter.fillRect(
-                QRect(x, y, square, square),
-                ((x / square + y / square) % 2 != 0)
-                    ? QColor(127, 127, 127)
-                    : QColor(255, 255, 255));
-        }
-    }
 
     core::BezierPath curve;
     try {
@@ -130,7 +124,12 @@ QPixmap layer_preview(const document::CurveLayer& layer)
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setOpacity(std::clamp(layer.appearance.opacity, 0.0, 1.0));
     QPen pen(to_qcolor(layer.appearance.stroke));
-    pen.setWidthF(std::clamp(layer.appearance.stroke_width * scale, 1.0, 3.0));
+    constexpr double minimum_preview_stroke = 0.8;
+    constexpr double maximum_preview_stroke = 4.0;
+    pen.setWidthF(std::clamp(
+        layer.appearance.stroke_width * scale,
+        minimum_preview_stroke,
+        maximum_preview_stroke));
     painter.setPen(pen);
     painter.setBrush(layer.appearance.fill_enabled
         ? QBrush(to_qcolor(layer.appearance.fill))
@@ -220,9 +219,11 @@ void LayerListItemWidget::set_name(const QString& name)
     name_label_->set_full_text(name);
 }
 
-void LayerListItemWidget::set_layer_preview(const document::CurveLayer& layer)
+void LayerListItemWidget::set_layer_preview(
+    const document::CurveLayer& layer,
+    const document::RgbaColor& document_background)
 {
-    preview_label_->setPixmap(layer_preview(layer));
+    preview_label_->setPixmap(layer_preview(layer, document_background));
 }
 
 void LayerListItemWidget::set_visible_state(const bool visible)
