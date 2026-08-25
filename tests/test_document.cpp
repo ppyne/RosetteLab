@@ -111,6 +111,16 @@ void test_controlled_layer_import()
     require(next.name == "Polar rose 13", "default name should follow imported sequence");
 }
 
+void test_document_settings_defaults()
+{
+    rosettelab::document::Document document;
+    require(document.settings().page_width == 210.0, "default page width should be 210");
+    require(document.settings().page_height == 210.0, "default page height should be 210");
+    require(document.settings().unit == "mm", "default document unit should be millimetres");
+    require(document.settings().background == rosettelab::document::RgbaColor{1.0, 1.0, 1.0, 1.0},
+            "default page background should be opaque white");
+}
+
 } // namespace
 
 int main()
@@ -121,6 +131,7 @@ int main()
         test_layer_reordering();
         test_layer_duplication();
         test_controlled_layer_import();
+        test_document_settings_defaults();
         std::cout << "All RosetteLab document tests passed\n";
         return 0;
     } catch (const std::exception& error) {
