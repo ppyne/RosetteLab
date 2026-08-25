@@ -24,7 +24,7 @@ private:
     QDoubleSpinBox* phase_{};
     QDoubleSpinBox* rotation_{};
     QSpinBox* samples_{};
+    QSpinBox* zoom_{};
 };
 
 } // namespace rosettelab::ui
-
