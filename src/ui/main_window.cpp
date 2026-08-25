@@ -127,7 +127,9 @@ MainWindow::MainWindow(QWidget* parent)
     rename_button_ = new QPushButton("Rename", layers_panel);
     duplicate_button_ = new QPushButton("Duplicate", layers_panel);
     delete_button_ = new QPushButton("Delete", layers_panel);
-    lock_button_ = new QPushButton("Lock", layers_panel);
+    lock_button_ = new QPushButton("Unlock", layers_panel);
+    lock_button_->setFixedWidth(lock_button_->sizeHint().width());
+    lock_button_->setText("Lock");
     layer_actions->addWidget(rename_button_);
     layer_actions->addWidget(duplicate_button_);
     layer_actions->addWidget(delete_button_);
