@@ -127,7 +127,11 @@ Generation requirements:
 - no GUI calls;
 - cancellation support for expensive future jobs.
 
-The first renderer may use polylines or Cairo paths. SVG path simplification and Bézier fitting can be evaluated later without changing the curve API.
+The canonical representation of every supported smooth curve is preferentially an adaptive sequence of cubic Bézier segments. A dense polyline is not the normal export representation.
+
+Generators should expose analytical first derivatives when practical. A shared fitter constructs cubic segments from endpoint positions and tangents, measures their deviation against reference evaluations of the source equation, and recursively subdivides until the document-space tolerance is satisfied. Cusps, singularities, discontinuities, and inflection-sensitive intervals are explicit subdivision boundaries.
+
+Reference point sampling remains available for numerical validation and for exceptional curves that cannot be represented faithfully by the fitter. Preview and SVG serialization consume the same fitted path so they cannot diverge geometrically.
 
 ## 6. Preview rendering
 
