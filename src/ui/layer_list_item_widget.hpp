@@ -31,7 +31,9 @@ public:
 
     [[nodiscard]] document::LayerId layer_id() const noexcept { return layer_id_; }
     void set_name(const QString& name);
-    void set_layer_preview(const document::CurveLayer& layer);
+    void set_layer_preview(
+        const document::CurveLayer& layer,
+        const document::RgbaColor& document_background);
     void set_visible_state(bool visible);
     void set_locked_state(bool locked);
 
