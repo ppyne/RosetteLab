@@ -7,6 +7,7 @@ It combines a live drawing canvas, an editable layer stack, and curve-specific c
 ## Planned curve families
 
 - Polar roses
+- Ellipses
 - Hypotrochoids and epitrochoids
 - Lissajous curves
 - Harmonographs
@@ -79,7 +80,7 @@ ctest --test-dir build --output-on-failure
 
 ## Status
 
-The project is currently in specification and architecture setup. The first implementation milestone will establish the Qt application shell, the document model, SVG metadata round-tripping, and a live polar-rose preview.
+The project is under active development. The Qt application shell, editable layer model, polar-rose and ellipse Bézier rendering, appearance controls, and native SVG metadata round-tripping are implemented.
 
 ## License
 
