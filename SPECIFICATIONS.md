@@ -293,7 +293,7 @@ Initial export targets:
 - clean SVG without RosetteLab editing metadata;
 - PNG at configurable dimensions and scale.
 
-PDF export is deferred unless GTK's rendering stack provides a reliable low-cost path.
+PDF export is deferred unless Qt's rendering stack provides a reliable low-cost path.
 
 ## 10. Safety and validation
 
@@ -308,7 +308,7 @@ PDF export is deferred unless GTK's rendering stack provides a reliable low-cost
 
 - Keyboard navigation for all controls.
 - Accessible labels for eye, lock, layer, and color controls.
-- Host theme integration, including dark mode where GTK supports it.
+- Host theme integration, including dark mode through Qt's platform integration.
 - The main window should open in front when launched normally, without forcing permanent always-on-top behavior.
 - Primary target: macOS.
 - Secondary targets: Linux and Windows, subject to GTK packaging validation.
@@ -320,7 +320,7 @@ Platform-specific native widgets should be avoided unless isolated behind an abs
 ### 12.1 Milestone 0.1 — technical foundation
 
 - C++ project and build system;
-- GTK 4 application shell;
+- Qt 6 Widgets application shell;
 - basic three-pane layout;
 - document and layer data model;
 - polar rose generator;
