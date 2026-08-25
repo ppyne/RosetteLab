@@ -54,6 +54,29 @@ The native project format is SVG with namespaced RosetteLab metadata. The visibl
 
 See [SPECIFICATIONS.md](SPECIFICATIONS.md) for the product requirements and staged scope, and [ARCHITECTURE.md](ARCHITECTURE.md) for the initial technical direction.
 
+## Build from source
+
+Requirements:
+
+- a C++20 compiler;
+- CMake 3.20 or newer;
+- Qt 6.5 or newer with the Widgets module.
+
+```sh
+cmake -S . -B build
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
+./build/rosettelab
+```
+
+The mathematical core and its tests can be built without Qt:
+
+```sh
+cmake -S . -B build -DROSETTELAB_BUILD_GUI=OFF
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
+```
+
 ## Status
 
 The project is currently in specification and architecture setup. The first implementation milestone will establish the Qt application shell, the document model, SVG metadata round-tripping, and a live polar-rose preview.
