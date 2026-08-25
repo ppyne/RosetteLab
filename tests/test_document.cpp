@@ -72,6 +72,14 @@ void test_layer_duplication()
     const auto source_id = document.add_polar_rose(parameters, "Source").id;
     static_cast<void>(document.set_layer_visible(source_id, false));
     static_cast<void>(document.set_layer_locked(source_id, true));
+    auto* source = document.find_layer(source_id);
+    source->appearance.stroke = {0.2, 0.4, 0.8, 0.5};
+    source->appearance.stroke_width = 2.5;
+    source->appearance.fill_enabled = true;
+    source->appearance.fill_rule = rosettelab::document::FillRule::EvenOdd;
+    source->appearance.opacity = 0.75;
+    source->appearance.blend_mode = rosettelab::document::BlendMode::Multiply;
+    const auto expected_appearance = source->appearance;
 
     const auto* duplicate = document.duplicate_layer(source_id);
     require(duplicate != nullptr, "existing layer should be duplicable");
@@ -79,6 +87,8 @@ void test_layer_duplication()
     require(duplicate->name == "Polar rose 2", "duplicate should receive the next default name");
     require(!duplicate->visible, "duplicate should preserve visibility");
     require(!duplicate->locked, "duplicate should start unlocked");
+    require(duplicate->appearance == expected_appearance,
+            "duplicate should preserve all appearance properties");
     require(std::get<rosettelab::curves::PolarRoseParameters>(duplicate->parameters).k == 11.0,
             "duplicate should preserve mathematical parameters");
     require(document.layers()[1].id == duplicate->id, "duplicate should follow its source");
