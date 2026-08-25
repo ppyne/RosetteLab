@@ -42,7 +42,7 @@ The main window contains three primary regions:
    - Both glyph controls have stable dimensions, tooltips, keyboard access, and accessible names; changing state must never resize the layer panel.
    - Supports add, duplicate, rename, and delete operations.
    - The primary `Add…` command opens a curve-type selector rather than creating a predetermined family directly.
-   - The selector lists Polar rose, Hypotrochoid, Epitrochoid, Lissajous, Harmonograph, and Spirograph; only implemented families are enabled.
+   - The selector lists Polar rose, Ellipse, Hypotrochoid, Epitrochoid, Lissajous, Harmonograph, and Spirograph; only implemented families are enabled.
    - Creating a layer prompts for its name, prefilled as `Curve type N`, where the type is the English curve-family name and (N) is the next number for that family (for example, `Polar rose 1`, `Polar rose 2`, or `Lissajous 1`).
    - Default names do not change when mathematical parameters change.
    - A user-defined name remains unchanged until explicitly renamed.
@@ -78,7 +78,7 @@ A clickable unlocked or locked UTF-8 padlock glyph is the second control in the 
 
 ### 4.3 Reordering
 
-Layer rows are reorderable by drag and drop. The SVG paint order and RosetteLab metadata order must remain consistent.
+Layer rows are reorderable by drag and drop. The topmost painted layer is shown at the top of the list and the bottommost painted layer at the bottom. Internally, SVG elements remain serialized in standard paint order from bottom to top, while the UI presents the exact visual inverse. Drag-and-drop changes must keep both representations consistent.
 
 ## 5. Curve families
 
@@ -103,7 +103,26 @@ Initial parameters:
 
 The mathematical meaning of k, including the odd/even petal behavior, must be documented in the interface help. Decimal approximations such as 0.33 must never be silently interpreted as the exact fraction 1/3. RosetteLab must not forcibly close an incomplete decimal trace.
 
-### 5.2 Trochoid
+### 5.2 Ellipse
+
+Canonical form:
+
+\[
+x(t)=r_x\cos(t),\qquad y(t)=r_y\sin(t)
+\]
+
+The curve may then be rotated by an angle \(\alpha\) around its centre.
+
+Parameters:
+
+- horizontal radius \(r_x\);
+- vertical radius \(r_y\);
+- angular rotation;
+- adaptive Bézier tolerance in document units.
+
+Ellipses are represented preferentially as cubic Bézier arcs, use the common layer appearance controls, and preserve all parameters in native RosetteLab SVG metadata.
+
+### 5.3 Trochoid
 
 The family selector contains:
 
@@ -140,7 +159,7 @@ Parameters:
 - optional forced closure of a limited trace;
 - samples per revolution.
 
-### 5.3 Lissajous
+### 5.4 Lissajous
 
 Canonical form:
 
@@ -151,7 +170,7 @@ y(t)=A_y\sin(f_y t+\phi_y)
 
 Parameters include both amplitudes, both frequencies, phases, duration, and precision.
 
-### 5.4 Harmonograph
+### 5.5 Harmonograph
 
 The initial model uses damped oscillations on both axes:
 
@@ -167,7 +186,7 @@ Parameters include amplitudes, frequencies, phases, damping factors, duration, a
 
 More complete multi-pendulum models are explicitly deferred.
 
-### 5.5 Spirograph
+### 5.6 Spirograph
 
 This mode exposes terms familiar from a physical Spirograph rather than requiring abstract radii:
 
@@ -347,7 +366,7 @@ PDF export is deferred unless Qt's rendering stack provides a reliable low-cost 
 - Host theme integration, including dark mode through Qt's platform integration.
 - The main window should open in front when launched normally, without forcing permanent always-on-top behavior.
 - Primary target: macOS.
-- Secondary targets: Linux and Windows, subject to GTK packaging validation.
+- Secondary targets: Linux and Windows, subject to Qt packaging validation.
 
 Platform-specific native widgets should be avoided unless isolated behind an abstraction.
 
@@ -359,7 +378,7 @@ Platform-specific native widgets should be avoided unless isolated behind an abs
 - Qt 6 Widgets application shell;
 - basic three-pane layout;
 - document and layer data model;
-- polar rose generator;
+- polar rose and ellipse generators;
 - live preview;
 - unit tests for curve generation.
 
