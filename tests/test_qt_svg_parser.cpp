@@ -32,6 +32,9 @@ bool color_close(
 void test_save_open_round_trip()
 {
     rosettelab::document::Document source;
+    source.settings().page_width = 297.0;
+    source.settings().page_height = 210.0;
+    source.settings().background = {0.2, 0.3, 0.4, 0.5};
     auto parameters = rosettelab::curves::PolarRoseParameters{};
     parameters.k_mode = rosettelab::curves::PolarKMode::Fraction;
     parameters.numerator = 2;
@@ -45,6 +48,10 @@ void test_save_open_round_trip()
     const auto text = rosettelab::svg::serialize_rosettelab_svg(source);
     const auto loaded = rosettelab::svg::parse_rosettelab_svg(QByteArray::fromStdString(text));
     require(loaded.layers().size() == 1, "one layer should round-trip");
+    require(loaded.settings().page_width == 297.0 && loaded.settings().page_height == 210.0,
+            "page dimensions should round-trip");
+    require(color_close(loaded.settings().background, source.settings().background),
+            "page background should round-trip");
     const auto& restored = loaded.layers().front();
     require(restored.name == "Fractional rose", "name should round-trip");
     require(restored.locked, "lock should round-trip");
