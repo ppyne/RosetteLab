@@ -140,8 +140,6 @@ MainWindow::MainWindow(QWidget* parent)
         {"Color dodge", document::BlendMode::ColorDodge}, {"Color burn", document::BlendMode::ColorBurn},
         {"Hard light", document::BlendMode::HardLight}, {"Soft light", document::BlendMode::SoftLight},
         {"Difference", document::BlendMode::Difference}, {"Exclusion", document::BlendMode::Exclusion},
-        {"Hue", document::BlendMode::Hue}, {"Saturation", document::BlendMode::Saturation},
-        {"Color", document::BlendMode::Color}, {"Luminosity", document::BlendMode::Luminosity},
     };
     for (const auto& [name, mode] : blend_modes) {
         blend_mode_->addItem(name, static_cast<int>(mode));
