@@ -436,7 +436,7 @@ The following may wait until after 1.0 unless implementation proves inexpensive:
 - scripting or plugin API;
 - cloud synchronization;
 - collaborative editing;
-- PDF export;
+
 - autosave and crash recovery;
 - advanced color-management workflows;
 - GPU-specific renderer.
