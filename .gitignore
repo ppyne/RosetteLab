@@ -1,0 +1,60 @@
+# CMake
+/build/
+/cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+compile_commands.json
+install_manifest.txt
+
+# Build products
+*.a
+*.app/
+*.dSYM/
+*.dll
+*.dylib
+*.exe
+*.la
+*.lib
+*.lo
+*.o
+*.obj
+*.so
+*.so.*
+
+# Test and coverage output
+Testing/
+coverage/
+*.gcda
+*.gcno
+*.gcov
+*.profraw
+*.profdata
+
+# Package output
+/dist/
+*.dmg
+*.pkg
+*.tar.gz
+*.zip
+
+# Editors and IDEs
+.idea/
+.vscode/
+*.code-workspace
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Temporary files
+*.bak
+*.log
+*.tmp
