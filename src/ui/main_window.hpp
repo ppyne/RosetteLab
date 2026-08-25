@@ -3,8 +3,11 @@
 #include "rosettelab/curves/polar_rose.hpp"
 #include "rosettelab/document/document.hpp"
 
+#include <QColor>
 #include <QMainWindow>
 
+class QCheckBox;
+class QComboBox;
 class QDoubleSpinBox;
 class QGroupBox;
 class QListWidget;
@@ -30,6 +33,10 @@ private:
     void duplicate_active_layer();
     void delete_active_layer();
     void set_active_layer_locked(bool locked);
+    void choose_stroke_color();
+    void choose_fill_color();
+    void update_appearance();
+    void refresh_color_buttons();
     void refresh_layer_actions();
     void sync_layer_order();
     void update_preview();
@@ -42,6 +49,16 @@ private:
     QDoubleSpinBox* tolerance_{};
     QSpinBox* zoom_{};
     QGroupBox* curve_group_{};
+    QGroupBox* appearance_group_{};
+    QPushButton* stroke_color_button_{};
+    QPushButton* fill_color_button_{};
+    QDoubleSpinBox* stroke_width_{};
+    QCheckBox* fill_enabled_{};
+    QComboBox* fill_rule_{};
+    QSpinBox* layer_opacity_{};
+    QComboBox* blend_mode_{};
+    QColor stroke_color_{Qt::black};
+    QColor fill_color_{Qt::white};
     QListWidget* layers_{};
     QPushButton* rename_button_{};
     QPushButton* duplicate_button_{};
