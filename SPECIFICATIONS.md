@@ -157,7 +157,7 @@ Parameters:
 - complete mathematically closed trace or limited turns;
 - number of turns around the fixed gear;
 - optional forced closure of a limited trace;
-- samples per revolution.
+- adaptive Bézier tolerance in document units.
 
 ### 5.4 Lissajous
 
