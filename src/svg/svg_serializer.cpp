@@ -2,6 +2,7 @@
 
 #include "rosettelab/curves/ellipse.hpp"
 #include "rosettelab/curves/polar_rose.hpp"
+#include "rosettelab/curves/trochoid.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -164,11 +165,36 @@ void write_ellipse(std::ostringstream& output, const document::CurveLayer& layer
     write_rendered_path(output, path, layer.appearance);
 }
 
+void write_trochoid(std::ostringstream& output, const document::CurveLayer& layer)
+{
+    const auto* parameters = std::get_if<curves::TrochoidParameters>(&layer.parameters);
+    if (parameters == nullptr) {
+        throw std::invalid_argument("Trochoid layer has incompatible parameters");
+    }
+    const auto kind = layer.type == document::CurveType::Hypotrochoid
+        ? curves::TrochoidKind::Hypotrochoid
+        : curves::TrochoidKind::Epitrochoid;
+    const auto path = curves::generate_trochoid_bezier(
+        kind, *parameters, parameters->bezier_tolerance);
+    output << "    <rosettelab:curve"
+           << " fixed-radius=\"" << number(parameters->fixed_radius) << "\""
+           << " rolling-radius=\"" << number(parameters->rolling_radius) << "\""
+           << " pen-offset=\"" << number(parameters->pen_offset) << "\""
+           << " rotation-degrees=\"" << number(parameters->rotation_degrees) << "\""
+           << " trace-mode=\"" << (parameters->trace_mode == curves::TraceMode::Complete ? "complete" : "limited") << "\""
+           << " turns=\"" << number(parameters->turns) << "\""
+           << " close-limited-path=\"" << (parameters->close_limited_path ? "true" : "false") << "\""
+           << " bezier-tolerance=\"" << number(parameters->bezier_tolerance) << "\"/>\n";
+    write_rendered_path(output, path, layer.appearance);
+}
+
 const char* curve_type_id(const document::CurveType type)
 {
     switch (type) {
     case document::CurveType::PolarRose: return "polar-rose";
     case document::CurveType::Ellipse: return "ellipse";
+    case document::CurveType::Hypotrochoid: return "hypotrochoid";
+    case document::CurveType::Epitrochoid: return "epitrochoid";
     default: throw std::invalid_argument("Unsupported curve type for SVG export");
     }
 }
@@ -225,6 +251,9 @@ std::string serialize_rosettelab_svg(
             write_polar_rose(output, layer);
         } else if (layer.type == document::CurveType::Ellipse) {
             write_ellipse(output, layer);
+        } else if (layer.type == document::CurveType::Hypotrochoid ||
+                   layer.type == document::CurveType::Epitrochoid) {
+            write_trochoid(output, layer);
         }
         output << "  </g>\n";
     }
