@@ -36,7 +36,10 @@ The main window contains three primary regions:
    - Shows one row per curve.
    - Supports drag-and-drop reordering.
    - Recalls the selected layer's parameters in the editor.
-   - Provides visibility and lock controls.
+   - Each layer row is ordered as: visibility glyph, lock glyph, then layer name.
+   - The visibility control uses clickable open-eye and closed-eye UTF-8 glyphs instead of a checkbox.
+   - The lock control uses clickable unlocked and locked UTF-8 padlock glyphs instead of a separate Lock/Unlock button.
+   - Both glyph controls have stable dimensions, tooltips, keyboard access, and accessible names; changing state must never resize the layer panel.
    - Supports add, duplicate, rename, and delete operations.
    - The primary `Add…` command opens a curve-type selector rather than creating a predetermined family directly.
    - The selector lists Polar rose, Hypotrochoid, Epitrochoid, Lissajous, Harmonograph, and Spirograph; only implemented families are enabled.
@@ -67,11 +70,11 @@ Every curve layer has:
 
 ### 4.1 Visibility
 
-An open or closed eye control changes whether the layer is rendered. Visibility is stored in the project SVG.
+A clickable open-eye or closed-eye UTF-8 glyph changes whether the layer is rendered. It is the first control in the layer row. Visibility is stored in the project SVG.
 
 ### 4.2 Locking
 
-A padlock prevents accidental changes to curve, transform, and appearance parameters. Locked layers remain selectable and inspectable. Unlocking is always available.
+A clickable unlocked or locked UTF-8 padlock glyph is the second control in the layer row. It prevents accidental changes to curve, transform, and appearance parameters. Locked layers remain selectable and inspectable. Unlocking is always available. No separate Lock/Unlock button is displayed below the layer list.
 
 ### 4.3 Reordering
 
