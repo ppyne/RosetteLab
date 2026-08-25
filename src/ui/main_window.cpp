@@ -102,10 +102,21 @@ MainWindow::MainWindow(QWidget* parent)
     radius_->setValue(100.0);
     radius_->setDecimals(2);
 
+    k_mode_ = new QComboBox(curve_group_);
+    k_mode_->addItem("Decimal", static_cast<int>(curves::PolarKMode::Decimal));
+    k_mode_->addItem("Fraction", static_cast<int>(curves::PolarKMode::Fraction));
+
     k_ = new QDoubleSpinBox(curve_group_);
     k_->setRange(-1000.0, 1000.0);
     k_->setValue(7.0);
     k_->setDecimals(3);
+
+    numerator_ = new QSpinBox(curve_group_);
+    numerator_->setRange(1, 10000);
+    numerator_->setValue(7);
+    denominator_ = new QSpinBox(curve_group_);
+    denominator_->setRange(1, 10000);
+    denominator_->setValue(1);
 
     phase_ = angle_control(curve_group_);
     rotation_ = angle_control(curve_group_);
@@ -119,11 +130,15 @@ MainWindow::MainWindow(QWidget* parent)
     tolerance_->setToolTip("Maximum geometric deviation from the mathematical curve; smaller values are more precise.");
 
     form->addRow("Radius a", radius_);
+    form->addRow("k representation", k_mode_);
     form->addRow("Parameter k", k_);
+    form->addRow("Numerator n", numerator_);
+    form->addRow("Denominator d", denominator_);
     form->addRow("Phase", phase_);
     form->addRow("Rotation", rotation_);
     form->addRow("Curve tolerance", tolerance_);
     parameters_layout->addWidget(curve_group_);
+    refresh_k_mode_controls();
 
     appearance_group_ = new QGroupBox("Appearance", parameters_panel);
     auto* appearance_form = new QFormLayout(appearance_group_);
@@ -223,7 +238,13 @@ MainWindow::MainWindow(QWidget* parent)
     splitter->setSizes({280, 640, 280});
 
     connect(radius_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(k_mode_, &QComboBox::currentIndexChanged, this, [this] {
+        refresh_k_mode_controls();
+        update_preview();
+    });
     connect(k_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(numerator_, &QSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(denominator_, &QSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(phase_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
@@ -363,7 +384,10 @@ void MainWindow::load_active_layer()
     }
 
     const QSignalBlocker radius_blocker(radius_);
+    const QSignalBlocker k_mode_blocker(k_mode_);
     const QSignalBlocker k_blocker(k_);
+    const QSignalBlocker numerator_blocker(numerator_);
+    const QSignalBlocker denominator_blocker(denominator_);
     const QSignalBlocker phase_blocker(phase_);
     const QSignalBlocker rotation_blocker(rotation_);
     const QSignalBlocker tolerance_blocker(tolerance_);
@@ -373,7 +397,10 @@ void MainWindow::load_active_layer()
     const QSignalBlocker opacity_blocker(layer_opacity_);
     const QSignalBlocker blend_blocker(blend_mode_);
     radius_->setValue(parameters->radius);
+    k_mode_->setCurrentIndex(k_mode_->findData(static_cast<int>(parameters->k_mode)));
     k_->setValue(parameters->k);
+    numerator_->setValue(parameters->numerator);
+    denominator_->setValue(parameters->denominator);
     phase_->setValue(parameters->phase_degrees);
     rotation_->setValue(parameters->rotation_degrees);
     tolerance_->setValue(parameters->bezier_tolerance);
@@ -385,6 +412,16 @@ void MainWindow::load_active_layer()
     layer_opacity_->setValue(static_cast<int>(std::lround(layer->appearance.opacity * 100.0)));
     blend_mode_->setCurrentIndex(blend_mode_->findData(static_cast<int>(layer->appearance.blend_mode)));
     refresh_color_buttons();
+    refresh_k_mode_controls();
+}
+
+void MainWindow::refresh_k_mode_controls()
+{
+    const auto mode = static_cast<curves::PolarKMode>(k_mode_->currentData().toInt());
+    const bool decimal = mode == curves::PolarKMode::Decimal;
+    k_->setEnabled(decimal);
+    numerator_->setEnabled(!decimal);
+    denominator_->setEnabled(!decimal);
 }
 
 void MainWindow::choose_stroke_color()
@@ -545,7 +582,10 @@ void MainWindow::update_preview()
         return;
     }
     parameters->radius = radius_->value();
+    parameters->k_mode = static_cast<curves::PolarKMode>(k_mode_->currentData().toInt());
     parameters->k = k_->value();
+    parameters->numerator = numerator_->value();
+    parameters->denominator = denominator_->value();
     parameters->phase_degrees = phase_->value();
     parameters->rotation_degrees = rotation_->value();
     parameters->bezier_tolerance = tolerance_->value();
