@@ -31,6 +31,26 @@ void test_default_names_and_stable_ids()
             "default names should not be reused after deletion");
 }
 
+void test_ellipse_names_and_parameters()
+{
+    rosettelab::document::Document document;
+    rosettelab::curves::EllipseParameters parameters;
+    parameters.radius_x = 120.0;
+    parameters.radius_y = 45.0;
+    const auto id = document.add_ellipse(parameters).id;
+    const auto* layer = document.find_layer(id);
+    require(layer != nullptr && layer->name == "Ellipse 1",
+            "ellipse should use its own default-name sequence");
+    require(layer->type == rosettelab::document::CurveType::Ellipse,
+            "ellipse layer should retain its curve type");
+    require(std::get<rosettelab::curves::EllipseParameters>(layer->parameters).radius_y == 45.0,
+            "ellipse layer should retain its mathematical parameters");
+
+    const auto* duplicate = document.duplicate_layer(id);
+    require(duplicate != nullptr && duplicate->name == "Ellipse 2",
+            "ellipse duplicate should use the next ellipse name");
+}
+
 void test_custom_name_and_layer_state()
 {
     rosettelab::document::Document document;
@@ -127,6 +147,7 @@ int main()
 {
     try {
         test_default_names_and_stable_ids();
+        test_ellipse_names_and_parameters();
         test_custom_name_and_layer_state();
         test_layer_reordering();
         test_layer_duplication();
