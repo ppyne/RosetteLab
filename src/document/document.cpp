@@ -43,6 +43,7 @@ CurveLayer& Document::add_polar_rose(
         parameters,
         true,
         false,
+        {},
     });
     return layers_.back();
 }
@@ -78,6 +79,7 @@ CurveLayer* Document::duplicate_layer(const LayerId id, std::optional<std::strin
         source.parameters,
         source.visible,
         false,
+        source.appearance,
     };
     const auto inserted = layers_.insert(
         layers_.begin() + static_cast<std::ptrdiff_t>(source_index + 1),
