@@ -38,6 +38,15 @@ struct CurveLayer {
     LayerAppearance appearance{};
 };
 
+struct DocumentSettings {
+    double page_width{210.0};
+    double page_height{210.0};
+    std::string unit{"mm"};
+    RgbaColor background{1.0, 1.0, 1.0, 1.0};
+
+    friend constexpr bool operator==(const DocumentSettings&, const DocumentSettings&) = default;
+};
+
 class Document {
 public:
     [[nodiscard]] CurveLayer& add_polar_rose(
@@ -61,11 +70,14 @@ public:
 
     [[nodiscard]] std::vector<CurveLayer>& layers() noexcept { return layers_; }
     [[nodiscard]] const std::vector<CurveLayer>& layers() const noexcept { return layers_; }
+    [[nodiscard]] DocumentSettings& settings() noexcept { return settings_; }
+    [[nodiscard]] const DocumentSettings& settings() const noexcept { return settings_; }
 
 private:
     [[nodiscard]] std::string next_default_name(CurveType type);
 
     std::vector<CurveLayer> layers_;
+    DocumentSettings settings_;
     std::array<std::size_t, static_cast<std::size_t>(CurveType::Count)> name_counters_{};
     LayerId next_id_{1};
 };
