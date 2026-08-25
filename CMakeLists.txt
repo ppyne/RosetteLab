@@ -5,6 +5,10 @@ project(RosetteLab VERSION 0.1.0 LANGUAGES CXX)
 option(ROSETTELAB_BUILD_GUI "Build the Qt 6 desktop application" ON)
 option(ROSETTELAB_BUILD_TESTS "Build RosetteLab tests" ON)
 
+if(ROSETTELAB_BUILD_TESTS)
+    enable_testing()
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -38,17 +42,26 @@ if(ROSETTELAB_BUILD_GUI)
             src/ui/main_window.cpp
             src/ui/layer_list_item_widget.cpp
             src/ui/preview_widget.cpp
+            src/svg/qt_svg_parser.cpp
         )
         target_include_directories(rosettelab PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
         target_link_libraries(rosettelab PRIVATE rosettelab_core Qt6::Widgets)
         install(TARGETS rosettelab RUNTIME DESTINATION bin)
+
+        if(ROSETTELAB_BUILD_TESTS)
+            add_executable(rosettelab_qt_svg_tests
+                src/svg/qt_svg_parser.cpp
+                tests/test_qt_svg_parser.cpp
+            )
+            target_link_libraries(rosettelab_qt_svg_tests PRIVATE rosettelab_core Qt6::Core)
+            add_test(NAME rosettelab_qt_svg_tests COMMAND rosettelab_qt_svg_tests)
+        endif()
     else()
         message(WARNING "Qt 6 Widgets was not found; building the core without the GUI")
     endif()
 endif()
 
 if(ROSETTELAB_BUILD_TESTS)
-    enable_testing()
     add_executable(rosettelab_core_tests tests/test_polar_rose.cpp)
     target_link_libraries(rosettelab_core_tests PRIVATE rosettelab_core)
     add_test(NAME rosettelab_core_tests COMMAND rosettelab_core_tests)
