@@ -14,6 +14,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(rosettelab_core
+    src/curves/ellipse.cpp
     src/curves/polar_rose.cpp
     src/document/document.cpp
     src/svg/svg_serializer.cpp
@@ -63,6 +64,10 @@ if(ROSETTELAB_BUILD_GUI)
 endif()
 
 if(ROSETTELAB_BUILD_TESTS)
+    add_executable(rosettelab_ellipse_tests tests/test_ellipse.cpp)
+    target_link_libraries(rosettelab_ellipse_tests PRIVATE rosettelab_core)
+    add_test(NAME rosettelab_ellipse_tests COMMAND rosettelab_ellipse_tests)
+
     add_executable(rosettelab_core_tests tests/test_polar_rose.cpp)
     target_link_libraries(rosettelab_core_tests PRIVATE rosettelab_core)
     add_test(NAME rosettelab_core_tests COMMAND rosettelab_core_tests)
