@@ -44,6 +44,7 @@ void test_save_open_round_trip()
     layer.appearance.fill_enabled = true;
     layer.appearance.fill = {0.1, 0.2, 0.3, 0.4};
     layer.appearance.blend_mode = rosettelab::document::BlendMode::Multiply;
+    const auto expected_fill = layer.appearance.fill;
     rosettelab::curves::EllipseParameters ellipse_parameters;
     ellipse_parameters.radius_x = 75.0;
     ellipse_parameters.radius_y = 25.0;
@@ -60,7 +61,7 @@ void test_save_open_round_trip()
     const auto& restored = loaded.layers().front();
     require(restored.name == "Fractional rose", "name should round-trip");
     require(restored.locked, "lock should round-trip");
-    require(color_close(restored.appearance.fill, layer.appearance.fill),
+    require(color_close(restored.appearance.fill, expected_fill),
             "fill RGBA should round-trip within 8-bit SVG precision");
     require(restored.appearance.blend_mode == rosettelab::document::BlendMode::Multiply,
             "blend mode should round-trip");
