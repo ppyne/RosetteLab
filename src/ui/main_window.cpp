@@ -93,9 +93,9 @@ MainWindow::MainWindow(QWidget* parent)
     auto* layers_layout = new QVBoxLayout(layers_panel);
     layers_layout->addWidget(new QLabel("Layers", layers_panel));
     auto* layers = new QListWidget(layers_panel);
-    active_layer_item_ = new QListWidgetItem("Polar rose - k=7", layers);
-    active_layer_item_->setFlags(active_layer_item_->flags() | Qt::ItemIsUserCheckable);
-    active_layer_item_->setCheckState(Qt::Checked);
+    auto* initial_layer = new QListWidgetItem("Polar rose 1", layers);
+    initial_layer->setFlags(initial_layer->flags() | Qt::ItemIsUserCheckable);
+    initial_layer->setCheckState(Qt::Checked);
     layers_layout->addWidget(layers);
 
     splitter->setStretchFactor(0, 0);
@@ -125,11 +125,6 @@ void MainWindow::update_preview()
     parameters.phase_degrees = phase_->value();
     parameters.rotation_degrees = rotation_->value();
     preview_->set_parameters(parameters);
-
-    if (active_layer_item_ != nullptr && !active_layer_has_custom_name_) {
-        active_layer_item_->setText(
-            QStringLiteral("Polar rose - k=%1").arg(k_->value(), 0, 'g', 8));
-    }
 }
 
 } // namespace rosettelab::ui
