@@ -35,6 +35,8 @@ private:
     void add_trochoid(document::CurveType type);
     void open_file();
     void save_as();
+    void export_raster(bool jpeg);
+    void export_pdf();
     void rebuild_layer_list();
     QListWidgetItem* add_layer_row(const document::CurveLayer& layer, int row = -1);
     void select_layer_row(document::LayerId id);
