@@ -40,6 +40,7 @@ if(ROSETTELAB_BUILD_GUI)
         add_executable(rosettelab
             src/app/main.cpp
             src/ui/color_editor_dialog.cpp
+            src/ui/color_preview_button.cpp
             src/ui/main_window.cpp
             src/ui/layer_list_item_widget.cpp
             src/ui/preview_widget.cpp
