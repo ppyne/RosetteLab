@@ -12,6 +12,7 @@ class QDoubleSpinBox;
 class QGroupBox;
 class QListWidget;
 class QListWidgetItem;
+class QLabel;
 class QPushButton;
 class QSpinBox;
 
@@ -25,6 +26,7 @@ public:
 
 private:
     void add_polar_rose();
+    void add_ellipse();
     void open_file();
     void save_as();
     void rebuild_layer_list();
@@ -53,6 +55,7 @@ private:
     QDoubleSpinBox* page_height_{};
     QPushButton* page_background_button_{};
     QColor page_background_{Qt::white};
+    QLabel* curve_type_label_{};
     QDoubleSpinBox* radius_{};
     QComboBox* k_mode_{};
     QDoubleSpinBox* k_{};
@@ -63,6 +66,11 @@ private:
     QDoubleSpinBox* tolerance_{};
     QSpinBox* zoom_{};
     QGroupBox* curve_group_{};
+    QGroupBox* ellipse_group_{};
+    QDoubleSpinBox* ellipse_radius_x_{};
+    QDoubleSpinBox* ellipse_radius_y_{};
+    QDoubleSpinBox* ellipse_rotation_{};
+    QDoubleSpinBox* ellipse_tolerance_{};
     QGroupBox* appearance_group_{};
     QPushButton* stroke_color_button_{};
     QPushButton* fill_color_button_{};
