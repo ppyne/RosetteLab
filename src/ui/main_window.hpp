@@ -5,7 +5,6 @@
 #include <QMainWindow>
 
 class QDoubleSpinBox;
-class QListWidgetItem;
 class QSpinBox;
 
 namespace rosettelab::ui {
@@ -26,8 +25,6 @@ private:
     QDoubleSpinBox* rotation_{};
     QDoubleSpinBox* tolerance_{};
     QSpinBox* zoom_{};
-    QListWidgetItem* active_layer_item_{};
-    bool active_layer_has_custom_name_{false};
 };
 
 } // namespace rosettelab::ui
