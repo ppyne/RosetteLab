@@ -4,6 +4,9 @@
 #include "ui/preview_widget.hpp"
 
 #include <QAbstractItemModel>
+#include <QCheckBox>
+#include <QColorDialog>
+#include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
 #include <QGroupBox>
@@ -23,6 +26,9 @@
 #include <QWidget>
 
 #include <algorithm>
+#include <cmath>
+#include <initializer_list>
+#include <utility>
 
 namespace rosettelab::ui {
 namespace {
@@ -34,6 +40,29 @@ QDoubleSpinBox* angle_control(QWidget* parent)
     control->setDecimals(2);
     control->setSuffix(" deg");
     return control;
+}
+
+document::RgbaColor rgba_from_qcolor(const QColor& color)
+{
+    return {color.redF(), color.greenF(), color.blueF(), color.alphaF()};
+}
+
+QColor qcolor_from_rgba(const document::RgbaColor& color)
+{
+    return QColor::fromRgbF(color.red, color.green, color.blue, color.alpha);
+}
+
+void style_color_button(QPushButton* button, const QColor& color)
+{
+    button->setText(QStringLiteral("#%1%2%3%4")
+        .arg(color.red(), 2, 16, QLatin1Char('0'))
+        .arg(color.green(), 2, 16, QLatin1Char('0'))
+        .arg(color.blue(), 2, 16, QLatin1Char('0'))
+        .arg(color.alpha(), 2, 16, QLatin1Char('0'))
+        .toUpper());
+    const auto text = color.lightnessF() < 0.5 ? QStringLiteral("white") : QStringLiteral("black");
+    button->setStyleSheet(QStringLiteral("background-color: rgba(%1, %2, %3, %4); color: %5;")
+        .arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha()).arg(text));
 }
 
 } // namespace
@@ -81,6 +110,52 @@ MainWindow::MainWindow(QWidget* parent)
     form->addRow("Rotation", rotation_);
     form->addRow("Curve tolerance", tolerance_);
     parameters_layout->addWidget(curve_group_);
+
+    appearance_group_ = new QGroupBox("Appearance", parameters_panel);
+    auto* appearance_form = new QFormLayout(appearance_group_);
+    stroke_color_button_ = new QPushButton(appearance_group_);
+    fill_color_button_ = new QPushButton(appearance_group_);
+
+    stroke_width_ = new QDoubleSpinBox(appearance_group_);
+    stroke_width_->setRange(0.0, 1000.0);
+    stroke_width_->setValue(0.6);
+    stroke_width_->setDecimals(2);
+    stroke_width_->setSuffix(" units");
+
+    fill_enabled_ = new QCheckBox("Enabled", appearance_group_);
+    fill_rule_ = new QComboBox(appearance_group_);
+    fill_rule_->addItem("Non-zero", static_cast<int>(document::FillRule::NonZero));
+    fill_rule_->addItem("Even-odd", static_cast<int>(document::FillRule::EvenOdd));
+
+    layer_opacity_ = new QSpinBox(appearance_group_);
+    layer_opacity_->setRange(0, 100);
+    layer_opacity_->setValue(100);
+    layer_opacity_->setSuffix(" %");
+
+    blend_mode_ = new QComboBox(appearance_group_);
+    const std::initializer_list<std::pair<const char*, document::BlendMode>> blend_modes{
+        {"Normal", document::BlendMode::Normal}, {"Multiply", document::BlendMode::Multiply},
+        {"Screen", document::BlendMode::Screen}, {"Overlay", document::BlendMode::Overlay},
+        {"Darken", document::BlendMode::Darken}, {"Lighten", document::BlendMode::Lighten},
+        {"Color dodge", document::BlendMode::ColorDodge}, {"Color burn", document::BlendMode::ColorBurn},
+        {"Hard light", document::BlendMode::HardLight}, {"Soft light", document::BlendMode::SoftLight},
+        {"Difference", document::BlendMode::Difference}, {"Exclusion", document::BlendMode::Exclusion},
+        {"Hue", document::BlendMode::Hue}, {"Saturation", document::BlendMode::Saturation},
+        {"Color", document::BlendMode::Color}, {"Luminosity", document::BlendMode::Luminosity},
+    };
+    for (const auto& [name, mode] : blend_modes) {
+        blend_mode_->addItem(name, static_cast<int>(mode));
+    }
+
+    appearance_form->addRow("Stroke color", stroke_color_button_);
+    appearance_form->addRow("Stroke width", stroke_width_);
+    appearance_form->addRow("Fill", fill_enabled_);
+    appearance_form->addRow("Fill color", fill_color_button_);
+    appearance_form->addRow("Fill rule", fill_rule_);
+    appearance_form->addRow("Layer opacity", layer_opacity_);
+    appearance_form->addRow("Blend mode", blend_mode_);
+    parameters_layout->addWidget(appearance_group_);
+    refresh_color_buttons();
 
     auto* view_group = new QGroupBox("View", parameters_panel);
     auto* view_form = new QFormLayout(view_group);
@@ -142,6 +217,13 @@ MainWindow::MainWindow(QWidget* parent)
     connect(tolerance_, &QDoubleSpinBox::valueChanged, this, [this](const double value) {
         preview_->set_curve_tolerance(value);
     });
+    connect(stroke_color_button_, &QPushButton::clicked, this, [this] { choose_stroke_color(); });
+    connect(fill_color_button_, &QPushButton::clicked, this, [this] { choose_fill_color(); });
+    connect(stroke_width_, &QDoubleSpinBox::valueChanged, this, [this] { update_appearance(); });
+    connect(fill_enabled_, &QCheckBox::toggled, this, [this] { update_appearance(); });
+    connect(fill_rule_, &QComboBox::currentIndexChanged, this, [this] { update_appearance(); });
+    connect(layer_opacity_, &QSpinBox::valueChanged, this, [this] { update_appearance(); });
+    connect(blend_mode_, &QComboBox::currentIndexChanged, this, [this] { update_appearance(); });
     connect(zoom_, &QSpinBox::valueChanged, this, [this](const int value) {
         preview_->set_zoom_percent(static_cast<double>(value));
     });
@@ -242,10 +324,71 @@ void MainWindow::load_active_layer()
     const QSignalBlocker k_blocker(k_);
     const QSignalBlocker phase_blocker(phase_);
     const QSignalBlocker rotation_blocker(rotation_);
+    const QSignalBlocker stroke_width_blocker(stroke_width_);
+    const QSignalBlocker fill_enabled_blocker(fill_enabled_);
+    const QSignalBlocker fill_rule_blocker(fill_rule_);
+    const QSignalBlocker opacity_blocker(layer_opacity_);
+    const QSignalBlocker blend_blocker(blend_mode_);
     radius_->setValue(parameters->radius);
     k_->setValue(parameters->k);
     phase_->setValue(parameters->phase_degrees);
     rotation_->setValue(parameters->rotation_degrees);
+    stroke_color_ = qcolor_from_rgba(layer->appearance.stroke);
+    fill_color_ = qcolor_from_rgba(layer->appearance.fill);
+    stroke_width_->setValue(layer->appearance.stroke_width);
+    fill_enabled_->setChecked(layer->appearance.fill_enabled);
+    fill_rule_->setCurrentIndex(fill_rule_->findData(static_cast<int>(layer->appearance.fill_rule)));
+    layer_opacity_->setValue(static_cast<int>(std::lround(layer->appearance.opacity * 100.0)));
+    blend_mode_->setCurrentIndex(blend_mode_->findData(static_cast<int>(layer->appearance.blend_mode)));
+    refresh_color_buttons();
+}
+
+void MainWindow::choose_stroke_color()
+{
+    const auto color = QColorDialog::getColor(
+        stroke_color_, this, "Stroke color", QColorDialog::ShowAlphaChannel);
+    if (color.isValid()) {
+        stroke_color_ = color;
+        refresh_color_buttons();
+        update_appearance();
+    }
+}
+
+void MainWindow::choose_fill_color()
+{
+    const auto color = QColorDialog::getColor(
+        fill_color_, this, "Fill color", QColorDialog::ShowAlphaChannel);
+    if (color.isValid()) {
+        fill_color_ = color;
+        refresh_color_buttons();
+        update_appearance();
+    }
+}
+
+void MainWindow::update_appearance()
+{
+    auto* layer = document_.find_layer(active_layer_id_);
+    if (layer == nullptr || layer->locked) {
+        return;
+    }
+    layer->appearance.stroke = rgba_from_qcolor(stroke_color_);
+    layer->appearance.stroke_width = stroke_width_->value();
+    layer->appearance.fill_enabled = fill_enabled_->isChecked();
+    layer->appearance.fill = rgba_from_qcolor(fill_color_);
+    layer->appearance.fill_rule = static_cast<document::FillRule>(fill_rule_->currentData().toInt());
+    layer->appearance.opacity = static_cast<double>(layer_opacity_->value()) / 100.0;
+    layer->appearance.blend_mode = static_cast<document::BlendMode>(blend_mode_->currentData().toInt());
+    refresh_color_buttons();
+    preview_->update();
+}
+
+void MainWindow::refresh_color_buttons()
+{
+    style_color_button(stroke_color_button_, stroke_color_);
+    style_color_button(fill_color_button_, fill_color_);
+    const bool fill_controls_enabled = fill_enabled_->isChecked();
+    fill_color_button_->setEnabled(fill_controls_enabled);
+    fill_rule_->setEnabled(fill_controls_enabled);
 }
 
 void MainWindow::rename_active_layer()
@@ -329,6 +472,7 @@ void MainWindow::refresh_layer_actions()
     duplicate_button_->setEnabled(has_layer);
     delete_button_->setEnabled(has_layer);
     curve_group_->setEnabled(has_layer && !layer->locked);
+    appearance_group_->setEnabled(has_layer && !layer->locked);
 }
 
 void MainWindow::sync_layer_order()
