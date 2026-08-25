@@ -117,7 +117,11 @@ void write_polar_rose(std::ostringstream& output, const document::CurveLayer& la
 
     output << "    <rosettelab:curve"
            << " radius=\"" << number(parameters->radius) << "\""
+           << " k-mode=\"" << (parameters->k_mode == curves::PolarKMode::Fraction ? "fraction" : "decimal") << "\""
            << " k=\"" << number(parameters->k) << "\""
+           << " numerator=\"" << parameters->numerator << "\""
+           << " denominator=\"" << parameters->denominator << "\""
+           << " effective-k=\"" << number(curves::effective_k(*parameters)) << "\""
            << " phase-degrees=\"" << number(parameters->phase_degrees) << "\""
            << " rotation-degrees=\"" << number(parameters->rotation_degrees) << "\""
            << " bezier-tolerance=\"" << number(parameters->bezier_tolerance) << "\"/>\n";
@@ -186,4 +190,3 @@ std::string serialize_rosettelab_svg(
 }
 
 } // namespace rosettelab::svg
-
