@@ -21,7 +21,7 @@ The main window contains three primary regions:
 
 1. **Preview canvas**
    - Displays all visible layers in stack order.
-   - Uses an opaque white page by default, independently of the operating-system UI theme.
+   - Uses an opaque white page by default, independently of the operating-system UI theme.\n   - When the selected page background is transparent or translucent, the preview displays it over a checkerboard made of alternating white and 50% grey (`RGB 127, 127, 127`) squares.
    - Supports zoom, pan, fit-to-document, and a configurable background.
    - Shows horizontal and vertical scroll bars automatically whenever the zoomed page exceeds the preview viewport.
    - Reflects parameter and appearance changes without requiring an Apply action.
@@ -260,7 +260,7 @@ Two synchronized representations are required:
 - RGBA;
 - HSLA.
 
-A graphical picker may be added where the platform toolkit supports it consistently. Numeric entry must remain available.
+A graphical picker may be added where the platform toolkit supports it consistently. Numeric entry must remain available. The color-preview strip at the bottom of every stroke, fill, and page-background selector displays transparent or translucent colors over a checkerboard made of alternating white and 50% grey (`RGB 127, 127, 127`) squares. Its `#RRGGBBAA - Choose visually...` label uses white text on a dark composited preview and black text on a light composited preview, taking alpha into account.
 
 ### 8.4 Layer rendering
 
