@@ -72,6 +72,22 @@ void test_hidden_layer_remains_in_project()
     require(contains(svg, "<path d=\"M "), "hidden editable geometry should remain in the file");
 }
 
+void test_ellipse_contains_editable_metadata_and_beziers()
+{
+    rosettelab::document::Document document;
+    rosettelab::curves::EllipseParameters parameters;
+    parameters.radius_x = 90.0;
+    parameters.radius_y = 35.0;
+    parameters.rotation_degrees = 27.0;
+    static_cast<void>(document.add_ellipse(parameters));
+    const auto svg = rosettelab::svg::serialize_rosettelab_svg(document);
+    require(contains(svg, "rosettelab:type=\"ellipse\""), "ellipse type should be stored");
+    require(contains(svg, "radius-x=\"90\""), "horizontal radius should be stored");
+    require(contains(svg, "radius-y=\"35\""), "vertical radius should be stored");
+    require(contains(svg, "rotation-degrees=\"27\""), "ellipse rotation should be stored");
+    require(contains(svg, " C "), "ellipse should render as cubic Bezier segments");
+}
+
 } // namespace
 
 int main()
@@ -79,6 +95,7 @@ int main()
     try {
         test_native_svg_contains_geometry_and_metadata();
         test_hidden_layer_remains_in_project();
+        test_ellipse_contains_editable_metadata_and_beziers();
         std::cout << "All RosetteLab SVG serializer tests passed\n";
         return 0;
     } catch (const std::exception& error) {
