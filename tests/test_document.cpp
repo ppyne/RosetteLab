@@ -69,6 +69,7 @@ void test_layer_duplication()
     rosettelab::document::Document document;
     auto parameters = rosettelab::curves::PolarRoseParameters{};
     parameters.k = 11.0;
+    parameters.bezier_tolerance = 0.0125;
     const auto source_id = document.add_polar_rose(parameters, "Source").id;
     static_cast<void>(document.set_layer_visible(source_id, false));
     static_cast<void>(document.set_layer_locked(source_id, true));
@@ -91,6 +92,8 @@ void test_layer_duplication()
             "duplicate should preserve all appearance properties");
     require(std::get<rosettelab::curves::PolarRoseParameters>(duplicate->parameters).k == 11.0,
             "duplicate should preserve mathematical parameters");
+    require(std::get<rosettelab::curves::PolarRoseParameters>(duplicate->parameters).bezier_tolerance == 0.0125,
+            "duplicate should preserve curve tolerance");
     require(document.layers()[1].id == duplicate->id, "duplicate should follow its source");
     require(document.duplicate_layer(999999) == nullptr, "missing layer should not be duplicated");
 }
