@@ -12,6 +12,8 @@ std::string curve_type_name(const CurveType type)
     switch (type) {
     case CurveType::PolarRose:
         return "Polar rose";
+    case CurveType::Ellipse:
+        return "Ellipse";
     case CurveType::Hypotrochoid:
         return "Hypotrochoid";
     case CurveType::Epitrochoid:
@@ -45,6 +47,21 @@ CurveLayer& Document::add_polar_rose(
         true,
         false,
         {},
+    });
+    return layers_.back();
+}
+
+CurveLayer& Document::add_ellipse(
+    const curves::EllipseParameters& parameters,
+    std::optional<std::string> name)
+{
+    const auto default_name = next_default_name(CurveType::Ellipse);
+    if (!name.has_value() || name->empty()) {
+        name = default_name;
+    }
+
+    layers_.push_back({
+        next_id_++, std::move(*name), CurveType::Ellipse, parameters, true, false, {},
     });
     return layers_.back();
 }
@@ -93,8 +110,12 @@ bool Document::import_layer(CurveLayer layer)
     if (layer.id == 0 || layer.name.empty() || find_layer(layer.id) != nullptr) {
         return false;
     }
-    if (layer.type != CurveType::PolarRose ||
-        !std::holds_alternative<curves::PolarRoseParameters>(layer.parameters)) {
+    const bool compatible =
+        (layer.type == CurveType::PolarRose &&
+         std::holds_alternative<curves::PolarRoseParameters>(layer.parameters)) ||
+        (layer.type == CurveType::Ellipse &&
+         std::holds_alternative<curves::EllipseParameters>(layer.parameters));
+    if (!compatible) {
         return false;
     }
 
