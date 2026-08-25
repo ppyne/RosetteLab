@@ -12,6 +12,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(rosettelab_core
     src/curves/polar_rose.cpp
     src/document/document.cpp
+    src/svg/svg_serializer.cpp
 )
 
 target_include_directories(rosettelab_core
@@ -55,4 +56,8 @@ if(ROSETTELAB_BUILD_TESTS)
     add_executable(rosettelab_document_tests tests/test_document.cpp)
     target_link_libraries(rosettelab_document_tests PRIVATE rosettelab_core)
     add_test(NAME rosettelab_document_tests COMMAND rosettelab_document_tests)
+
+    add_executable(rosettelab_svg_tests tests/test_svg_serializer.cpp)
+    target_link_libraries(rosettelab_svg_tests PRIVATE rosettelab_core)
+    add_test(NAME rosettelab_svg_tests COMMAND rosettelab_svg_tests)
 endif()
