@@ -7,6 +7,7 @@
 
 class QComboBox;
 class QLabel;
+class QLineEdit;
 class QPushButton;
 class QSpinBox;
 
@@ -29,12 +30,14 @@ private:
     void configure_fields();
     void update_color_from_fields();
     void update_fields_from_color();
+    void update_color_from_hex(QString text);
     void update_preview();
     void choose_visually();
 
     QColor color_;
     bool updating_{false};
     QComboBox* format_{};
+    QLineEdit* hex_{};
     std::array<QLabel*, 4> channel_labels_{};
     std::array<QSpinBox*, 4> channels_{};
     ColorPreviewButton* preview_{};
