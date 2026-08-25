@@ -98,6 +98,25 @@ MainWindow::MainWindow(QWidget* parent)
     auto* parameters_layout = new QVBoxLayout(parameters_panel);
     parameters_layout->addWidget(new QLabel("Polar rose", parameters_panel));
 
+    auto* document_group = new QGroupBox("Document", parameters_panel);
+    auto* document_form = new QFormLayout(document_group);
+    page_width_ = new QDoubleSpinBox(document_group);
+    page_width_->setRange(1.0, 100000.0);
+    page_width_->setValue(210.0);
+    page_width_->setDecimals(2);
+    page_width_->setSuffix(" mm");
+    page_height_ = new QDoubleSpinBox(document_group);
+    page_height_->setRange(1.0, 100000.0);
+    page_height_->setValue(210.0);
+    page_height_->setDecimals(2);
+    page_height_->setSuffix(" mm");
+    page_background_button_ = new QPushButton(document_group);
+    document_form->addRow("Page width", page_width_);
+    document_form->addRow("Page height", page_height_);
+    document_form->addRow("Background", page_background_button_);
+    parameters_layout->addWidget(document_group);
+    style_color_button(page_background_button_, page_background_);
+
     curve_group_ = new QGroupBox("Curve parameters", parameters_panel);
     auto* form = new QFormLayout(curve_group_);
 
@@ -242,6 +261,9 @@ MainWindow::MainWindow(QWidget* parent)
     splitter->setSizes({280, 640, 280});
 
     connect(radius_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(page_width_, &QDoubleSpinBox::valueChanged, this, [this] { update_document_settings(); });
+    connect(page_height_, &QDoubleSpinBox::valueChanged, this, [this] { update_document_settings(); });
+    connect(page_background_button_, &QPushButton::clicked, this, [this] { choose_page_background(); });
     connect(k_mode_, &QComboBox::currentIndexChanged, this, [this] {
         refresh_k_mode_controls();
         update_preview();
@@ -300,8 +322,39 @@ void MainWindow::open_file()
         return;
     }
     rebuild_layer_list();
+    load_document_settings();
     preview_->update();
     setWindowTitle(QStringLiteral("RosetteLab - %1").arg(QFileInfo(path).fileName()));
+}
+
+void MainWindow::choose_page_background()
+{
+    ColorEditorDialog dialog(page_background_, "Page background", this);
+    if (dialog.exec() == QDialog::Accepted) {
+        page_background_ = dialog.color();
+        style_color_button(page_background_button_, page_background_);
+        update_document_settings();
+    }
+}
+
+void MainWindow::update_document_settings()
+{
+    document_.settings().page_width = page_width_->value();
+    document_.settings().page_height = page_height_->value();
+    document_.settings().unit = "mm";
+    document_.settings().background = rgba_from_qcolor(page_background_);
+    preview_->refresh_document_geometry();
+}
+
+void MainWindow::load_document_settings()
+{
+    const QSignalBlocker width_blocker(page_width_);
+    const QSignalBlocker height_blocker(page_height_);
+    page_width_->setValue(document_.settings().page_width);
+    page_height_->setValue(document_.settings().page_height);
+    page_background_ = qcolor_from_rgba(document_.settings().background);
+    style_color_button(page_background_button_, page_background_);
+    preview_->refresh_document_geometry();
 }
 
 void MainWindow::rebuild_layer_list()
