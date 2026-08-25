@@ -2,16 +2,23 @@
 
 #include "ui/preview_widget.hpp"
 
+#include <QAbstractItemModel>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
 #include <QGroupBox>
+#include <QInputDialog>
 #include <QLabel>
 #include <QListWidget>
+#include <QLineEdit>
+#include <QPushButton>
 #include <QScrollArea>
+#include <QSignalBlocker>
 #include <QSpinBox>
 #include <QSplitter>
 #include <QVBoxLayout>
 #include <QWidget>
+
+#include <algorithm>
 
 namespace rosettelab::ui {
 namespace {
@@ -87,16 +94,24 @@ MainWindow::MainWindow(QWidget* parent)
     preview_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     preview_scroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     preview_ = new PreviewWidget;
+    preview_->set_document(&document_);
     preview_scroll->setWidget(preview_);
 
     auto* layers_panel = new QWidget(splitter);
     auto* layers_layout = new QVBoxLayout(layers_panel);
     layers_layout->addWidget(new QLabel("Layers", layers_panel));
-    auto* layers = new QListWidget(layers_panel);
-    auto* initial_layer = new QListWidgetItem("Polar rose 1", layers);
+    layers_ = new QListWidget(layers_panel);
+    layers_->setDragDropMode(QAbstractItemView::InternalMove);
+    auto& initial = document_.add_polar_rose();
+    active_layer_id_ = initial.id;
+    auto* initial_layer = new QListWidgetItem(QString::fromStdString(initial.name), layers_);
+    initial_layer->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(initial.id));
     initial_layer->setFlags(initial_layer->flags() | Qt::ItemIsUserCheckable);
     initial_layer->setCheckState(Qt::Checked);
-    layers_layout->addWidget(layers);
+    layers_->setCurrentItem(initial_layer);
+    layers_layout->addWidget(layers_);
+    auto* add_button = new QPushButton("Add polar rose", layers_panel);
+    layers_layout->addWidget(add_button);
 
     splitter->setStretchFactor(0, 0);
     splitter->setStretchFactor(1, 1);
@@ -113,18 +128,103 @@ MainWindow::MainWindow(QWidget* parent)
     connect(zoom_, &QSpinBox::valueChanged, this, [this](const int value) {
         preview_->set_zoom_percent(static_cast<double>(value));
     });
+    connect(add_button, &QPushButton::clicked, this, [this] { add_polar_rose(); });
+    connect(layers_, &QListWidget::currentItemChanged, this,
+        [this](QListWidgetItem* current, QListWidgetItem*) {
+            if (current != nullptr) {
+                select_layer(current->data(Qt::UserRole).toULongLong());
+            }
+        });
+    connect(layers_, &QListWidget::itemChanged, this, [this](QListWidgetItem* item) {
+        const auto id = static_cast<document::LayerId>(item->data(Qt::UserRole).toULongLong());
+        static_cast<void>(document_.set_layer_visible(id, item->checkState() == Qt::Checked));
+        preview_->update();
+    });
+    connect(layers_->model(), &QAbstractItemModel::rowsMoved, this,
+        [this] { sync_layer_order(); });
 
     update_preview();
 }
 
+void MainWindow::add_polar_rose()
+{
+    const auto suggested = QString::fromStdString(
+        document_.suggested_default_name(document::CurveType::PolarRose));
+    bool accepted = false;
+    const auto name = QInputDialog::getText(
+        this, "New polar rose", "Layer name", QLineEdit::Normal, suggested, &accepted).trimmed();
+    if (!accepted || name.isEmpty()) {
+        return;
+    }
+
+    auto& layer = document_.add_polar_rose({}, name.toStdString());
+    auto* item = new QListWidgetItem(name, layers_);
+    item->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(layer.id));
+    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+    item->setCheckState(Qt::Checked);
+    layers_->setCurrentItem(item);
+    preview_->update();
+}
+
+void MainWindow::select_layer(const document::LayerId id)
+{
+    active_layer_id_ = id;
+    load_active_layer();
+}
+
+void MainWindow::load_active_layer()
+{
+    const auto* layer = document_.find_layer(active_layer_id_);
+    if (layer == nullptr) {
+        return;
+    }
+    const auto* parameters = std::get_if<curves::PolarRoseParameters>(&layer->parameters);
+    if (parameters == nullptr) {
+        return;
+    }
+
+    const QSignalBlocker radius_blocker(radius_);
+    const QSignalBlocker k_blocker(k_);
+    const QSignalBlocker phase_blocker(phase_);
+    const QSignalBlocker rotation_blocker(rotation_);
+    radius_->setValue(parameters->radius);
+    k_->setValue(parameters->k);
+    phase_->setValue(parameters->phase_degrees);
+    rotation_->setValue(parameters->rotation_degrees);
+}
+
+void MainWindow::sync_layer_order()
+{
+    for (int target = 0; target < layers_->count(); ++target) {
+        const auto id = static_cast<document::LayerId>(
+            layers_->item(target)->data(Qt::UserRole).toULongLong());
+        const auto& layers = document_.layers();
+        const auto iterator = std::find_if(layers.begin(), layers.end(),
+            [id](const document::CurveLayer& layer) { return layer.id == id; });
+        if (iterator == layers.end()) {
+            continue;
+        }
+        const auto current = static_cast<std::size_t>(std::distance(layers.begin(), iterator));
+        static_cast<void>(document_.move_layer(current, static_cast<std::size_t>(target)));
+    }
+    preview_->update();
+}
+
 void MainWindow::update_preview()
 {
-    curves::PolarRoseParameters parameters;
-    parameters.radius = radius_->value();
-    parameters.k = k_->value();
-    parameters.phase_degrees = phase_->value();
-    parameters.rotation_degrees = rotation_->value();
-    preview_->set_parameters(parameters);
+    auto* layer = document_.find_layer(active_layer_id_);
+    if (layer == nullptr || layer->locked) {
+        return;
+    }
+    auto* parameters = std::get_if<curves::PolarRoseParameters>(&layer->parameters);
+    if (parameters == nullptr) {
+        return;
+    }
+    parameters->radius = radius_->value();
+    parameters->k = k_->value();
+    parameters->phase_degrees = phase_->value();
+    parameters->rotation_degrees = rotation_->value();
+    preview_->update();
 }
 
 } // namespace rosettelab::ui
