@@ -6,7 +6,9 @@
 #include <QMainWindow>
 
 class QDoubleSpinBox;
+class QGroupBox;
 class QListWidget;
+class QPushButton;
 class QSpinBox;
 
 namespace rosettelab::ui {
@@ -21,6 +23,11 @@ private:
     void add_polar_rose();
     void select_layer(document::LayerId id);
     void load_active_layer();
+    void rename_active_layer();
+    void duplicate_active_layer();
+    void delete_active_layer();
+    void set_active_layer_locked(bool locked);
+    void refresh_layer_actions();
     void sync_layer_order();
     void update_preview();
 
@@ -31,7 +38,12 @@ private:
     QDoubleSpinBox* rotation_{};
     QDoubleSpinBox* tolerance_{};
     QSpinBox* zoom_{};
+    QGroupBox* curve_group_{};
     QListWidget* layers_{};
+    QPushButton* rename_button_{};
+    QPushButton* duplicate_button_{};
+    QPushButton* delete_button_{};
+    QPushButton* lock_button_{};
     document::Document document_;
     document::LayerId active_layer_id_{};
 };
