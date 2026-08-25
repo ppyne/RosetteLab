@@ -355,6 +355,8 @@ The **File → Export** submenu provides:
 - **To JPEG…**: raster export at a user-selected resolution from 72 to 1200 DPI and high quality; transparent document areas are composited onto opaque white because JPEG has no alpha channel; the filename extension is always normalized to `.jpg`, including when `.jpeg` was entered;
 - **To PDF…**: export at the exact document dimensions. Documents using only Normal compositing retain vector cubic Bézier paths, fills, strokes, and opacity. Because Qt's PDF paint engine does not reliably preserve layer blend modes, a document containing any visible non-Normal blend mode is precomposed at 300 DPI and embedded as a raster page so that the PDF matches the preview. On Qt 6.8 and later, a modal choice offers RGB or CMYK before the save dialog. RGB is the default and embeds Qt's default sRGB output intent. CMYK asks Qt to convert the RGB source colors to CMYK and does not attach the sRGB output intent. Older Qt versions retain their legacy PDF color behavior because this selection API is unavailable.
 
+**Known temporary limitation and required replacement:** the PDF format itself supports vector blend modes through transparency groups and `ExtGState` dictionaries using `/BM` entries such as `/Multiply`, `/Screen`, and `/Overlay`. The raster fallback above is solely a limitation of the current `QPdfWriter` backend and is not an acceptable permanent implementation. RosetteLab must replace or supplement `QPdfWriter` with a PDF export path that emits native PDF blend modes while retaining Bézier geometry, fills, strokes, alpha, layer opacity, stacking order, and the selected RGB or CMYK workflow. Rasterization may remain available only as an explicit compatibility fallback.
+
 Preview and all export formats use the shared document renderer and the same fitted curve geometry. Raster export rejects dimensions above 32,767 pixels per side or 100 million pixels in total. Clean SVG without RosetteLab editing metadata remains a planned export target.
 
 ## 11. Safety and validation
@@ -418,7 +420,7 @@ Platform-specific native widgets should be avoided unless isolated behind an abs
 - Spirograph mode with generic wheel/hole mapping;
 - copy-based superposition;
 - PNG and JPEG export;
-- vector PDF export;
+- fully vector PDF export with native PDF blend modes, with rasterization retained only as an explicit compatibility fallback;
 - undo/redo for document edits;
 - user documentation;
 - macOS application package;
