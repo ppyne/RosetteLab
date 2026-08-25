@@ -417,7 +417,8 @@ Platform-specific native widgets should be avoided unless isolated behind an abs
 
 - Spirograph mode with generic wheel/hole mapping;
 - copy-based superposition;
-- PNG and JPEG export;\n- vector PDF export;
+- PNG and JPEG export;
+- vector PDF export;
 - undo/redo for document edits;
 - user documentation;
 - macOS application package;
