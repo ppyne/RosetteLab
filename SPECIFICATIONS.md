@@ -156,8 +156,11 @@ Parameters:
 - pen offset (d);
 - complete mathematically closed trace or limited turns;
 - number of turns around the fixed gear;
-- optional forced closure of a limited trace;
+- optional forced closure of a limited trace, represented by the SVG closing segment;
+- angular rotation;
 - adaptive Bézier tolerance in document units.
+
+For a complete trace, RosetteLab resolves the rational ratio `R/r` and traces the denominator number of revolutions required for exact closure. Ratios whose reduced denominator would exceed the supported safety bound must use limited tracing or produce a clear validation error.
 
 ### 5.4 Lissajous
 
