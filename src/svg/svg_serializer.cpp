@@ -143,30 +143,36 @@ void write_polar_rose(std::ostringstream& output, const document::CurveLayer& la
 } // namespace
 
 std::string serialize_rosettelab_svg(
-    const document::Document& document,
-    const SvgDocumentSettings& settings)
+    const document::Document& document)
 {
-    if (!std::isfinite(settings.width) || !std::isfinite(settings.height) ||
-        settings.width <= 0.0 || settings.height <= 0.0) {
+    const auto& settings = document.settings();
+    if (!std::isfinite(settings.page_width) || !std::isfinite(settings.page_height) ||
+        settings.page_width <= 0.0 || settings.page_height <= 0.0 || settings.unit.empty()) {
         throw std::invalid_argument("SVG dimensions must be finite and positive");
     }
 
-    const double left = -settings.width / 2.0;
-    const double top = -settings.height / 2.0;
+    const double left = -settings.page_width / 2.0;
+    const double top = -settings.page_height / 2.0;
     std::ostringstream output;
     output.imbue(std::locale::classic());
     output << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
            << "<svg xmlns=\"http://www.w3.org/2000/svg\""
            << " xmlns:rosettelab=\"" << metadata_namespace << "\""
-           << " width=\"" << number(settings.width) << xml_escape(settings.unit) << "\""
-           << " height=\"" << number(settings.height) << xml_escape(settings.unit) << "\""
+           << " width=\"" << number(settings.page_width) << xml_escape(settings.unit) << "\""
+           << " height=\"" << number(settings.page_height) << xml_escape(settings.unit) << "\""
            << " viewBox=\"" << number(left) << ' ' << number(top) << ' '
-           << number(settings.width) << ' ' << number(settings.height) << "\""
+           << number(settings.page_width) << ' ' << number(settings.page_height) << "\""
            << " rosettelab:document=\"true\""
-           << " rosettelab:schema-version=\"" << schema_version << "\">\n";
+           << " rosettelab:schema-version=\"" << schema_version << "\""
+           << " rosettelab:page-width=\"" << number(settings.page_width) << "\""
+           << " rosettelab:page-height=\"" << number(settings.page_height) << "\""
+           << " rosettelab:unit=\"" << xml_escape(settings.unit) << "\""
+           << " rosettelab:background=\"" << rgb_hex(settings.background) << "\""
+           << " rosettelab:background-opacity=\""
+           << number(std::clamp(settings.background.alpha, 0.0, 1.0)) << "\">\n";
 
     output << "  <rect x=\"" << number(left) << "\" y=\"" << number(top)
-           << "\" width=\"" << number(settings.width) << "\" height=\"" << number(settings.height)
+           << "\" width=\"" << number(settings.page_width) << "\" height=\"" << number(settings.page_height)
            << "\" fill=\"" << rgb_hex(settings.background) << "\" fill-opacity=\""
            << number(std::clamp(settings.background.alpha, 0.0, 1.0)) << "\""
            << " rosettelab:role=\"page-background\"/>\n";
