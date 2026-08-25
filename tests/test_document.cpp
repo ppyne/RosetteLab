@@ -51,6 +51,24 @@ void test_ellipse_names_and_parameters()
             "ellipse duplicate should use the next ellipse name");
 }
 
+void test_trochoid_names_and_parameters()
+{
+    rosettelab::document::Document document;
+    rosettelab::curves::TrochoidParameters parameters;
+    parameters.pen_offset = 44.5;
+    const auto hypo = document.add_trochoid(
+        rosettelab::document::CurveType::Hypotrochoid, parameters).id;
+    const auto epi = document.add_trochoid(
+        rosettelab::document::CurveType::Epitrochoid, parameters).id;
+    require(document.find_layer(hypo)->name == "Hypotrochoid 1",
+            "hypotrochoid should use its own name sequence");
+    require(document.find_layer(epi)->name == "Epitrochoid 1",
+            "epitrochoid should use its own name sequence");
+    require(std::get<rosettelab::curves::TrochoidParameters>(
+                document.find_layer(epi)->parameters).pen_offset == 44.5,
+            "trochoid parameters should be retained");
+}
+
 void test_custom_name_and_layer_state()
 {
     rosettelab::document::Document document;
@@ -148,6 +166,7 @@ int main()
     try {
         test_default_names_and_stable_ids();
         test_ellipse_names_and_parameters();
+        test_trochoid_names_and_parameters();
         test_custom_name_and_layer_state();
         test_layer_reordering();
         test_layer_duplication();
