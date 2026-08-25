@@ -80,10 +80,22 @@ QPixmap layer_preview(
 {
     constexpr int size = 28;
     QPixmap pixmap(size, size);
-    auto background = to_qcolor(document_background);
-    background.setAlpha(255);
-    pixmap.fill(background);
+    pixmap.fill(Qt::transparent);
     QPainter painter(&pixmap);
+    const auto background = to_qcolor(document_background);
+    if (background.alpha() < 255) {
+        constexpr int square = 4;
+        for (int y = 0; y < size; y += square) {
+            for (int x = 0; x < size; x += square) {
+                painter.fillRect(
+                    QRect(x, y, square, square),
+                    ((x / square + y / square) % 2 != 0)
+                        ? QColor(127, 127, 127)
+                        : QColor(255, 255, 255));
+            }
+        }
+    }
+    painter.fillRect(QRect(0, 0, size, size), background);
 
     core::BezierPath curve;
     try {
