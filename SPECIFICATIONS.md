@@ -184,9 +184,31 @@ Requirements:
 
 Custom user preset storage is deferred.
 
-## 7. Drawing and appearance
+## 7. Curve representation and rendering
 
-### 7.1 Stroke
+### 7.1 Bézier-first policy
+
+Whenever mathematically and geometrically appropriate, RosetteLab represents generated curves as sequences of cubic Bézier segments rather than dense polylines.
+
+Requirements:
+
+- curve generators provide positions and analytical derivatives when practical;
+- an adaptive fitter subdivides a segment until its measured deviation from the mathematical curve is below the selected tolerance;
+- tolerance is expressed in document units and is independent of preview zoom;
+- generated SVG uses cubic path commands (`C`) preferentially;
+- closed mathematical curves produce topologically closed SVG paths;
+- inflection points, cusps, discontinuities, and singularities are split explicitly;
+- point-count and segment-count safety limits remain enforced;
+- the preview and exported SVG must derive from the same fitted geometry;
+- tests compare fitted Bézier paths against reference samples from the original equation.
+
+Polyline output is permitted only when a Bézier approximation is unavailable, would be less faithful, is explicitly requested for a specialized export, or is used internally as a temporary reference for validation. It must not be the normal representation of supported smooth curve families.
+
+User-facing precision presets map to documented geometric tolerances, with an optional custom tolerance.
+
+## 8. Drawing and appearance
+
+### 8.1 Stroke
 
 - default color: opaque black;
 - color;
@@ -194,13 +216,13 @@ Custom user preset storage is deferred.
 - width;
 - line cap and join when relevant.
 
-### 7.2 Fill
+### 8.2 Fill
 
 - none or color;
 - opacity from 0 to 100%;
 - fill rule: `nonzero` or `evenodd`.
 
-### 7.3 Color input
+### 8.3 Color input
 
 Two synchronized representations are required:
 
@@ -209,7 +231,7 @@ Two synchronized representations are required:
 
 A graphical picker may be added where the platform toolkit supports it consistently. Numeric entry must remain available.
 
-### 7.4 Layer rendering
+### 8.4 Layer rendering
 
 Each layer has an opacity percentage and a blend mode. The first supported set should map directly to SVG/CSS compositing:
 
@@ -232,7 +254,7 @@ Each layer has an opacity percentage and a blend mode. The first supported set s
 
 Unsupported backend modes must fail gracefully or be disabled rather than silently rendered incorrectly.
 
-## 8. Superposition and copies
+## 9. Superposition and copies
 
 A layer may represent one curve or a generated group of related copies.
 
@@ -246,9 +268,9 @@ Possible parameters:
 
 Version 1.0 requires copy count, angular offset, and scale progression. General parameter and color sequences are deferred.
 
-## 9. SVG project format
+## 10. SVG project format
 
-### 9.1 Native project detection
+### 10.1 Native project detection
 
 RosetteLab opens a file as a project only when all of the following are present and supported:
 
@@ -260,7 +282,7 @@ RosetteLab opens a file as a project only when all of the following are present 
 
 A normal SVG without these elements is not opened as a RosetteLab project. A clear message explains why. General SVG import is a later feature.
 
-### 9.2 Compatibility
+### 10.2 Compatibility
 
 The file remains a valid SVG that other SVG applications can render. RosetteLab metadata must not be required to display the generated paths.
 
@@ -270,7 +292,7 @@ Suggested namespace:
 
 Until a stable public namespace is established, schema identifiers must be versioned and centralized in code.
 
-### 9.3 Stored information
+### 10.3 Stored information
 
 The SVG stores:
 
@@ -284,11 +306,11 @@ The SVG stores:
 - blend mode and opacity;
 - preset provenance when applicable.
 
-### 9.4 Round-trip requirement
+### 10.4 Round-trip requirement
 
 Saving, reopening, and saving without edits must preserve the visible composition and all supported RosetteLab parameters. Unknown metadata from a newer schema must not be discarded silently.
 
-### 9.5 Export
+### 10.5 Export
 
 Initial export targets:
 
@@ -297,7 +319,7 @@ Initial export targets:
 
 PDF export is deferred unless Qt's rendering stack provides a reliable low-cost path.
 
-## 10. Safety and validation
+## 11. Safety and validation
 
 - Numeric controls have documented ranges and reject non-finite values.
 - Estimated point counts are bounded before generation.
@@ -306,7 +328,7 @@ PDF export is deferred unless Qt's rendering stack provides a reliable low-cost 
 - XML parsing prohibits external entity expansion and external resource loading.
 - Autosave and crash recovery are desirable but deferred from the first milestone.
 
-## 11. Accessibility and platform behavior
+## 12. Accessibility and platform behavior
 
 - Keyboard navigation for all controls.
 - Accessible labels for eye, lock, layer, and color controls.
@@ -317,9 +339,9 @@ PDF export is deferred unless Qt's rendering stack provides a reliable low-cost 
 
 Platform-specific native widgets should be avoided unless isolated behind an abstraction.
 
-## 12. Version scope
+## 13. Version scope
 
-### 12.1 Milestone 0.1 — technical foundation
+### 13.1 Milestone 0.1 — technical foundation
 
 - C++ project and build system;
 - Qt 6 Widgets application shell;
@@ -329,7 +351,7 @@ Platform-specific native widgets should be avoided unless isolated behind an abs
 - live preview;
 - unit tests for curve generation.
 
-### 12.2 Milestone 0.2 — editable composition
+### 13.2 Milestone 0.2 — editable composition
 
 - layer add/select/rename/duplicate/delete;
 - visibility and lock controls;
@@ -337,7 +359,7 @@ Platform-specific native widgets should be avoided unless isolated behind an abs
 - stroke, fill, opacity, fill rule, and essential blend modes;
 - presets that populate editable controls.
 
-### 12.3 Milestone 0.3 — native SVG round-trip
+### 13.3 Milestone 0.3 — native SVG round-trip
 
 - versioned RosetteLab metadata schema;
 - project save;
@@ -345,7 +367,7 @@ Platform-specific native widgets should be avoided unless isolated behind an abs
 - round-trip tests;
 - clean SVG export.
 
-### 12.4 Milestone 0.4 — core curve set
+### 13.4 Milestone 0.4 — core curve set
 
 - hypotrochoid and epitrochoid;
 - Lissajous;
@@ -353,7 +375,7 @@ Platform-specific native widgets should be avoided unless isolated behind an abs
 - limited/complete trochoid tracing;
 - per-family curated presets.
 
-### 12.5 Milestone 1.0 — first stable release
+### 13.5 Milestone 1.0 — first stable release
 
 - Spirograph mode with generic wheel/hole mapping;
 - copy-based superposition;
@@ -363,7 +385,7 @@ Platform-specific native widgets should be avoided unless isolated behind an abs
 - macOS application package;
 - tested project migration policy for the 1.x schema.
 
-## 13. Deferred features
+## 14. Deferred features
 
 The following may wait until after 1.0 unless implementation proves inexpensive:
 
@@ -382,7 +404,7 @@ The following may wait until after 1.0 unless implementation proves inexpensive:
 - advanced color-management workflows;
 - GPU-specific renderer.
 
-## 14. Acceptance criteria for 1.0
+## 15. Acceptance criteria for 1.0
 
 RosetteLab 1.0 is acceptable when a user can:
 
