@@ -349,12 +349,13 @@ Saving, reopening, and saving without edits must preserve the visible compositio
 
 ### 10.5 Export
 
-Initial export targets:
+The **File → Export** submenu provides:
 
-- clean SVG without RosetteLab editing metadata;
-- PNG at configurable dimensions and scale.
+- **To PNG…**: raster export at a user-selected resolution from 72 to 1200 DPI; document alpha is preserved and the UI checkerboard is never exported;
+- **To JPEG…**: raster export at a user-selected resolution from 72 to 1200 DPI and high quality; transparent document areas are composited onto opaque white because JPEG has no alpha channel;
+- **To PDF…**: vector export at the exact document dimensions, retaining cubic Bézier paths, fills, strokes, opacity, and supported blend modes.
 
-PDF export is deferred unless Qt's rendering stack provides a reliable low-cost path.
+Preview and all export formats use the shared document renderer and the same fitted curve geometry. Raster export rejects dimensions above 32,767 pixels per side or 100 million pixels in total. Clean SVG without RosetteLab editing metadata remains a planned export target.
 
 ## 11. Safety and validation
 
@@ -416,7 +417,7 @@ Platform-specific native widgets should be avoided unless isolated behind an abs
 
 - Spirograph mode with generic wheel/hole mapping;
 - copy-based superposition;
-- PNG export;
+- PNG and JPEG export;\n- vector PDF export;
 - undo/redo for document edits;
 - user documentation;
 - macOS application package;
