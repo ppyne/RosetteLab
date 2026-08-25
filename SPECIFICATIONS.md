@@ -23,6 +23,7 @@ The main window contains three primary regions:
    - Displays all visible layers in stack order.
    - Uses an opaque white page by default, independently of the operating-system UI theme.
    - Supports zoom, pan, fit-to-document, and a configurable background.
+   - Shows horizontal and vertical scroll bars automatically whenever the zoomed page exceeds the preview viewport.
    - Reflects parameter and appearance changes without requiring an Apply action.
 
 2. **Parameter editor**
@@ -87,7 +88,7 @@ Initial parameters:
 - angular multiplier (k);
 - phase (phi);
 - angular rotation;
-- sampling precision.
+- adaptive Bézier tolerance in document units.
 
 The mathematical meaning of (k), including the odd/even petal behavior, must be documented in the interface help.
 
