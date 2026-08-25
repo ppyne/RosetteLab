@@ -1,5 +1,6 @@
 #include "ui/main_window.hpp"
 
+#include "ui/layer_list_item_widget.hpp"
 #include "ui/preview_widget.hpp"
 
 #include <QAbstractItemModel>
@@ -107,10 +108,7 @@ MainWindow::MainWindow(QWidget* parent)
     layers_->setDragDropMode(QAbstractItemView::InternalMove);
     auto& initial = document_.add_polar_rose();
     active_layer_id_ = initial.id;
-    auto* initial_layer = new QListWidgetItem(QString::fromStdString(initial.name), layers_);
-    initial_layer->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(initial.id));
-    initial_layer->setFlags(initial_layer->flags() | Qt::ItemIsUserCheckable);
-    initial_layer->setCheckState(Qt::Checked);
+    auto* initial_layer = add_layer_row(initial);
     layers_->setCurrentItem(initial_layer);
     layers_layout->addWidget(layers_);
     auto* add_button = new QPushButton("Add...", layers_panel);
@@ -127,13 +125,9 @@ MainWindow::MainWindow(QWidget* parent)
     rename_button_ = new QPushButton("Rename", layers_panel);
     duplicate_button_ = new QPushButton("Duplicate", layers_panel);
     delete_button_ = new QPushButton("Delete", layers_panel);
-    lock_button_ = new QPushButton("Unlock", layers_panel);
-    lock_button_->setFixedWidth(lock_button_->sizeHint().width());
-    lock_button_->setText("Lock");
     layer_actions->addWidget(rename_button_);
     layer_actions->addWidget(duplicate_button_);
     layer_actions->addWidget(delete_button_);
-    layer_actions->addWidget(lock_button_);
     layers_layout->addLayout(layer_actions);
 
     splitter->setStretchFactor(0, 0);
@@ -155,23 +149,12 @@ MainWindow::MainWindow(QWidget* parent)
     connect(rename_button_, &QPushButton::clicked, this, [this] { rename_active_layer(); });
     connect(duplicate_button_, &QPushButton::clicked, this, [this] { duplicate_active_layer(); });
     connect(delete_button_, &QPushButton::clicked, this, [this] { delete_active_layer(); });
-    connect(lock_button_, &QPushButton::clicked, this, [this] {
-        const auto* layer = document_.find_layer(active_layer_id_);
-        if (layer != nullptr) {
-            set_active_layer_locked(!layer->locked);
-        }
-    });
     connect(layers_, &QListWidget::currentItemChanged, this,
         [this](QListWidgetItem* current, QListWidgetItem*) {
             if (current != nullptr) {
                 select_layer(current->data(Qt::UserRole).toULongLong());
             }
         });
-    connect(layers_, &QListWidget::itemChanged, this, [this](QListWidgetItem* item) {
-        const auto id = static_cast<document::LayerId>(item->data(Qt::UserRole).toULongLong());
-        static_cast<void>(document_.set_layer_visible(id, item->checkState() == Qt::Checked));
-        preview_->update();
-    });
     connect(layers_->model(), &QAbstractItemModel::rowsMoved, this,
         [this] { sync_layer_order(); });
 
@@ -191,12 +174,50 @@ void MainWindow::add_polar_rose()
     }
 
     auto& layer = document_.add_polar_rose({}, name.toStdString());
-    auto* item = new QListWidgetItem(name, layers_);
-    item->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(layer.id));
-    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-    item->setCheckState(Qt::Checked);
+    auto* item = add_layer_row(layer);
     layers_->setCurrentItem(item);
     preview_->update();
+}
+
+QListWidgetItem* MainWindow::add_layer_row(const document::CurveLayer& layer, const int row)
+{
+    auto* item = new QListWidgetItem;
+    item->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(layer.id));
+    item->setSizeHint(QSize(220, 32));
+    if (row < 0) {
+        layers_->addItem(item);
+    } else {
+        layers_->insertItem(row, item);
+    }
+
+    auto* widget = new LayerListItemWidget(
+        layer.id,
+        QString::fromStdString(layer.name),
+        layer.visible,
+        layer.locked,
+        [this, id = layer.id] { select_layer_row(id); },
+        [this, id = layer.id](const bool visible) {
+            select_layer_row(id);
+            static_cast<void>(document_.set_layer_visible(id, visible));
+            preview_->update();
+        },
+        [this, id = layer.id](const bool locked) {
+            select_layer_row(id);
+            set_active_layer_locked(locked);
+        });
+    layers_->setItemWidget(item, widget);
+    return item;
+}
+
+void MainWindow::select_layer_row(const document::LayerId id)
+{
+    for (int row = 0; row < layers_->count(); ++row) {
+        auto* item = layers_->item(row);
+        if (item->data(Qt::UserRole).toULongLong() == id) {
+            layers_->setCurrentItem(item);
+            return;
+        }
+    }
 }
 
 void MainWindow::select_layer(const document::LayerId id)
@@ -247,7 +268,10 @@ void MainWindow::rename_active_layer()
         return;
     }
     if (document_.rename_layer(active_layer_id_, name.toStdString())) {
-        item->setText(name);
+        auto* widget = static_cast<LayerListItemWidget*>(layers_->itemWidget(item));
+        if (widget != nullptr) {
+            widget->set_name(name);
+        }
     }
 }
 
@@ -259,11 +283,7 @@ void MainWindow::duplicate_active_layer()
         return;
     }
 
-    auto* item = new QListWidgetItem(QString::fromStdString(duplicate->name));
-    item->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(duplicate->id));
-    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-    item->setCheckState(duplicate->visible ? Qt::Checked : Qt::Unchecked);
-    layers_->insertItem(source_row + 1, item);
+    auto* item = add_layer_row(*duplicate, source_row + 1);
     layers_->setCurrentItem(item);
     preview_->update();
 }
@@ -308,9 +328,7 @@ void MainWindow::refresh_layer_actions()
     rename_button_->setEnabled(has_layer);
     duplicate_button_->setEnabled(has_layer);
     delete_button_->setEnabled(has_layer);
-    lock_button_->setEnabled(has_layer);
     curve_group_->setEnabled(has_layer && !layer->locked);
-    lock_button_->setText(has_layer && layer->locked ? "Unlock" : "Lock");
 }
 
 void MainWindow::sync_layer_order()
