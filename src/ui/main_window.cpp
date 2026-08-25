@@ -198,6 +198,47 @@ MainWindow::MainWindow(QWidget* parent)
     ellipse_group_->hide();
     parameters_layout->addWidget(ellipse_group_);
 
+    trochoid_group_ = new QGroupBox("Trochoid parameters", parameters_panel);
+    auto* trochoid_form = new QFormLayout(trochoid_group_);
+    trochoid_fixed_radius_ = new QDoubleSpinBox(trochoid_group_);
+    trochoid_fixed_radius_->setRange(0.01, 100000.0);
+    trochoid_fixed_radius_->setValue(105.0);
+    trochoid_fixed_radius_->setDecimals(3);
+    trochoid_rolling_radius_ = new QDoubleSpinBox(trochoid_group_);
+    trochoid_rolling_radius_->setRange(0.01, 100000.0);
+    trochoid_rolling_radius_->setValue(45.0);
+    trochoid_rolling_radius_->setDecimals(3);
+    trochoid_pen_offset_ = new QDoubleSpinBox(trochoid_group_);
+    trochoid_pen_offset_->setRange(0.0, 100000.0);
+    trochoid_pen_offset_->setValue(30.0);
+    trochoid_pen_offset_->setDecimals(3);
+    trochoid_rotation_ = angle_control(trochoid_group_);
+    trochoid_trace_mode_ = new QComboBox(trochoid_group_);
+    trochoid_trace_mode_->addItem("Complete closed curve", static_cast<int>(curves::TraceMode::Complete));
+    trochoid_trace_mode_->addItem("Limited number of turns", static_cast<int>(curves::TraceMode::Limited));
+    trochoid_turns_ = new QDoubleSpinBox(trochoid_group_);
+    trochoid_turns_->setRange(0.01, 10000.0);
+    trochoid_turns_->setValue(2.0);
+    trochoid_turns_->setDecimals(3);
+    trochoid_close_limited_ = new QCheckBox("Close with a straight segment", trochoid_group_);
+    trochoid_tolerance_ = new QDoubleSpinBox(trochoid_group_);
+    trochoid_tolerance_->setRange(0.001, 10.0);
+    trochoid_tolerance_->setValue(0.05);
+    trochoid_tolerance_->setDecimals(3);
+    trochoid_tolerance_->setSingleStep(0.01);
+    trochoid_tolerance_->setSuffix(" units");
+    trochoid_form->addRow("Fixed radius / teeth R", trochoid_fixed_radius_);
+    trochoid_form->addRow("Rolling radius / teeth r", trochoid_rolling_radius_);
+    trochoid_form->addRow("Pen offset d", trochoid_pen_offset_);
+    trochoid_form->addRow("Rotation", trochoid_rotation_);
+    trochoid_form->addRow("Tracing mode", trochoid_trace_mode_);
+    trochoid_form->addRow("Turns around fixed gear", trochoid_turns_);
+    trochoid_form->addRow("Limited path closure", trochoid_close_limited_);
+    trochoid_form->addRow("Curve tolerance", trochoid_tolerance_);
+    trochoid_group_->hide();
+    parameters_layout->addWidget(trochoid_group_);
+    refresh_trochoid_trace_controls();
+
     appearance_group_ = new QGroupBox("Appearance", parameters_panel);
     auto* appearance_form = new QFormLayout(appearance_group_);
     stroke_color_button_ = new ColorPreviewButton(appearance_group_);
@@ -275,8 +316,14 @@ MainWindow::MainWindow(QWidget* parent)
     auto* add_menu = new QMenu(add_button);
     add_menu->addAction("Polar rose", this, [this] { add_polar_rose(); });
     add_menu->addAction("Ellipse", this, [this] { add_ellipse(); });
+    add_menu->addAction("Hypotrochoid", this, [this] {
+        add_trochoid(document::CurveType::Hypotrochoid);
+    });
+    add_menu->addAction("Epitrochoid", this, [this] {
+        add_trochoid(document::CurveType::Epitrochoid);
+    });
     for (const auto* unavailable : {
-             "Hypotrochoid", "Epitrochoid", "Lissajous", "Harmonograph", "Spirograph"}) {
+             "Lissajous", "Harmonograph", "Spirograph"}) {
         add_menu->addAction(unavailable)->setEnabled(false);
     }
     add_button->setMenu(add_menu);
@@ -314,6 +361,17 @@ MainWindow::MainWindow(QWidget* parent)
     connect(ellipse_radius_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(ellipse_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(ellipse_tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(trochoid_fixed_radius_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(trochoid_rolling_radius_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(trochoid_pen_offset_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(trochoid_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(trochoid_trace_mode_, &QComboBox::currentIndexChanged, this, [this] {
+        refresh_trochoid_trace_controls();
+        update_preview();
+    });
+    connect(trochoid_turns_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(trochoid_close_limited_, &QCheckBox::toggled, this, [this] { update_preview(); });
+    connect(trochoid_tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(stroke_color_button_, &QPushButton::clicked, this, [this] { choose_stroke_color(); });
     connect(fill_color_button_, &QPushButton::clicked, this, [this] { choose_fill_color(); });
     connect(stroke_width_, &QDoubleSpinBox::valueChanged, this, [this] { update_appearance(); });
@@ -492,6 +550,23 @@ void MainWindow::add_ellipse()
     preview_->update();
 }
 
+void MainWindow::add_trochoid(const document::CurveType type)
+{
+    const auto type_name = QString::fromStdString(document::curve_type_name(type));
+    const auto suggested = QString::fromStdString(document_.suggested_default_name(type));
+    bool accepted = false;
+    const auto name = QInputDialog::getText(
+        this, QStringLiteral("New %1").arg(type_name), "Layer name",
+        QLineEdit::Normal, suggested, &accepted).trimmed();
+    if (!accepted || name.isEmpty()) {
+        return;
+    }
+    auto& layer = document_.add_trochoid(type, {}, name.toStdString());
+    auto* item = add_layer_row(layer);
+    layers_->setCurrentItem(item);
+    preview_->update();
+}
+
 QListWidgetItem* MainWindow::add_layer_row(const document::CurveLayer& layer, const int row)
 {
     auto* item = new QListWidgetItem;
@@ -550,8 +625,10 @@ void MainWindow::load_active_layer()
     curve_type_label_->setText(QString::fromStdString(document::curve_type_name(layer->type)));
     const auto* parameters = std::get_if<curves::PolarRoseParameters>(&layer->parameters);
     const auto* ellipse_parameters = std::get_if<curves::EllipseParameters>(&layer->parameters);
+    const auto* trochoid_parameters = std::get_if<curves::TrochoidParameters>(&layer->parameters);
     curve_group_->setVisible(parameters != nullptr);
     ellipse_group_->setVisible(ellipse_parameters != nullptr);
+    trochoid_group_->setVisible(trochoid_parameters != nullptr);
 
     const QSignalBlocker radius_blocker(radius_);
     const QSignalBlocker k_mode_blocker(k_mode_);
@@ -565,6 +642,14 @@ void MainWindow::load_active_layer()
     const QSignalBlocker ellipse_radius_y_blocker(ellipse_radius_y_);
     const QSignalBlocker ellipse_rotation_blocker(ellipse_rotation_);
     const QSignalBlocker ellipse_tolerance_blocker(ellipse_tolerance_);
+    const QSignalBlocker trochoid_fixed_blocker(trochoid_fixed_radius_);
+    const QSignalBlocker trochoid_rolling_blocker(trochoid_rolling_radius_);
+    const QSignalBlocker trochoid_offset_blocker(trochoid_pen_offset_);
+    const QSignalBlocker trochoid_rotation_blocker(trochoid_rotation_);
+    const QSignalBlocker trochoid_mode_blocker(trochoid_trace_mode_);
+    const QSignalBlocker trochoid_turns_blocker(trochoid_turns_);
+    const QSignalBlocker trochoid_close_blocker(trochoid_close_limited_);
+    const QSignalBlocker trochoid_tolerance_blocker(trochoid_tolerance_);
     const QSignalBlocker stroke_width_blocker(stroke_width_);
     const QSignalBlocker fill_enabled_blocker(fill_enabled_);
     const QSignalBlocker fill_rule_blocker(fill_rule_);
@@ -584,6 +669,16 @@ void MainWindow::load_active_layer()
         ellipse_radius_y_->setValue(ellipse_parameters->radius_y);
         ellipse_rotation_->setValue(ellipse_parameters->rotation_degrees);
         ellipse_tolerance_->setValue(ellipse_parameters->bezier_tolerance);
+    } else if (trochoid_parameters != nullptr) {
+        trochoid_fixed_radius_->setValue(trochoid_parameters->fixed_radius);
+        trochoid_rolling_radius_->setValue(trochoid_parameters->rolling_radius);
+        trochoid_pen_offset_->setValue(trochoid_parameters->pen_offset);
+        trochoid_rotation_->setValue(trochoid_parameters->rotation_degrees);
+        trochoid_trace_mode_->setCurrentIndex(trochoid_trace_mode_->findData(
+            static_cast<int>(trochoid_parameters->trace_mode)));
+        trochoid_turns_->setValue(trochoid_parameters->turns);
+        trochoid_close_limited_->setChecked(trochoid_parameters->close_limited_path);
+        trochoid_tolerance_->setValue(trochoid_parameters->bezier_tolerance);
     }
     stroke_color_ = qcolor_from_rgba(layer->appearance.stroke);
     fill_color_ = qcolor_from_rgba(layer->appearance.fill);
@@ -594,6 +689,7 @@ void MainWindow::load_active_layer()
     blend_mode_->setCurrentIndex(blend_mode_->findData(static_cast<int>(layer->appearance.blend_mode)));
     refresh_color_buttons();
     refresh_k_mode_controls();
+    refresh_trochoid_trace_controls();
 }
 
 void MainWindow::refresh_k_mode_controls()
@@ -603,6 +699,14 @@ void MainWindow::refresh_k_mode_controls()
     k_->setEnabled(decimal);
     numerator_->setEnabled(!decimal);
     denominator_->setEnabled(!decimal);
+}
+
+void MainWindow::refresh_trochoid_trace_controls()
+{
+    const bool limited = static_cast<curves::TraceMode>(
+        trochoid_trace_mode_->currentData().toInt()) == curves::TraceMode::Limited;
+    trochoid_turns_->setEnabled(limited);
+    trochoid_close_limited_->setEnabled(limited);
 }
 
 void MainWindow::choose_stroke_color()
@@ -734,6 +838,7 @@ void MainWindow::refresh_layer_actions()
     delete_button_->setEnabled(has_layer);
     curve_group_->setEnabled(has_layer && !layer->locked);
     ellipse_group_->setEnabled(has_layer && !layer->locked);
+    trochoid_group_->setEnabled(has_layer && !layer->locked);
     appearance_group_->setEnabled(has_layer && !layer->locked);
 }
 
@@ -800,6 +905,16 @@ void MainWindow::update_preview()
         parameters->radius_y = ellipse_radius_y_->value();
         parameters->rotation_degrees = ellipse_rotation_->value();
         parameters->bezier_tolerance = ellipse_tolerance_->value();
+    } else if (auto* parameters = std::get_if<curves::TrochoidParameters>(&layer->parameters)) {
+        parameters->fixed_radius = trochoid_fixed_radius_->value();
+        parameters->rolling_radius = trochoid_rolling_radius_->value();
+        parameters->pen_offset = trochoid_pen_offset_->value();
+        parameters->rotation_degrees = trochoid_rotation_->value();
+        parameters->trace_mode = static_cast<curves::TraceMode>(
+            trochoid_trace_mode_->currentData().toInt());
+        parameters->turns = trochoid_turns_->value();
+        parameters->close_limited_path = trochoid_close_limited_->isChecked();
+        parameters->bezier_tolerance = trochoid_tolerance_->value();
     }
     refresh_layer_preview(active_layer_id_);
     preview_->update();
