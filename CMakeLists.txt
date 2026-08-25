@@ -53,6 +53,7 @@ if(ROSETTELAB_BUILD_GUI)
                 src/svg/qt_svg_parser.cpp
                 tests/test_qt_svg_parser.cpp
             )
+            target_include_directories(rosettelab_qt_svg_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
             target_link_libraries(rosettelab_qt_svg_tests PRIVATE rosettelab_core Qt6::Core)
             add_test(NAME rosettelab_qt_svg_tests COMMAND rosettelab_qt_svg_tests)
         endif()
