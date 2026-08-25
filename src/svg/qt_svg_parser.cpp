@@ -219,6 +219,21 @@ document::Document parse_rosettelab_svg(const QByteArray& data)
     }
 
     document::Document document;
+    document.settings().page_width = parse_double(
+        required_metadata_attribute(attributes, metadata_ns, "page-width"), "page-width");
+    document.settings().page_height = parse_double(
+        required_metadata_attribute(attributes, metadata_ns, "page-height"), "page-height");
+    document.settings().unit = required_metadata_attribute(attributes, metadata_ns, "unit").toStdString();
+    const double background_alpha = parse_double(
+        required_metadata_attribute(attributes, metadata_ns, "background-opacity"),
+        "background-opacity");
+    document.settings().background = parse_rgb(
+        required_metadata_attribute(attributes, metadata_ns, "background"),
+        background_alpha);
+    if (document.settings().page_width <= 0.0 || document.settings().page_height <= 0.0 ||
+        document.settings().unit.empty()) {
+        throw parse_error("Invalid RosetteLab page settings");
+    }
     std::size_t layer_count = 0;
     while (reader.readNextStartElement()) {
         if (reader.namespaceUri() == "http://www.w3.org/2000/svg" && reader.name() == "g") {
