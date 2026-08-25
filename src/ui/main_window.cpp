@@ -4,18 +4,26 @@
 #include "ui/layer_list_item_widget.hpp"
 #include "ui/preview_widget.hpp"
 
+#include "rosettelab/svg/svg_serializer.hpp"
+
 #include <QAbstractItemModel>
+#include <QAction>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDoubleSpinBox>
+#include <QFile>
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QInputDialog>
+#include <QKeySequence>
 #include <QLabel>
 #include <QListWidget>
 #include <QLineEdit>
 #include <QMenu>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QScrollArea>
@@ -27,6 +35,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <exception>
 #include <initializer_list>
 #include <utility>
 
@@ -72,6 +81,11 @@ MainWindow::MainWindow(QWidget* parent)
 {
     setWindowTitle("RosetteLab");
     resize(1200, 760);
+
+    auto* file_menu = menuBar()->addMenu("&File");
+    auto* save_as_action = file_menu->addAction("Save As...");
+    save_as_action->setShortcut(QKeySequence::SaveAs);
+    connect(save_as_action, &QAction::triggered, this, [this] { save_as(); });
 
     auto* splitter = new QSplitter(Qt::Horizontal, this);
     setCentralWidget(splitter);
@@ -212,9 +226,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(k_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(phase_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(tolerance_, &QDoubleSpinBox::valueChanged, this, [this](const double value) {
-        preview_->set_curve_tolerance(value);
-    });
+    connect(tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(stroke_color_button_, &QPushButton::clicked, this, [this] { choose_stroke_color(); });
     connect(fill_color_button_, &QPushButton::clicked, this, [this] { choose_fill_color(); });
     connect(stroke_width_, &QDoubleSpinBox::valueChanged, this, [this] { update_appearance(); });
@@ -240,6 +252,38 @@ MainWindow::MainWindow(QWidget* parent)
 
     update_preview();
     refresh_layer_actions();
+}
+
+void MainWindow::save_as()
+{
+    auto path = QFileDialog::getSaveFileName(
+        this, "Save RosetteLab SVG", {}, "RosetteLab SVG (*.svg)");
+    if (path.isEmpty()) {
+        return;
+    }
+    if (!path.endsWith(".svg", Qt::CaseInsensitive)) {
+        path += ".svg";
+    }
+
+    std::string svg_text;
+    try {
+        svg_text = svg::serialize_rosettelab_svg(document_);
+    } catch (const std::exception& error) {
+        QMessageBox::critical(this, "Unable to save", error.what());
+        return;
+    }
+
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        QMessageBox::critical(this, "Unable to save", file.errorString());
+        return;
+    }
+    const auto data = QByteArray::fromStdString(svg_text);
+    if (file.write(data) != data.size()) {
+        QMessageBox::critical(this, "Unable to save", file.errorString());
+        return;
+    }
+    setWindowTitle(QStringLiteral("RosetteLab - %1").arg(QFileInfo(path).fileName()));
 }
 
 void MainWindow::add_polar_rose()
@@ -322,6 +366,7 @@ void MainWindow::load_active_layer()
     const QSignalBlocker k_blocker(k_);
     const QSignalBlocker phase_blocker(phase_);
     const QSignalBlocker rotation_blocker(rotation_);
+    const QSignalBlocker tolerance_blocker(tolerance_);
     const QSignalBlocker stroke_width_blocker(stroke_width_);
     const QSignalBlocker fill_enabled_blocker(fill_enabled_);
     const QSignalBlocker fill_rule_blocker(fill_rule_);
@@ -331,6 +376,7 @@ void MainWindow::load_active_layer()
     k_->setValue(parameters->k);
     phase_->setValue(parameters->phase_degrees);
     rotation_->setValue(parameters->rotation_degrees);
+    tolerance_->setValue(parameters->bezier_tolerance);
     stroke_color_ = qcolor_from_rgba(layer->appearance.stroke);
     fill_color_ = qcolor_from_rgba(layer->appearance.fill);
     stroke_width_->setValue(layer->appearance.stroke_width);
@@ -502,6 +548,7 @@ void MainWindow::update_preview()
     parameters->k = k_->value();
     parameters->phase_degrees = phase_->value();
     parameters->rotation_degrees = rotation_->value();
+    parameters->bezier_tolerance = tolerance_->value();
     preview_->update();
 }
 
