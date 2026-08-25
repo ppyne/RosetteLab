@@ -34,6 +34,10 @@
 #include <QPageSize>
 #include <QPainter>
 #include <QPdfWriter>
+#include <QtGlobal>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+#include <QPdfOutputIntent>
+#endif
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSettings>
@@ -592,6 +596,10 @@ void MainWindow::export_pdf()
     writer.setTitle("RosetteLab export");
     writer.setCreator("RosetteLab");
     writer.setResolution(300);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+    writer.setColorModel(QPdfWriter::ColorModel::RGB);
+    writer.setOutputIntent(QPdfOutputIntent{});
+#endif
     const QPageSize page_size(
         QSizeF(document_.settings().page_width, document_.settings().page_height),
         QPageSize::Millimeter,
