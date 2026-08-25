@@ -43,6 +43,9 @@ public:
         std::optional<std::string> name = std::nullopt);
 
     [[nodiscard]] std::string suggested_default_name(CurveType type) const;
+    [[nodiscard]] CurveLayer* duplicate_layer(
+        LayerId id,
+        std::optional<std::string> name = std::nullopt);
 
     [[nodiscard]] bool remove_layer(LayerId id);
     [[nodiscard]] bool move_layer(std::size_t from, std::size_t to);
