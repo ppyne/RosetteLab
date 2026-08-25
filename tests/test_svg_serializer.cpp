@@ -24,6 +24,10 @@ void test_native_svg_contains_geometry_and_metadata()
 {
     rosettelab::document::Document document;
     auto& layer = document.add_polar_rose({}, "Rose & <one>");
+    auto& parameters = std::get<rosettelab::curves::PolarRoseParameters>(layer.parameters);
+    parameters.k_mode = rosettelab::curves::PolarKMode::Fraction;
+    parameters.numerator = 1;
+    parameters.denominator = 3;
     layer.appearance.stroke = {1.0, 0.0, 0.5, 0.25};
     layer.appearance.fill_enabled = true;
     layer.appearance.fill = {0.0, 0.5, 1.0, 0.75};
@@ -38,6 +42,9 @@ void test_native_svg_contains_geometry_and_metadata()
     require(contains(svg, "rosettelab:name=\"Rose &amp; &lt;one&gt;\""), "layer name should be escaped");
     require(contains(svg, "rosettelab:type=\"polar-rose\""), "curve type should be stored");
     require(contains(svg, "bezier-tolerance=\"0.05\""), "curve tolerance should be stored");
+    require(contains(svg, "k-mode=\"fraction\""), "fraction mode should be stored");
+    require(contains(svg, "numerator=\"1\""), "fraction numerator should be stored");
+    require(contains(svg, "denominator=\"3\""), "fraction denominator should be stored");
     require(contains(svg, "<path d=\"M "), "rendered path should be present");
     require(contains(svg, " C "), "rendered path should use cubic Bezier commands");
     require(contains(svg, "stroke=\"#FF0080\""), "stroke RGB should be serialized");
