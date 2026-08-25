@@ -10,6 +10,7 @@
 #include <QAbstractItemModel>
 #include <QAction>
 #include <QCheckBox>
+#include <QCloseEvent>
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFile>
@@ -28,6 +29,7 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QSettings>
 #include <QSignalBlocker>
 #include <QSpinBox>
 #include <QSplitter>
@@ -94,7 +96,14 @@ MainWindow::MainWindow(QWidget* parent)
     auto* splitter = new QSplitter(Qt::Horizontal, this);
     setCentralWidget(splitter);
 
-    auto* parameters_panel = new QWidget(splitter);
+    auto* parameters_scroll = new QScrollArea(splitter);
+    parameters_scroll->setWidgetResizable(true);
+    parameters_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    parameters_scroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    parameters_scroll->setSizeAdjustPolicy(QAbstractScrollArea::AdjustIgnored);
+    parameters_scroll->setMinimumWidth(260);
+    auto* parameters_panel = new QWidget;
+    parameters_scroll->setWidget(parameters_panel);
     auto* parameters_layout = new QVBoxLayout(parameters_panel);
     curve_type_label_ = new QLabel("Polar rose", parameters_panel);
     parameters_layout->addWidget(curve_type_label_);
@@ -331,6 +340,19 @@ MainWindow::MainWindow(QWidget* parent)
 
     update_preview();
     refresh_layer_actions();
+
+    QSettings settings;
+    const auto geometry = settings.value("mainWindow/geometry").toByteArray();
+    if (!geometry.isEmpty()) {
+        restoreGeometry(geometry);
+    }
+}
+
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+    QSettings settings;
+    settings.setValue("mainWindow/geometry", saveGeometry());
+    QMainWindow::closeEvent(event);
 }
 
 void MainWindow::open_file()
