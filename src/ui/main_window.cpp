@@ -397,6 +397,7 @@ void MainWindow::update_document_settings()
     document_.settings().unit = "mm";
     document_.settings().background = rgba_from_qcolor(page_background_);
     preview_->refresh_document_geometry();
+    refresh_all_layer_previews();
 }
 
 void MainWindow::load_document_settings()
@@ -408,6 +409,7 @@ void MainWindow::load_document_settings()
     page_background_ = qcolor_from_rgba(document_.settings().background);
     style_color_button(page_background_button_, page_background_);
     preview_->refresh_document_geometry();
+    refresh_all_layer_previews();
 }
 
 void MainWindow::rebuild_layer_list()
@@ -517,7 +519,7 @@ QListWidgetItem* MainWindow::add_layer_row(const document::CurveLayer& layer, co
             set_active_layer_locked(locked);
         });
     layers_->setItemWidget(item, widget);
-    widget->set_layer_preview(layer);
+    widget->set_layer_preview(layer, document_.settings().background);
     return item;
 }
 
@@ -748,9 +750,16 @@ void MainWindow::refresh_layer_preview(const document::LayerId id)
         }
         auto* widget = static_cast<LayerListItemWidget*>(layers_->itemWidget(item));
         if (widget != nullptr) {
-            widget->set_layer_preview(*layer);
+            widget->set_layer_preview(*layer, document_.settings().background);
         }
         return;
+    }
+}
+
+void MainWindow::refresh_all_layer_previews()
+{
+    for (const auto& layer : document_.layers()) {
+        refresh_layer_preview(layer.id);
     }
 }
 
