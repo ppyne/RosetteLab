@@ -558,12 +558,14 @@ void MainWindow::export_raster(const bool jpeg)
         this,
         jpeg ? "Export JPEG" : "Export PNG",
         {},
-        jpeg ? "JPEG image (*.jpg *.jpeg)" : "PNG image (*.png)");
+        jpeg ? "JPEG image (*.jpg)" : "PNG image (*.png)");
     if (path.isEmpty()) {
         return;
     }
-    if (jpeg && !path.endsWith(".jpg", Qt::CaseInsensitive) &&
-        !path.endsWith(".jpeg", Qt::CaseInsensitive)) {
+    if (jpeg && path.endsWith(".jpeg", Qt::CaseInsensitive)) {
+        path.chop(5);
+        path += ".jpg";
+    } else if (jpeg && !path.endsWith(".jpg", Qt::CaseInsensitive)) {
         path += ".jpg";
     } else if (!jpeg && !path.endsWith(".png", Qt::CaseInsensitive)) {
         path += ".png";
@@ -584,6 +586,21 @@ void MainWindow::export_raster(const bool jpeg)
 
 void MainWindow::export_pdf()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+    bool model_accepted = false;
+    const auto color_model = QInputDialog::getItem(
+        this,
+        "Export PDF",
+        "Color model",
+        {"RGB", "CMYK"},
+        0,
+        false,
+        &model_accepted);
+    if (!model_accepted) {
+        return;
+    }
+#endif
+
     auto path = QFileDialog::getSaveFileName(this, "Export PDF", {}, "PDF document (*.pdf)");
     if (path.isEmpty()) {
         return;
@@ -597,8 +614,12 @@ void MainWindow::export_pdf()
     writer.setCreator("RosetteLab");
     writer.setResolution(300);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
-    writer.setColorModel(QPdfWriter::ColorModel::RGB);
-    writer.setOutputIntent(QPdfOutputIntent{});
+    if (color_model == "CMYK") {
+        writer.setColorModel(QPdfWriter::ColorModel::CMYK);
+    } else {
+        writer.setColorModel(QPdfWriter::ColorModel::RGB);
+        writer.setOutputIntent(QPdfOutputIntent{});
+    }
 #endif
     const QPageSize page_size(
         QSizeF(document_.settings().page_width, document_.settings().page_height),
