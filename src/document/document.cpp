@@ -31,8 +31,9 @@ CurveLayer& Document::add_polar_rose(
     const curves::PolarRoseParameters& parameters,
     std::optional<std::string> name)
 {
+    const auto default_name = next_default_name(CurveType::PolarRose);
     if (!name.has_value() || name->empty()) {
-        name = next_default_name(CurveType::PolarRose);
+        name = default_name;
     }
 
     layers_.push_back({
@@ -44,6 +45,15 @@ CurveLayer& Document::add_polar_rose(
         false,
     });
     return layers_.back();
+}
+
+std::string Document::suggested_default_name(const CurveType type) const
+{
+    const auto index = static_cast<std::size_t>(type);
+    if (index >= name_counters_.size()) {
+        throw std::invalid_argument("Unknown curve type");
+    }
+    return curve_type_name(type) + " " + std::to_string(name_counters_[index] + 1);
 }
 
 bool Document::remove_layer(const LayerId id)
@@ -129,4 +139,3 @@ std::string Document::next_default_name(const CurveType type)
 }
 
 } // namespace rosettelab::document
-
