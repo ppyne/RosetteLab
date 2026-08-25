@@ -59,12 +59,6 @@ void PreviewWidget::set_document(const document::Document* document)
     update();
 }
 
-void PreviewWidget::set_curve_tolerance(const double tolerance)
-{
-    curve_tolerance_ = std::clamp(tolerance, 0.001, 10.0);
-    update();
-}
-
 void PreviewWidget::set_zoom_percent(const double zoom_percent)
 {
     zoom_percent_ = std::clamp(zoom_percent, 10.0, 800.0);
@@ -117,7 +111,7 @@ void PreviewWidget::paintEvent(QPaintEvent*)
 
         core::BezierPath curve;
         try {
-            curve = curves::generate_polar_rose_bezier(*parameters, curve_tolerance_);
+            curve = curves::generate_polar_rose_bezier(*parameters, parameters->bezier_tolerance);
         } catch (const std::exception&) {
             continue;
         }
