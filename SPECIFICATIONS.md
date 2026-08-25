@@ -36,7 +36,7 @@ The main window contains three primary regions:
    - Shows one row per curve.
    - Supports drag-and-drop reordering.
    - Recalls the selected layer's parameters in the editor.
-   - Each layer row is ordered as: visibility glyph, lock glyph, then layer name.
+   - Each layer row is ordered as: visibility glyph, lock glyph, visual layer thumbnail, then layer name.\n   - The thumbnail has the same square dimensions as the visibility and lock controls and previews the layer's current geometry and appearance. It updates when curve or appearance parameters change.
    - The visibility control uses clickable open-eye and closed-eye UTF-8 glyphs instead of a checkbox.
    - The lock control uses clickable unlocked and locked UTF-8 padlock glyphs instead of a separate Lock/Unlock button.
    - Both glyph controls have stable dimensions, tooltips, keyboard access, and accessible names; changing state must never resize the layer panel.
@@ -45,7 +45,7 @@ The main window contains three primary regions:
    - The selector lists Polar rose, Ellipse, Hypotrochoid, Epitrochoid, Lissajous, Harmonograph, and Spirograph; only implemented families are enabled.
    - Creating a layer prompts for its name, prefilled as `Curve type N`, where the type is the English curve-family name and (N) is the next number for that family (for example, `Polar rose 1`, `Polar rose 2`, or `Lissajous 1`).
    - Default names do not change when mathematical parameters change.
-   - A user-defined name remains unchanged until explicitly renamed.
+   - A user-defined name remains unchanged until explicitly renamed.\n   - A name wider than the available row width is elided with a trailing ellipsis. Hovering the elided name displays its complete value in a tooltip.
 
 The layout must remain usable on laptop-sized displays. Resizable panes and sensible minimum sizes are required. The application restores the last main-window size, position, and maximized state on the next launch; Qt must keep a restored window reachable when the previous screen arrangement is no longer available.
 
@@ -259,7 +259,7 @@ Three synchronized representations are required:
 
 - RGBA;
 - HSLA;
-- web hexadecimal as `#RRGGBB` or `#RRGGBBAA`.
+- web hexadecimal as `#RRGGBB` or `#RRGGBBAA`, displayed below the numeric color channels.
 
 The hexadecimal field supports typing and clipboard copy/paste. A missing leading `#` is inserted automatically, and a six-digit RGB value is normalized to eight digits by appending the opaque alpha component `FF`. Whenever a complete valid hexadecimal value changes, the RGBA or HSLA channels and the visual preview update immediately; edits made through numeric channels or the graphical picker update the hexadecimal field in return.
 
