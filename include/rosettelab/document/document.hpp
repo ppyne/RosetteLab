@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rosettelab/curves/ellipse.hpp"
 #include "rosettelab/curves/polar_rose.hpp"
 #include "rosettelab/document/appearance.hpp"
 
@@ -15,6 +16,7 @@ namespace rosettelab::document {
 
 enum class CurveType : std::size_t {
     PolarRose,
+    Ellipse,
     Hypotrochoid,
     Epitrochoid,
     Lissajous,
@@ -26,7 +28,7 @@ enum class CurveType : std::size_t {
 [[nodiscard]] std::string curve_type_name(CurveType type);
 
 using LayerId = std::uint64_t;
-using CurveParameters = std::variant<curves::PolarRoseParameters>;
+using CurveParameters = std::variant<curves::PolarRoseParameters, curves::EllipseParameters>;
 
 struct CurveLayer {
     LayerId id{};
@@ -51,6 +53,9 @@ class Document {
 public:
     [[nodiscard]] CurveLayer& add_polar_rose(
         const curves::PolarRoseParameters& parameters = {},
+        std::optional<std::string> name = std::nullopt);
+    [[nodiscard]] CurveLayer& add_ellipse(
+        const curves::EllipseParameters& parameters = {},
         std::optional<std::string> name = std::nullopt);
 
     [[nodiscard]] std::string suggested_default_name(CurveType type) const;
