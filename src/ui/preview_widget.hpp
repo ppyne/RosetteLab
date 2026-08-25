@@ -13,6 +13,7 @@ public:
 
     void set_document(const document::Document* document);
     void set_zoom_percent(double zoom_percent);
+    void refresh_document_geometry();
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -20,8 +21,6 @@ protected:
 private:
     const document::Document* document_{};
     double zoom_percent_{100.0};
-    double page_width_{210.0};
-    double page_height_{210.0};
     double pixels_per_unit_{2.5};
 
     void update_canvas_size();
