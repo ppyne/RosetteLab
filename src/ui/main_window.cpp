@@ -517,6 +517,7 @@ QListWidgetItem* MainWindow::add_layer_row(const document::CurveLayer& layer, co
             set_active_layer_locked(locked);
         });
     layers_->setItemWidget(item, widget);
+    widget->set_layer_preview(layer);
     return item;
 }
 
@@ -636,6 +637,7 @@ void MainWindow::update_appearance()
     layer->appearance.opacity = static_cast<double>(layer_opacity_->value()) / 100.0;
     layer->appearance.blend_mode = static_cast<document::BlendMode>(blend_mode_->currentData().toInt());
     refresh_color_buttons();
+    refresh_layer_preview(active_layer_id_);
     preview_->update();
 }
 
@@ -733,6 +735,25 @@ void MainWindow::refresh_layer_actions()
     appearance_group_->setEnabled(has_layer && !layer->locked);
 }
 
+void MainWindow::refresh_layer_preview(const document::LayerId id)
+{
+    const auto* layer = document_.find_layer(id);
+    if (layer == nullptr) {
+        return;
+    }
+    for (int row = 0; row < layers_->count(); ++row) {
+        auto* item = layers_->item(row);
+        if (item->data(Qt::UserRole).toULongLong() != id) {
+            continue;
+        }
+        auto* widget = static_cast<LayerListItemWidget*>(layers_->itemWidget(item));
+        if (widget != nullptr) {
+            widget->set_layer_preview(*layer);
+        }
+        return;
+    }
+}
+
 void MainWindow::sync_layer_order()
 {
     for (int target = 0; target < layers_->count(); ++target) {
@@ -771,6 +792,7 @@ void MainWindow::update_preview()
         parameters->rotation_degrees = ellipse_rotation_->value();
         parameters->bezier_tolerance = ellipse_tolerance_->value();
     }
+    refresh_layer_preview(active_layer_id_);
     preview_->update();
 }
 
