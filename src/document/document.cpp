@@ -56,6 +56,35 @@ std::string Document::suggested_default_name(const CurveType type) const
     return curve_type_name(type) + " " + std::to_string(name_counters_[index] + 1);
 }
 
+CurveLayer* Document::duplicate_layer(const LayerId id, std::optional<std::string> name)
+{
+    const auto iterator = std::find_if(layers_.begin(), layers_.end(),
+        [id](const CurveLayer& layer) { return layer.id == id; });
+    if (iterator == layers_.end()) {
+        return nullptr;
+    }
+
+    const auto source_index = static_cast<std::size_t>(std::distance(layers_.begin(), iterator));
+    const auto source = *iterator;
+    const auto default_name = next_default_name(source.type);
+    if (!name.has_value() || name->empty()) {
+        name = default_name;
+    }
+
+    CurveLayer duplicate{
+        next_id_++,
+        std::move(*name),
+        source.type,
+        source.parameters,
+        source.visible,
+        false,
+    };
+    const auto inserted = layers_.insert(
+        layers_.begin() + static_cast<std::ptrdiff_t>(source_index + 1),
+        std::move(duplicate));
+    return &*inserted;
+}
+
 bool Document::remove_layer(const LayerId id)
 {
     const auto iterator = std::find_if(layers_.begin(), layers_.end(),
