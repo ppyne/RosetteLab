@@ -21,6 +21,7 @@ The main window contains three primary regions:
 
 1. **Preview canvas**
    - Displays all visible layers in stack order.
+   - Uses an opaque white page by default, independently of the operating-system UI theme.
    - Supports zoom, pan, fit-to-document, and a configurable background.
    - Reflects parameter and appearance changes without requiring an Apply action.
 
@@ -187,6 +188,7 @@ Custom user preset storage is deferred.
 
 ### 7.1 Stroke
 
+- default color: opaque black;
 - color;
 - opacity from 0 to 100%;
 - width;
