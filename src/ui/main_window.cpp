@@ -7,6 +7,7 @@
 #include <QGroupBox>
 #include <QLabel>
 #include <QListWidget>
+#include <QScrollArea>
 #include <QSpinBox>
 #include <QSplitter>
 #include <QVBoxLayout>
@@ -55,15 +56,19 @@ MainWindow::MainWindow(QWidget* parent)
     phase_ = angle_control(curve_group);
     rotation_ = angle_control(curve_group);
 
-    samples_ = new QSpinBox(curve_group);
-    samples_->setRange(16, 250000);
-    samples_->setValue(720);
+    tolerance_ = new QDoubleSpinBox(curve_group);
+    tolerance_->setRange(0.001, 10.0);
+    tolerance_->setValue(0.05);
+    tolerance_->setDecimals(3);
+    tolerance_->setSingleStep(0.01);
+    tolerance_->setSuffix(" units");
+    tolerance_->setToolTip("Maximum geometric deviation from the mathematical curve; smaller values are more precise.");
 
     form->addRow("Radius a", radius_);
     form->addRow("Parameter k", k_);
     form->addRow("Phase", phase_);
     form->addRow("Rotation", rotation_);
-    form->addRow("Samples", samples_);
+    form->addRow("Curve tolerance", tolerance_);
     parameters_layout->addWidget(curve_group);
 
     auto* view_group = new QGroupBox("View", parameters_panel);
@@ -76,7 +81,13 @@ MainWindow::MainWindow(QWidget* parent)
     parameters_layout->addWidget(view_group);
     parameters_layout->addStretch();
 
-    preview_ = new PreviewWidget(splitter);
+    auto* preview_scroll = new QScrollArea(splitter);
+    preview_scroll->setWidgetResizable(false);
+    preview_scroll->setAlignment(Qt::AlignCenter);
+    preview_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    preview_scroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    preview_ = new PreviewWidget;
+    preview_scroll->setWidget(preview_);
 
     auto* layers_panel = new QWidget(splitter);
     auto* layers_layout = new QVBoxLayout(layers_panel);
@@ -96,7 +107,9 @@ MainWindow::MainWindow(QWidget* parent)
     connect(k_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(phase_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(samples_, &QSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(tolerance_, &QDoubleSpinBox::valueChanged, this, [this](const double value) {
+        preview_->set_curve_tolerance(value);
+    });
     connect(zoom_, &QSpinBox::valueChanged, this, [this](const int value) {
         preview_->set_zoom_percent(static_cast<double>(value));
     });
@@ -111,7 +124,6 @@ void MainWindow::update_preview()
     parameters.k = k_->value();
     parameters.phase_degrees = phase_->value();
     parameters.rotation_degrees = rotation_->value();
-    parameters.samples = static_cast<std::size_t>(samples_->value());
     preview_->set_parameters(parameters);
 }
 
