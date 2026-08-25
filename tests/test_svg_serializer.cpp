@@ -23,6 +23,9 @@ bool contains(const std::string& text, const std::string_view fragment)
 void test_native_svg_contains_geometry_and_metadata()
 {
     rosettelab::document::Document document;
+    document.settings().page_width = 297.0;
+    document.settings().page_height = 210.0;
+    document.settings().background = {0.25, 0.5, 0.75, 0.5};
     auto& layer = document.add_polar_rose({}, "Rose & <one>");
     auto& parameters = std::get<rosettelab::curves::PolarRoseParameters>(layer.parameters);
     parameters.k_mode = rosettelab::curves::PolarKMode::Fraction;
@@ -39,6 +42,9 @@ void test_native_svg_contains_geometry_and_metadata()
     require(contains(svg, "xmlns:rosettelab=\"https://rosettelab.app/ns/1\""),
             "native namespace should be declared");
     require(contains(svg, "rosettelab:document=\"true\""), "document marker should be present");
+    require(contains(svg, "rosettelab:page-width=\"297\""), "page width should be stored");
+    require(contains(svg, "rosettelab:page-height=\"210\""), "page height should be stored");
+    require(contains(svg, "rosettelab:background=\"#4080BF\""), "page background should be stored");
     require(contains(svg, "rosettelab:name=\"Rose &amp; &lt;one&gt;\""), "layer name should be escaped");
     require(contains(svg, "rosettelab:type=\"polar-rose\""), "curve type should be stored");
     require(contains(svg, "bezier-tolerance=\"0.05\""), "curve tolerance should be stored");
