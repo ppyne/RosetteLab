@@ -37,6 +37,7 @@ private:
     void choose_stroke_color();
     void choose_fill_color();
     void update_appearance();
+    void refresh_k_mode_controls();
     void refresh_color_buttons();
     void refresh_layer_actions();
     void sync_layer_order();
@@ -44,7 +45,10 @@ private:
 
     PreviewWidget* preview_{};
     QDoubleSpinBox* radius_{};
+    QComboBox* k_mode_{};
     QDoubleSpinBox* k_{};
+    QSpinBox* numerator_{};
+    QSpinBox* denominator_{};
     QDoubleSpinBox* phase_{};
     QDoubleSpinBox* rotation_{};
     QDoubleSpinBox* tolerance_{};
