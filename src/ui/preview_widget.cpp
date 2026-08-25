@@ -115,14 +115,15 @@ void PreviewWidget::paintEvent(QPaintEvent*)
         if (!layer.visible) {
             continue;
         }
-        const auto* parameters = std::get_if<curves::PolarRoseParameters>(&layer.parameters);
-        if (parameters == nullptr) {
-            continue;
-        }
-
         core::BezierPath curve;
         try {
-            curve = curves::generate_polar_rose_bezier(*parameters, parameters->bezier_tolerance);
+            if (const auto* parameters = std::get_if<curves::PolarRoseParameters>(&layer.parameters)) {
+                curve = curves::generate_polar_rose_bezier(*parameters, parameters->bezier_tolerance);
+            } else if (const auto* parameters = std::get_if<curves::EllipseParameters>(&layer.parameters)) {
+                curve = curves::generate_ellipse_bezier(*parameters, parameters->bezier_tolerance);
+            } else {
+                continue;
+            }
         } catch (const std::exception&) {
             continue;
         }
