@@ -38,6 +38,8 @@ The main window contains three primary regions:
    - Recalls the selected layer's parameters in the editor.
    - Provides visibility and lock controls.
    - Supports add, duplicate, rename, and delete operations.
+   - The primary `Add…` command opens a curve-type selector rather than creating a predetermined family directly.
+   - The selector lists Polar rose, Hypotrochoid, Epitrochoid, Lissajous, Harmonograph, and Spirograph; only implemented families are enabled.
    - Creating a layer prompts for its name, prefilled as `Curve type N`, where the type is the English curve-family name and (N) is the next number for that family (for example, `Polar rose 1`, `Polar rose 2`, or `Lissajous 1`).
    - Default names do not change when mathematical parameters change.
    - A user-defined name remains unchanged until explicitly renamed.
