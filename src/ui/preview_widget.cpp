@@ -56,7 +56,12 @@ PreviewWidget::PreviewWidget(QWidget* parent)
 void PreviewWidget::set_document(const document::Document* document)
 {
     document_ = document;
-    update();
+    update_canvas_size();
+}
+
+void PreviewWidget::refresh_document_geometry()
+{
+    update_canvas_size();
 }
 
 void PreviewWidget::set_zoom_percent(const double zoom_percent)
@@ -69,9 +74,11 @@ void PreviewWidget::update_canvas_size()
 {
     constexpr double margin = 40.0;
     const double scale = pixels_per_unit_ * zoom_percent_ / 100.0;
+    const double page_width = document_ != nullptr ? document_->settings().page_width : 210.0;
+    const double page_height = document_ != nullptr ? document_->settings().page_height : 210.0;
     setFixedSize(
-        static_cast<int>(std::ceil(page_width_ * scale + margin)),
-        static_cast<int>(std::ceil(page_height_ * scale + margin)));
+        static_cast<int>(std::ceil(page_width * scale + margin)),
+        static_cast<int>(std::ceil(page_height * scale + margin)));
     update();
 }
 
@@ -82,7 +89,9 @@ void PreviewWidget::paintEvent(QPaintEvent*)
     painter.fillRect(rect(), palette().brush(QPalette::Window));
 
     const double document_scale = pixels_per_unit_ * zoom_percent_ / 100.0;
-    const QSizeF page_size(page_width_ * document_scale, page_height_ * document_scale);
+    const double page_width = document_ != nullptr ? document_->settings().page_width : 210.0;
+    const double page_height = document_ != nullptr ? document_->settings().page_height : 210.0;
+    const QSizeF page_size(page_width * document_scale, page_height * document_scale);
     const QRectF page_rect(
         (width() - page_size.width()) / 2.0,
         (height() - page_size.height()) / 2.0,
@@ -90,7 +99,9 @@ void PreviewWidget::paintEvent(QPaintEvent*)
         page_size.height());
 
     painter.setPen(QPen(QColor(0, 0, 0, 45), 1.0));
-    painter.setBrush(Qt::white);
+    painter.setBrush(document_ != nullptr
+        ? QBrush(to_qcolor(document_->settings().background))
+        : QBrush(Qt::white));
     painter.drawRect(page_rect);
     if (document_ == nullptr) {
         return;
