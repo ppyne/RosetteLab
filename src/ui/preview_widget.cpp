@@ -9,6 +9,38 @@
 #include <exception>
 
 namespace rosettelab::ui {
+namespace {
+
+QColor to_qcolor(const document::RgbaColor& color)
+{
+    return QColor::fromRgbF(color.red, color.green, color.blue, color.alpha);
+}
+
+QPainter::CompositionMode composition_mode(const document::BlendMode mode)
+{
+    using enum document::BlendMode;
+    switch (mode) {
+    case Normal: return QPainter::CompositionMode_SourceOver;
+    case Multiply: return QPainter::CompositionMode_Multiply;
+    case Screen: return QPainter::CompositionMode_Screen;
+    case Overlay: return QPainter::CompositionMode_Overlay;
+    case Darken: return QPainter::CompositionMode_Darken;
+    case Lighten: return QPainter::CompositionMode_Lighten;
+    case ColorDodge: return QPainter::CompositionMode_ColorDodge;
+    case ColorBurn: return QPainter::CompositionMode_ColorBurn;
+    case HardLight: return QPainter::CompositionMode_HardLight;
+    case SoftLight: return QPainter::CompositionMode_SoftLight;
+    case Difference: return QPainter::CompositionMode_Difference;
+    case Exclusion: return QPainter::CompositionMode_Exclusion;
+    case Hue: return QPainter::CompositionMode_Hue;
+    case Saturation: return QPainter::CompositionMode_Saturation;
+    case Color: return QPainter::CompositionMode_Color;
+    case Luminosity: return QPainter::CompositionMode_Luminosity;
+    }
+    return QPainter::CompositionMode_SourceOver;
+}
+
+} // namespace
 
 PreviewWidget::PreviewWidget(QWidget* parent)
     : QWidget(parent)
@@ -70,10 +102,6 @@ void PreviewWidget::paintEvent(QPaintEvent*)
     painter.setClipRect(page_rect.adjusted(1.0, 1.0, -1.0, -1.0));
 
     painter.translate(page_rect.center());
-    QPen pen(Qt::black);
-    pen.setWidthF(1.5);
-    painter.setPen(pen);
-    painter.setBrush(Qt::NoBrush);
     for (const auto& layer : document_->layers()) {
         if (!layer.visible) {
             continue;
@@ -108,7 +136,21 @@ void PreviewWidget::paintEvent(QPaintEvent*)
         if (curve.closed) {
             path.closeSubpath();
         }
+        path.setFillRule(layer.appearance.fill_rule == document::FillRule::EvenOdd
+            ? Qt::OddEvenFill
+            : Qt::WindingFill);
+
+        painter.save();
+        painter.setOpacity(std::clamp(layer.appearance.opacity, 0.0, 1.0));
+        painter.setCompositionMode(composition_mode(layer.appearance.blend_mode));
+        QPen pen(to_qcolor(layer.appearance.stroke));
+        pen.setWidthF(std::max(0.0, layer.appearance.stroke_width * document_scale));
+        painter.setPen(pen);
+        painter.setBrush(layer.appearance.fill_enabled
+            ? QBrush(to_qcolor(layer.appearance.fill))
+            : QBrush(Qt::NoBrush));
         painter.drawPath(path);
+        painter.restore();
     }
     painter.restore();
 }
