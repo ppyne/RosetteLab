@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <string_view>
 #include <utility>
 
 namespace rosettelab::document {
@@ -85,6 +86,39 @@ CurveLayer* Document::duplicate_layer(const LayerId id, std::optional<std::strin
         layers_.begin() + static_cast<std::ptrdiff_t>(source_index + 1),
         std::move(duplicate));
     return &*inserted;
+}
+
+bool Document::import_layer(CurveLayer layer)
+{
+    if (layer.id == 0 || layer.name.empty() || find_layer(layer.id) != nullptr) {
+        return false;
+    }
+    if (layer.type != CurveType::PolarRose ||
+        !std::holds_alternative<curves::PolarRoseParameters>(layer.parameters)) {
+        return false;
+    }
+
+    const auto type_index = static_cast<std::size_t>(layer.type);
+    const auto prefix = curve_type_name(layer.type) + " ";
+    if (layer.name.starts_with(prefix)) {
+        const auto suffix = std::string_view(layer.name).substr(prefix.size());
+        std::size_t value = 0;
+        bool numeric = !suffix.empty();
+        for (const char character : suffix) {
+            if (character < '0' || character > '9') {
+                numeric = false;
+                break;
+            }
+            value = value * 10 + static_cast<std::size_t>(character - '0');
+        }
+        if (numeric) {
+            name_counters_[type_index] = std::max(name_counters_[type_index], value);
+        }
+    }
+
+    next_id_ = std::max(next_id_, layer.id + 1);
+    layers_.push_back(std::move(layer));
+    return true;
 }
 
 bool Document::remove_layer(const LayerId id)
