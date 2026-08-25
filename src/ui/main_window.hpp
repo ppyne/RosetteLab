@@ -38,7 +38,10 @@ private:
     void set_active_layer_locked(bool locked);
     void choose_stroke_color();
     void choose_fill_color();
+    void choose_page_background();
     void update_appearance();
+    void update_document_settings();
+    void load_document_settings();
     void refresh_k_mode_controls();
     void refresh_color_buttons();
     void refresh_layer_actions();
@@ -46,6 +49,10 @@ private:
     void update_preview();
 
     PreviewWidget* preview_{};
+    QDoubleSpinBox* page_width_{};
+    QDoubleSpinBox* page_height_{};
+    QPushButton* page_background_button_{};
+    QColor page_background_{Qt::white};
     QDoubleSpinBox* radius_{};
     QComboBox* k_mode_{};
     QDoubleSpinBox* k_{};
