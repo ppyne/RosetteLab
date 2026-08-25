@@ -634,8 +634,21 @@ void MainWindow::export_pdf()
         QMessageBox::critical(this, "Unable to export", "Qt could not create the selected PDF file.");
         return;
     }
-    render::render_document(
-        painter, document_, QRectF(0, 0, writer.width(), writer.height()));
+    const QRectF pdf_page(0, 0, writer.width(), writer.height());
+    if (render::requires_flattened_output(document_)) {
+        // Qt's PDF paint engine does not preserve QPainter composition modes.
+        // Precompose the page so that the exported PDF matches the preview.
+        QImage composed(writer.width(), writer.height(), QImage::Format_ARGB32_Premultiplied);
+        composed.fill(Qt::transparent);
+        {
+            QPainter image_painter(&composed);
+            render::render_document(image_painter, document_, composed.rect());
+        }
+        painter.drawImage(pdf_page, composed);
+    } else {
+        // Keep ordinary documents vector-based whenever no flattening is needed.
+        render::render_document(painter, document_, pdf_page);
+    }
     painter.end();
 }
 

@@ -8,6 +8,8 @@ class QPainter;
 
 namespace rosettelab::render {
 
+[[nodiscard]] bool requires_flattened_output(const document::Document& document);
+
 void render_document(
     QPainter& painter,
     const document::Document& document,

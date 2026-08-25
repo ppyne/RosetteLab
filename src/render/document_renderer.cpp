@@ -58,6 +58,16 @@ core::BezierPath layer_path(const document::CurveLayer& layer)
 
 } // namespace
 
+bool requires_flattened_output(const document::Document& document)
+{
+    return std::any_of(
+        document.layers().begin(), document.layers().end(),
+        [](const document::CurveLayer& layer) {
+            return layer.visible
+                && layer.appearance.blend_mode != document::BlendMode::Normal;
+        });
+}
+
 void render_document(
     QPainter& painter,
     const document::Document& document,

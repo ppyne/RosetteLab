@@ -53,6 +53,14 @@ if(ROSETTELAB_BUILD_GUI)
         install(TARGETS rosettelab RUNTIME DESTINATION bin)
 
         if(ROSETTELAB_BUILD_TESTS)
+            add_executable(rosettelab_renderer_tests
+                src/render/document_renderer.cpp
+                tests/test_document_renderer.cpp
+            )
+            target_include_directories(rosettelab_renderer_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+            target_link_libraries(rosettelab_renderer_tests PRIVATE rosettelab_core Qt6::Widgets)
+            add_test(NAME rosettelab_renderer_tests COMMAND rosettelab_renderer_tests)
+
             add_executable(rosettelab_qt_svg_tests
                 src/svg/qt_svg_parser.cpp
                 tests/test_qt_svg_parser.cpp
