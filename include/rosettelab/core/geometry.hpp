@@ -16,5 +16,16 @@ struct Polyline {
     bool closed{false};
 };
 
-} // namespace rosettelab::core
+struct CubicBezier {
+    Point start;
+    Point control1;
+    Point control2;
+    Point end;
+};
 
+struct BezierPath {
+    std::vector<CubicBezier> segments;
+    bool closed{false};
+};
+
+} // namespace rosettelab::core
