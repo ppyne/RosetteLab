@@ -15,6 +15,8 @@ struct PolarRoseParameters {
 };
 
 [[nodiscard]] core::Polyline generate_polar_rose(const PolarRoseParameters& parameters);
+[[nodiscard]] core::BezierPath generate_polar_rose_bezier(
+    const PolarRoseParameters& parameters,
+    double tolerance = 0.05);
 
 } // namespace rosettelab::curves
-
