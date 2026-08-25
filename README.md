@@ -80,7 +80,7 @@ ctest --test-dir build --output-on-failure
 
 ## Status
 
-The project is under active development. The Qt application shell, editable layer model, polar-rose and ellipse Bézier rendering, appearance controls, and native SVG metadata round-tripping are implemented.
+The project is under active development. The Qt application shell, editable layer model, polar-rose, ellipse, hypotrochoid, and epitrochoid Bézier rendering, appearance controls, and native SVG metadata round-tripping are implemented.
 
 ## License
 
