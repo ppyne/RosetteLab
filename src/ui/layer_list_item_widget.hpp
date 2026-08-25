@@ -12,6 +12,8 @@ class QToolButton;
 
 namespace rosettelab::ui {
 
+class ElidedLabel;
+
 class LayerListItemWidget final : public QWidget {
 public:
     using ToggleCallback = std::function<void(bool)>;
@@ -29,6 +31,7 @@ public:
 
     [[nodiscard]] document::LayerId layer_id() const noexcept { return layer_id_; }
     void set_name(const QString& name);
+    void set_layer_preview(const document::CurveLayer& layer);
     void set_visible_state(bool visible);
     void set_locked_state(bool locked);
 
@@ -47,7 +50,8 @@ private:
     ToggleCallback lock_changed_;
     QToolButton* visibility_button_{};
     QToolButton* lock_button_{};
-    QLabel* name_label_{};
+    QLabel* preview_label_{};
+    ElidedLabel* name_label_{};
 };
 
 } // namespace rosettelab::ui
