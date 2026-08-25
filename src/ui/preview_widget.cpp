@@ -2,7 +2,6 @@
 
 #include <QPainter>
 #include <QPainterPath>
-#include <QPalette>
 
 #include <algorithm>
 #include <exception>
@@ -26,7 +25,9 @@ void PreviewWidget::paintEvent(QPaintEvent*)
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.fillRect(rect(), palette().brush(QPalette::Base));
+    // The application chrome follows the operating-system theme, while the
+    // document canvas has its own explicit appearance.
+    painter.fillRect(rect(), Qt::white);
 
     core::Polyline curve;
     try {
@@ -53,7 +54,7 @@ void PreviewWidget::paintEvent(QPaintEvent*)
     }
 
     painter.translate(width() / 2.0, height() / 2.0);
-    QPen pen(palette().color(QPalette::Text));
+    QPen pen(Qt::black);
     pen.setWidthF(1.5);
     painter.setPen(pen);
     painter.setBrush(Qt::NoBrush);
@@ -61,4 +62,3 @@ void PreviewWidget::paintEvent(QPaintEvent*)
 }
 
 } // namespace rosettelab::ui
-
