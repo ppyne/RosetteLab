@@ -52,6 +52,7 @@ private:
     void refresh_k_mode_controls();
     void refresh_color_buttons();
     void refresh_layer_actions();
+    void refresh_layer_preview(document::LayerId id);
     void sync_layer_order();
     void update_preview();
 
