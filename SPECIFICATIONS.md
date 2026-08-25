@@ -30,7 +30,7 @@ The main window contains three primary regions:
    - Displays controls for the selected layer's curve family.
    - Includes curve geometry, drawing, color, opacity, and compositing controls.
    - Provides named presets whose values populate editable controls.
-   - Any subsequent edit is permitted and does not destroy the preset's starting values.
+   - Any subsequent edit is permitted and does not destroy the preset's starting values.\n   - The complete editor is vertically scrollable whenever its controls exceed the available window height. Switching curve families must not resize the main window.
 
 3. **Layer stack**
    - Shows one row per curve.
@@ -47,7 +47,7 @@ The main window contains three primary regions:
    - Default names do not change when mathematical parameters change.
    - A user-defined name remains unchanged until explicitly renamed.
 
-The layout must remain usable on laptop-sized displays. Resizable panes and sensible minimum sizes are required.
+The layout must remain usable on laptop-sized displays. Resizable panes and sensible minimum sizes are required. The application restores the last main-window size, position, and maximized state on the next launch; Qt must keep a restored window reachable when the previous screen arrangement is no longer available.
 
 ## 4. Layer model
 
