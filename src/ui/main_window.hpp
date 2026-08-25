@@ -25,7 +25,9 @@ public:
 
 private:
     void add_polar_rose();
+    void open_file();
     void save_as();
+    void rebuild_layer_list();
     QListWidgetItem* add_layer_row(const document::CurveLayer& layer, int row = -1);
     void select_layer_row(document::LayerId id);
     void select_layer(document::LayerId id);
