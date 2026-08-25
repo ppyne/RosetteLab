@@ -50,10 +50,20 @@ void test_save_open_round_trip()
     ellipse_parameters.radius_y = 25.0;
     ellipse_parameters.rotation_degrees = 15.0;
     static_cast<void>(source.add_ellipse(ellipse_parameters, "Tilted ellipse"));
+    rosettelab::curves::TrochoidParameters trochoid_parameters;
+    trochoid_parameters.fixed_radius = 32.0;
+    trochoid_parameters.rolling_radius = 63.0;
+    trochoid_parameters.pen_offset = 44.5;
+    trochoid_parameters.trace_mode = rosettelab::curves::TraceMode::Limited;
+    trochoid_parameters.turns = 2.0;
+    static_cast<void>(source.add_trochoid(
+        rosettelab::document::CurveType::Epitrochoid,
+        trochoid_parameters,
+        "Two-turn orbit"));
 
     const auto text = rosettelab::svg::serialize_rosettelab_svg(source);
     const auto loaded = rosettelab::svg::parse_rosettelab_svg(QByteArray::fromStdString(text));
-    require(loaded.layers().size() == 2, "both curve families should round-trip");
+    require(loaded.layers().size() == 3, "all implemented curve families should round-trip");
     require(loaded.settings().page_width == 297.0 && loaded.settings().page_height == 210.0,
             "page dimensions should round-trip");
     require(color_close(loaded.settings().background, source.settings().background),
@@ -77,6 +87,15 @@ void test_save_open_round_trip()
     require(ellipse.radius_x == 75.0 && ellipse.radius_y == 25.0 &&
             ellipse.rotation_degrees == 15.0,
             "ellipse parameters should round-trip");
+    const auto& restored_trochoid = loaded.layers()[2];
+    require(restored_trochoid.type == rosettelab::document::CurveType::Epitrochoid,
+            "epitrochoid type should round-trip");
+    const auto& trochoid = std::get<rosettelab::curves::TrochoidParameters>(
+        restored_trochoid.parameters);
+    require(trochoid.fixed_radius == 32.0 && trochoid.rolling_radius == 63.0 &&
+            trochoid.pen_offset == 44.5 && trochoid.turns == 2.0 &&
+            trochoid.trace_mode == rosettelab::curves::TraceMode::Limited,
+            "trochoid parameters should round-trip");
 }
 
 void test_rejects_ordinary_or_unsafe_svg()
