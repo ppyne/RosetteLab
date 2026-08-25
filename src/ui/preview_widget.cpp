@@ -1,12 +1,11 @@
 #include "ui/preview_widget.hpp"
+#include "render/document_renderer.hpp"
 
 #include <QPainter>
-#include <QPainterPath>
 #include <QPalette>
 
 #include <algorithm>
 #include <cmath>
-#include <exception>
 
 namespace rosettelab::ui {
 namespace {
@@ -34,34 +33,6 @@ void draw_checkerboard(QPainter& painter, const QRectF& area)
         }
     }
     painter.restore();
-}
-
-QPainter::CompositionMode composition_mode(const document::BlendMode mode)
-{
-    using enum document::BlendMode;
-    switch (mode) {
-    case Normal: return QPainter::CompositionMode_SourceOver;
-    case Multiply: return QPainter::CompositionMode_Multiply;
-    case Screen: return QPainter::CompositionMode_Screen;
-    case Overlay: return QPainter::CompositionMode_Overlay;
-    case Darken: return QPainter::CompositionMode_Darken;
-    case Lighten: return QPainter::CompositionMode_Lighten;
-    case ColorDodge: return QPainter::CompositionMode_ColorDodge;
-    case ColorBurn: return QPainter::CompositionMode_ColorBurn;
-    case HardLight: return QPainter::CompositionMode_HardLight;
-    case SoftLight: return QPainter::CompositionMode_SoftLight;
-    case Difference: return QPainter::CompositionMode_Difference;
-    case Exclusion: return QPainter::CompositionMode_Exclusion;
-    // QPainter has no HSL blend modes. They remain part of the document/SVG
-    // model but are not offered by the Qt preview until a custom compositor
-    // is implemented.
-    case Hue:
-    case Saturation:
-    case Color:
-    case Luminosity:
-        return QPainter::CompositionMode_SourceOver;
-    }
-    return QPainter::CompositionMode_SourceOver;
 }
 
 } // namespace
@@ -124,75 +95,17 @@ void PreviewWidget::paintEvent(QPaintEvent*)
     if (page_background.alpha() < 255) {
         draw_checkerboard(painter, page_rect);
     }
-    painter.fillRect(page_rect, page_background);
+    if (document_ != nullptr) {
+        render::render_document(painter, *document_, page_rect);
+    } else {
+        painter.fillRect(page_rect, page_background);
+    }
     painter.setPen(QPen(QColor(0, 0, 0, 45), 1.0));
     painter.setBrush(Qt::NoBrush);
     painter.drawRect(page_rect);
     if (document_ == nullptr) {
         return;
     }
-
-    painter.save();
-    painter.setClipRect(page_rect.adjusted(1.0, 1.0, -1.0, -1.0));
-
-    painter.translate(page_rect.center());
-    for (const auto& layer : document_->layers()) {
-        if (!layer.visible) {
-            continue;
-        }
-        core::BezierPath curve;
-        try {
-            if (const auto* parameters = std::get_if<curves::PolarRoseParameters>(&layer.parameters)) {
-                curve = curves::generate_polar_rose_bezier(*parameters, parameters->bezier_tolerance);
-            } else if (const auto* parameters = std::get_if<curves::EllipseParameters>(&layer.parameters)) {
-                curve = curves::generate_ellipse_bezier(*parameters, parameters->bezier_tolerance);
-            } else if (const auto* parameters = std::get_if<curves::TrochoidParameters>(&layer.parameters)) {
-                const auto kind = layer.type == document::CurveType::Hypotrochoid
-                    ? curves::TrochoidKind::Hypotrochoid
-                    : curves::TrochoidKind::Epitrochoid;
-                curve = curves::generate_trochoid_bezier(kind, *parameters, parameters->bezier_tolerance);
-            } else {
-                continue;
-            }
-        } catch (const std::exception&) {
-            continue;
-        }
-        if (curve.segments.empty()) {
-            continue;
-        }
-
-        QPainterPath path;
-        const auto& first = curve.segments.front().start;
-        path.moveTo(first.x * document_scale, first.y * document_scale);
-        for (const auto& segment : curve.segments) {
-            path.cubicTo(
-                segment.control1.x * document_scale,
-                segment.control1.y * document_scale,
-                segment.control2.x * document_scale,
-                segment.control2.y * document_scale,
-                segment.end.x * document_scale,
-                segment.end.y * document_scale);
-        }
-        if (curve.closed) {
-            path.closeSubpath();
-        }
-        path.setFillRule(layer.appearance.fill_rule == document::FillRule::EvenOdd
-            ? Qt::OddEvenFill
-            : Qt::WindingFill);
-
-        painter.save();
-        painter.setOpacity(std::clamp(layer.appearance.opacity, 0.0, 1.0));
-        painter.setCompositionMode(composition_mode(layer.appearance.blend_mode));
-        QPen pen(to_qcolor(layer.appearance.stroke));
-        pen.setWidthF(std::max(0.0, layer.appearance.stroke_width * document_scale));
-        painter.setPen(pen);
-        painter.setBrush(layer.appearance.fill_enabled
-            ? QBrush(to_qcolor(layer.appearance.fill))
-            : QBrush(Qt::NoBrush));
-        painter.drawPath(path);
-        painter.restore();
-    }
-    painter.restore();
 }
 
 } // namespace rosettelab::ui
