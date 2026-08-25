@@ -95,12 +95,23 @@ MainWindow::MainWindow(QWidget* parent)
     resize(1200, 760);
 
     auto* file_menu = menuBar()->addMenu("&File");
+    auto* new_action = file_menu->addAction("New");
+    new_action->setShortcut(QKeySequence::New);
+    connect(new_action, &QAction::triggered, this, [this] { new_document(); });
     auto* open_action = file_menu->addAction("Open...");
     open_action->setShortcut(QKeySequence::Open);
     connect(open_action, &QAction::triggered, this, [this] { open_file(); });
+    recent_files_menu_ = file_menu->addMenu("Open Recent");
+    refresh_recent_files_menu();
+    file_menu->addSeparator();
+    save_action_ = file_menu->addAction("Save");
+    save_action_->setShortcut(QKeySequence::Save);
+    save_action_->setEnabled(false);
+    connect(save_action_, &QAction::triggered, this, [this] { save(); });
     auto* save_as_action = file_menu->addAction("Save As...");
     save_as_action->setShortcut(QKeySequence::SaveAs);
     connect(save_as_action, &QAction::triggered, this, [this] { save_as(); });
+    file_menu->addSeparator();
     auto* export_menu = file_menu->addMenu("Export");
     export_menu->addAction("To PNG...", this, [this] { export_raster(false); });
     export_menu->addAction("To JPEG...", this, [this] { export_raster(true); });
@@ -439,6 +450,25 @@ void MainWindow::open_file()
         return;
     }
 
+    open_document(path);
+}
+
+void MainWindow::new_document()
+{
+    document_ = document::Document{};
+    auto& initial = document_.add_polar_rose();
+    active_layer_id_ = initial.id;
+    current_file_path_.clear();
+    rebuild_layer_list();
+    load_document_settings();
+    preview_->update();
+    save_action_->setEnabled(false);
+    setWindowTitle("RosetteLab");
+}
+
+void MainWindow::open_document(const QString& path)
+{
+
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
         QMessageBox::critical(this, "Unable to open", file.errorString());
@@ -454,7 +484,47 @@ void MainWindow::open_file()
     rebuild_layer_list();
     load_document_settings();
     preview_->update();
+    current_file_path_ = QFileInfo(path).absoluteFilePath();
+    save_action_->setEnabled(true);
+    add_recent_file(current_file_path_);
     setWindowTitle(QStringLiteral("RosetteLab - %1").arg(QFileInfo(path).fileName()));
+}
+
+void MainWindow::add_recent_file(const QString& path)
+{
+    QSettings settings;
+    auto files = settings.value("files/recent").toStringList();
+    const auto absolute_path = QFileInfo(path).absoluteFilePath();
+    files.removeAll(absolute_path);
+    files.prepend(absolute_path);
+    while (files.size() > 6) {
+        files.removeLast();
+    }
+    settings.setValue("files/recent", files);
+    refresh_recent_files_menu();
+}
+
+void MainWindow::refresh_recent_files_menu()
+{
+    recent_files_menu_->clear();
+    const auto files = QSettings{}.value("files/recent").toStringList();
+    for (const auto& path : files) {
+        auto* action = recent_files_menu_->addAction(QFileInfo(path).fileName());
+        action->setToolTip(path);
+        connect(action, &QAction::triggered, this, [this, path] { open_document(path); });
+    }
+    if (!files.isEmpty()) {
+        recent_files_menu_->addSeparator();
+    }
+    auto* clean_action = recent_files_menu_->addAction("Clean History");
+    clean_action->setEnabled(!files.isEmpty());
+    connect(clean_action, &QAction::triggered, this, [this] { clean_recent_files(); });
+}
+
+void MainWindow::clean_recent_files()
+{
+    QSettings{}.remove("files/recent");
+    refresh_recent_files_menu();
 }
 
 void MainWindow::choose_page_background()
@@ -514,25 +584,44 @@ void MainWindow::save_as()
         path += ".svg";
     }
 
+    static_cast<void>(save_document(path));
+}
+
+void MainWindow::save()
+{
+    if (current_file_path_.isEmpty()) {
+        save_as();
+        return;
+    }
+    static_cast<void>(save_document(current_file_path_));
+}
+
+bool MainWindow::save_document(const QString& path)
+{
+
     std::string svg_text;
     try {
         svg_text = svg::serialize_rosettelab_svg(document_);
     } catch (const std::exception& error) {
         QMessageBox::critical(this, "Unable to save", error.what());
-        return;
+        return false;
     }
 
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         QMessageBox::critical(this, "Unable to save", file.errorString());
-        return;
+        return false;
     }
     const auto data = QByteArray::fromStdString(svg_text);
     if (file.write(data) != data.size()) {
         QMessageBox::critical(this, "Unable to save", file.errorString());
-        return;
+        return false;
     }
+    current_file_path_ = QFileInfo(path).absoluteFilePath();
+    save_action_->setEnabled(true);
+    add_recent_file(current_file_path_);
     setWindowTitle(QStringLiteral("RosetteLab - %1").arg(QFileInfo(path).fileName()));
+    return true;
 }
 
 void MainWindow::export_raster(const bool jpeg)

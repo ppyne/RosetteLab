@@ -5,7 +5,9 @@
 
 #include <QColor>
 #include <QMainWindow>
+#include <QString>
 
+class QAction;
 class QCheckBox;
 class QCloseEvent;
 class QComboBox;
@@ -14,6 +16,7 @@ class QGroupBox;
 class QListWidget;
 class QListWidgetItem;
 class QLabel;
+class QMenu;
 class QPushButton;
 class QSplitter;
 class QSpinBox;
@@ -34,8 +37,15 @@ private:
     void add_polar_rose();
     void add_ellipse();
     void add_trochoid(document::CurveType type);
+    void new_document();
     void open_file();
+    void open_document(const QString& path);
+    void save();
     void save_as();
+    bool save_document(const QString& path);
+    void add_recent_file(const QString& path);
+    void refresh_recent_files_menu();
+    void clean_recent_files();
     void export_raster(bool jpeg);
     void export_pdf();
     void rebuild_layer_list();
@@ -64,6 +74,8 @@ private:
 
     PreviewWidget* preview_{};
     QSplitter* main_splitter_{};
+    QAction* save_action_{};
+    QMenu* recent_files_menu_{};
     QDoubleSpinBox* page_width_{};
     QDoubleSpinBox* page_height_{};
     ColorPreviewButton* page_background_button_{};
@@ -109,6 +121,7 @@ private:
     QPushButton* delete_button_{};
     document::Document document_;
     document::LayerId active_layer_id_{};
+    QString current_file_path_;
 };
 
 } // namespace rosettelab::ui

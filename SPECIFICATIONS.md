@@ -49,6 +49,18 @@ The main window contains three primary regions:
 
 The layout must remain usable on laptop-sized displays. Resizable panes and sensible minimum sizes are required. The application restores the last main-window size, position, and maximized state on the next launch; Qt must keep a restored window reachable when the previous screen arrangement is no longer available. The widths of the parameter editor, preview canvas, and layer stack are persisted through the main horizontal splitter state and restored on the next launch.
 
+### 3.1 Document commands and recent files
+
+The **File** menu provides:
+
+- **New**: creates a fresh document with the default page and initial Polar rose layer, clears the current document path, and restores the untitled RosetteLab window title;
+- **Open…**: opens a supported RosetteLab SVG and establishes its path as the current save target;
+- **Open Recent**: lists at most the six most recently opened or successfully saved RosetteLab documents, most recent first. Entries persist between application launches. Each entry retains its absolute path, and **Clean History** is always the final command in the submenu;
+- **Save**: writes directly to the established path and is enabled only after a document has been opened or successfully saved with **Save As…**;
+- **Save As…**: requests an SVG path, saves the document, establishes that path for subsequent **Save** commands, and adds it to the recent-file history.
+
+**New**, **Open…**, **Save**, and **Save As…** use the platform-standard Qt key sequences, including Command-N, Command-O, Command-S, and Shift-Command-S on macOS. Cleaning the recent-file history does not close or alter the current document.
+
 ## 4. Layer model
 
 Every curve layer has:
