@@ -8,6 +8,7 @@
 class QDoubleSpinBox;
 class QGroupBox;
 class QListWidget;
+class QListWidgetItem;
 class QPushButton;
 class QSpinBox;
 
@@ -21,6 +22,8 @@ public:
 
 private:
     void add_polar_rose();
+    QListWidgetItem* add_layer_row(const document::CurveLayer& layer, int row = -1);
+    void select_layer_row(document::LayerId id);
     void select_layer(document::LayerId id);
     void load_active_layer();
     void rename_active_layer();
@@ -43,7 +46,6 @@ private:
     QPushButton* rename_button_{};
     QPushButton* duplicate_button_{};
     QPushButton* delete_button_{};
-    QPushButton* lock_button_{};
     document::Document document_;
     document::LayerId active_layer_id_{};
 };
