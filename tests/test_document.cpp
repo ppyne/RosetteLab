@@ -44,6 +44,10 @@ void test_custom_name_and_layer_state()
     require(document.rename_layer(id, "Final name"), "layer should be renameable");
     require(document.find_layer(id)->name == "Final name", "new name should be retained");
     require(!document.rename_layer(id, ""), "empty layer name should be rejected");
+
+    const auto next = document.add_polar_rose().id;
+    require(document.find_layer(next)->name == "Polar rose 2",
+            "custom names should still advance the family sequence");
 }
 
 void test_layer_reordering()
@@ -75,4 +79,3 @@ int main()
         return 1;
     }
 }
-
