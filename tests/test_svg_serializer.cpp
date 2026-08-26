@@ -20,6 +20,17 @@ bool contains(const std::string& text, const std::string_view fragment)
     return text.find(fragment) != std::string::npos;
 }
 
+std::size_t occurrence_count(const std::string& text, const std::string_view fragment)
+{
+    std::size_t count = 0;
+    std::size_t position = 0;
+    while ((position = text.find(fragment, position)) != std::string::npos) {
+        ++count;
+        position += fragment.size();
+    }
+    return count;
+}
+
 void test_native_svg_contains_geometry_and_metadata()
 {
     rosettelab::document::Document document;
@@ -37,6 +48,8 @@ void test_native_svg_contains_geometry_and_metadata()
     layer.appearance.fill_rule = rosettelab::document::FillRule::EvenOdd;
     layer.appearance.opacity = 0.8;
     layer.appearance.blend_mode = rosettelab::document::BlendMode::Multiply;
+    layer.transform = {12.5, -8.0, 1.5, 0.75, false, 30.0};
+    layer.copies = {3, 17.0, 0.9, 2.0, -1.0};
 
     const auto svg = rosettelab::svg::serialize_rosettelab_svg(document);
     require(contains(svg, "xmlns:rosettelab=\"https://rosettelab.app/ns/1\""),
@@ -57,6 +70,13 @@ void test_native_svg_contains_geometry_and_metadata()
     require(contains(svg, "stroke-opacity=\"0.25\""), "stroke alpha should be serialized");
     require(contains(svg, "fill-rule=\"evenodd\""), "fill rule should be serialized");
     require(contains(svg, "mix-blend-mode:multiply"), "blend mode should be serialized");
+    require(contains(svg, "rosettelab:position-x=\"12.5\""), "layer X position should be stored");
+    require(contains(svg, "rosettelab:scale-y=\"0.75\""), "independent Y scale should be stored");
+    require(contains(svg, "rosettelab:copy-count=\"3\""), "copy count should be stored");
+    require(contains(svg, "translate(14.5 -9) rotate(47) scale(1.35 0.675)"),
+            "second rendered copy should use progressive transform settings");
+    require(occurrence_count(svg, "    <path d=\"") == 3,
+            "one rendered SVG path should be emitted per copy");
 }
 
 void test_hidden_layer_remains_in_project()

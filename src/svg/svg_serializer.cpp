@@ -111,9 +111,19 @@ std::string path_data(const core::BezierPath& path)
 void write_rendered_path(
     std::ostringstream& output,
     const core::BezierPath& path,
-    const document::LayerAppearance& appearance)
+    const document::LayerAppearance& appearance,
+    const document::CurveLayer& layer)
 {
-    output << "    <path d=\"" << path_data(path) << "\""
+    const int copy_count = std::clamp(layer.copies.count, 1, 1000);
+    for (int copy = 0; copy < copy_count; ++copy) {
+        const double copy_scale = std::pow(layer.copies.scale_step, copy);
+        output << "    <path d=\"" << path_data(path) << "\""
+           << " transform=\"translate("
+           << number(layer.transform.position_x + copy * layer.copies.offset_x_step) << ' '
+           << number(layer.transform.position_y + copy * layer.copies.offset_y_step) << ") rotate("
+           << number(layer.transform.rotation_degrees + copy * layer.copies.rotation_step_degrees)
+           << ") scale(" << number(layer.transform.scale_x * copy_scale) << ' '
+           << number(layer.transform.scale_y * copy_scale) << ")\""
            << " stroke=\"" << (appearance.stroke_enabled ? rgb_hex(appearance.stroke) : "none") << "\""
            << " rosettelab:stroke-color=\"" << rgb_hex(appearance.stroke) << "\""
            << " stroke-opacity=\"" << number(std::clamp(appearance.stroke.alpha, 0.0, 1.0)) << "\""
@@ -125,6 +135,7 @@ void write_rendered_path(
     output << " fill-rule=\"" << fill_rule_name(appearance.fill_rule) << "\""
            << " opacity=\"" << number(std::clamp(appearance.opacity, 0.0, 1.0)) << "\""
            << " style=\"mix-blend-mode:" << blend_mode_name(appearance.blend_mode) << "\"/>\n";
+    }
 }
 
 void write_polar_rose(std::ostringstream& output, const document::CurveLayer& layer)
@@ -147,7 +158,7 @@ void write_polar_rose(std::ostringstream& output, const document::CurveLayer& la
            << " rotation-degrees=\"" << number(parameters->rotation_degrees) << "\""
            << " bezier-tolerance=\"" << number(parameters->bezier_tolerance) << "\"/>\n";
 
-    write_rendered_path(output, path, layer.appearance);
+    write_rendered_path(output, path, layer.appearance, layer);
 }
 
 void write_ellipse(std::ostringstream& output, const document::CurveLayer& layer)
@@ -164,7 +175,7 @@ void write_ellipse(std::ostringstream& output, const document::CurveLayer& layer
            << " link-radii=\"" << (parameters->link_radii ? "true" : "false") << "\""
            << " rotation-degrees=\"" << number(parameters->rotation_degrees) << "\""
            << " bezier-tolerance=\"" << number(parameters->bezier_tolerance) << "\"/>\n";
-    write_rendered_path(output, path, layer.appearance);
+    write_rendered_path(output, path, layer.appearance, layer);
 }
 
 void write_trochoid(std::ostringstream& output, const document::CurveLayer& layer)
@@ -187,7 +198,7 @@ void write_trochoid(std::ostringstream& output, const document::CurveLayer& laye
            << " turns=\"" << number(parameters->turns) << "\""
            << " close-limited-path=\"" << (parameters->close_limited_path ? "true" : "false") << "\""
            << " bezier-tolerance=\"" << number(parameters->bezier_tolerance) << "\"/>\n";
-    write_rendered_path(output, path, layer.appearance);
+    write_rendered_path(output, path, layer.appearance, layer);
 }
 
 void write_lissajous(std::ostringstream& output, const document::CurveLayer& layer)
@@ -204,7 +215,7 @@ void write_lissajous(std::ostringstream& output, const document::CurveLayer& lay
            << " phase-y-degrees=\"" << number(p->phase_y_degrees) << "\""
            << " rotation-degrees=\"" << number(p->rotation_degrees) << "\""
            << " bezier-tolerance=\"" << number(p->bezier_tolerance) << "\"/>\n";
-    write_rendered_path(output, path, layer.appearance);
+    write_rendered_path(output, path, layer.appearance, layer);
 }
 
 void write_harmonograph(std::ostringstream& output, const document::CurveLayer& layer)
@@ -219,7 +230,7 @@ void write_harmonograph(std::ostringstream& output, const document::CurveLayer& 
            << " damping-x=\"" << number(p->damping_x) << "\" damping-y=\"" << number(p->damping_y) << "\""
            << " duration=\"" << number(p->duration) << "\" rotation-degrees=\"" << number(p->rotation_degrees) << "\""
            << " bezier-tolerance=\"" << number(p->bezier_tolerance) << "\"/>\n";
-    write_rendered_path(output,path,layer.appearance);
+    write_rendered_path(output,path,layer.appearance,layer);
 }
 
 const char* curve_type_id(const document::CurveType type)
@@ -279,6 +290,17 @@ std::string serialize_rosettelab_svg(
                << " rosettelab:type=\"" << curve_type_id(layer.type) << "\""
                << " rosettelab:visible=\"" << (layer.visible ? "true" : "false") << "\""
                << " rosettelab:locked=\"" << (layer.locked ? "true" : "false") << "\"";
+        output << " rosettelab:position-x=\"" << number(layer.transform.position_x) << "\""
+               << " rosettelab:position-y=\"" << number(layer.transform.position_y) << "\""
+               << " rosettelab:scale-x=\"" << number(layer.transform.scale_x) << "\""
+               << " rosettelab:scale-y=\"" << number(layer.transform.scale_y) << "\""
+               << " rosettelab:link-scales=\"" << (layer.transform.link_scales ? "true" : "false") << "\""
+               << " rosettelab:layer-rotation-degrees=\"" << number(layer.transform.rotation_degrees) << "\""
+               << " rosettelab:copy-count=\"" << std::clamp(layer.copies.count, 1, 1000) << "\""
+               << " rosettelab:copy-rotation-degrees=\"" << number(layer.copies.rotation_step_degrees) << "\""
+               << " rosettelab:copy-scale-step=\"" << number(layer.copies.scale_step) << "\""
+               << " rosettelab:copy-offset-x=\"" << number(layer.copies.offset_x_step) << "\""
+               << " rosettelab:copy-offset-y=\"" << number(layer.copies.offset_y_step) << "\"";
         if (!layer.preset_id.empty()) {
             output << " rosettelab:preset-id=\"" << xml_escape(layer.preset_id) << "\""
                    << " rosettelab:preset-customized=\""

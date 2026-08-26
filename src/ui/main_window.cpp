@@ -345,6 +345,60 @@ MainWindow::MainWindow(QWidget* parent)
     harmonograph_form->addRow("Curve tolerance",harmonograph_tolerance_);
     harmonograph_group_->hide(); parameters_layout->addWidget(harmonograph_group_);
 
+    transform_group_ = new QGroupBox("Layer transform", parameters_panel);
+    auto* transform_form = new QFormLayout(transform_group_);
+    transform_x_ = new QDoubleSpinBox(transform_group_);
+    transform_y_ = new QDoubleSpinBox(transform_group_);
+    for (auto* control : {transform_x_, transform_y_}) {
+        control->setRange(-100000.0, 100000.0);
+        control->setDecimals(3);
+        control->setSuffix(" units");
+    }
+    transform_scale_x_ = new QDoubleSpinBox(transform_group_);
+    transform_scale_y_ = new QDoubleSpinBox(transform_group_);
+    for (auto* control : {transform_scale_x_, transform_scale_y_}) {
+        control->setRange(0.01, 100000.0);
+        control->setDecimals(2);
+        control->setValue(100.0);
+        control->setSuffix(" %");
+    }
+    transform_link_scales_ = new QCheckBox("Link X/Y scales", transform_group_);
+    transform_link_scales_->setChecked(true);
+    transform_rotation_ = angle_control(transform_group_);
+    reset_transform_button_ = new QPushButton("Reset transform", transform_group_);
+    transform_form->addRow("Position X", transform_x_);
+    transform_form->addRow("Position Y", transform_y_);
+    transform_form->addRow("Scale X", transform_scale_x_);
+    transform_form->addRow("Scale Y", transform_scale_y_);
+    transform_form->addRow("", transform_link_scales_);
+    transform_form->addRow("Rotation", transform_rotation_);
+    transform_form->addRow("", reset_transform_button_);
+    parameters_layout->addWidget(transform_group_);
+
+    copies_group_ = new QGroupBox("Copies", parameters_panel);
+    auto* copies_form = new QFormLayout(copies_group_);
+    copy_count_ = new QSpinBox(copies_group_);
+    copy_count_->setRange(1, 1000);
+    copy_rotation_ = angle_control(copies_group_);
+    copy_scale_ = new QDoubleSpinBox(copies_group_);
+    copy_scale_->setRange(0.01, 1000.0);
+    copy_scale_->setDecimals(2);
+    copy_scale_->setValue(100.0);
+    copy_scale_->setSuffix(" %");
+    copy_offset_x_ = new QDoubleSpinBox(copies_group_);
+    copy_offset_y_ = new QDoubleSpinBox(copies_group_);
+    for (auto* control : {copy_offset_x_, copy_offset_y_}) {
+        control->setRange(-100000.0, 100000.0);
+        control->setDecimals(3);
+        control->setSuffix(" units");
+    }
+    copies_form->addRow("Count", copy_count_);
+    copies_form->addRow("Rotation per copy", copy_rotation_);
+    copies_form->addRow("Scale per copy", copy_scale_);
+    copies_form->addRow("Offset X per copy", copy_offset_x_);
+    copies_form->addRow("Offset Y per copy", copy_offset_y_);
+    parameters_layout->addWidget(copies_group_);
+
     appearance_group_ = new QGroupBox("Appearance", parameters_panel);
     auto* appearance_form = new QFormLayout(appearance_group_);
     stroke_enabled_ = new QCheckBox("Enabled", appearance_group_);
@@ -530,6 +584,31 @@ MainWindow::MainWindow(QWidget* parent)
     connect(lissajous_tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     for (auto* control : {harmonograph_amplitude_x_,harmonograph_amplitude_y_,harmonograph_frequency_x_,harmonograph_frequency_y_,harmonograph_phase_x_,harmonograph_phase_y_,harmonograph_damping_x_,harmonograph_damping_y_,harmonograph_duration_,harmonograph_rotation_,harmonograph_tolerance_})
         connect(control,&QDoubleSpinBox::valueChanged,this,[this]{ update_preview(); });
+    connect(transform_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(transform_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(transform_scale_x_, &QDoubleSpinBox::valueChanged, this, [this] {
+        if (transform_link_scales_->isChecked()) {
+            const QSignalBlocker blocker(transform_scale_y_);
+            transform_scale_y_->setValue(transform_scale_x_->value());
+        }
+        update_layer_transform();
+    });
+    connect(transform_scale_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(transform_link_scales_, &QCheckBox::toggled, this, [this](const bool linked) {
+        if (linked) {
+            const QSignalBlocker blocker(transform_scale_y_);
+            transform_scale_y_->setValue(transform_scale_x_->value());
+        }
+        refresh_transform_controls();
+        update_layer_transform();
+    });
+    connect(transform_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(reset_transform_button_, &QPushButton::clicked, this, [this] { reset_layer_transform(); });
+    connect(copy_count_, &QSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(copy_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(copy_scale_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(copy_offset_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(copy_offset_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
     connect(stroke_color_button_, &QPushButton::clicked, this, [this] { choose_stroke_color(); });
     connect(fill_color_button_, &QPushButton::clicked, this, [this] { choose_fill_color(); });
     connect(stroke_enabled_, &QCheckBox::toggled, this, [this] { update_appearance(); });
@@ -1331,6 +1410,17 @@ void MainWindow::load_active_layer()
     const QSignalBlocker liss_rotation_blocker(lissajous_rotation_);
     const QSignalBlocker liss_tolerance_blocker(lissajous_tolerance_);
     const QSignalBlocker harm_ax(harmonograph_amplitude_x_),harm_ay(harmonograph_amplitude_y_),harm_fx(harmonograph_frequency_x_),harm_fy(harmonograph_frequency_y_),harm_px(harmonograph_phase_x_),harm_py(harmonograph_phase_y_),harm_dx(harmonograph_damping_x_),harm_dy(harmonograph_damping_y_),harm_duration(harmonograph_duration_),harm_rotation(harmonograph_rotation_),harm_tolerance(harmonograph_tolerance_);
+    const QSignalBlocker transform_x_blocker(transform_x_);
+    const QSignalBlocker transform_y_blocker(transform_y_);
+    const QSignalBlocker transform_scale_x_blocker(transform_scale_x_);
+    const QSignalBlocker transform_scale_y_blocker(transform_scale_y_);
+    const QSignalBlocker transform_link_blocker(transform_link_scales_);
+    const QSignalBlocker transform_rotation_blocker(transform_rotation_);
+    const QSignalBlocker copy_count_blocker(copy_count_);
+    const QSignalBlocker copy_rotation_blocker(copy_rotation_);
+    const QSignalBlocker copy_scale_blocker(copy_scale_);
+    const QSignalBlocker copy_offset_x_blocker(copy_offset_x_);
+    const QSignalBlocker copy_offset_y_blocker(copy_offset_y_);
     const QSignalBlocker stroke_enabled_blocker(stroke_enabled_);
     const QSignalBlocker stroke_width_blocker(stroke_width_);
     const QSignalBlocker fill_enabled_blocker(fill_enabled_);
@@ -1378,6 +1468,17 @@ void MainWindow::load_active_layer()
         harmonograph_damping_x_->setValue(harmonograph_parameters->damping_x); harmonograph_damping_y_->setValue(harmonograph_parameters->damping_y);
         harmonograph_duration_->setValue(harmonograph_parameters->duration); harmonograph_rotation_->setValue(harmonograph_parameters->rotation_degrees); harmonograph_tolerance_->setValue(harmonograph_parameters->bezier_tolerance);
     }
+    transform_x_->setValue(layer->transform.position_x);
+    transform_y_->setValue(layer->transform.position_y);
+    transform_scale_x_->setValue(layer->transform.scale_x * 100.0);
+    transform_scale_y_->setValue(layer->transform.scale_y * 100.0);
+    transform_link_scales_->setChecked(layer->transform.link_scales);
+    transform_rotation_->setValue(layer->transform.rotation_degrees);
+    copy_count_->setValue(layer->copies.count);
+    copy_rotation_->setValue(layer->copies.rotation_step_degrees);
+    copy_scale_->setValue(layer->copies.scale_step * 100.0);
+    copy_offset_x_->setValue(layer->copies.offset_x_step);
+    copy_offset_y_->setValue(layer->copies.offset_y_step);
     stroke_color_ = qcolor_from_rgba(layer->appearance.stroke);
     fill_color_ = qcolor_from_rgba(layer->appearance.fill);
     stroke_enabled_->setChecked(layer->appearance.stroke_enabled);
@@ -1390,6 +1491,7 @@ void MainWindow::load_active_layer()
     refresh_k_mode_controls();
     refresh_ellipse_radius_controls();
     refresh_trochoid_trace_controls();
+    refresh_transform_controls();
 }
 
 void MainWindow::refresh_k_mode_controls()
@@ -1412,6 +1514,53 @@ void MainWindow::refresh_trochoid_trace_controls()
         trochoid_trace_mode_->currentData().toInt()) == curves::TraceMode::Limited;
     trochoid_turns_->setEnabled(limited);
     trochoid_close_limited_->setEnabled(limited);
+}
+
+void MainWindow::refresh_transform_controls()
+{
+    transform_scale_y_->setEnabled(!transform_link_scales_->isChecked());
+}
+
+void MainWindow::update_layer_transform()
+{
+    auto* layer = document_.find_layer(active_layer_id_);
+    if (layer == nullptr || layer->locked) {
+        return;
+    }
+    layer->transform.position_x = transform_x_->value();
+    layer->transform.position_y = transform_y_->value();
+    layer->transform.scale_x = transform_scale_x_->value() / 100.0;
+    layer->transform.link_scales = transform_link_scales_->isChecked();
+    layer->transform.scale_y = layer->transform.link_scales
+        ? layer->transform.scale_x
+        : transform_scale_y_->value() / 100.0;
+    layer->transform.rotation_degrees = transform_rotation_->value();
+    layer->copies.count = copy_count_->value();
+    layer->copies.rotation_step_degrees = copy_rotation_->value();
+    layer->copies.scale_step = copy_scale_->value() / 100.0;
+    layer->copies.offset_x_step = copy_offset_x_->value();
+    layer->copies.offset_y_step = copy_offset_y_->value();
+    refresh_layer_preview(active_layer_id_);
+    preview_->update();
+    mark_document_modified();
+}
+
+void MainWindow::reset_layer_transform()
+{
+    const QSignalBlocker x_blocker(transform_x_);
+    const QSignalBlocker y_blocker(transform_y_);
+    const QSignalBlocker scale_x_blocker(transform_scale_x_);
+    const QSignalBlocker scale_y_blocker(transform_scale_y_);
+    const QSignalBlocker linked_blocker(transform_link_scales_);
+    const QSignalBlocker rotation_blocker(transform_rotation_);
+    transform_x_->setValue(0.0);
+    transform_y_->setValue(0.0);
+    transform_scale_x_->setValue(100.0);
+    transform_scale_y_->setValue(100.0);
+    transform_link_scales_->setChecked(true);
+    transform_rotation_->setValue(0.0);
+    refresh_transform_controls();
+    update_layer_transform();
 }
 
 void MainWindow::choose_stroke_color()
@@ -1554,6 +1703,8 @@ void MainWindow::refresh_layer_actions()
     trochoid_group_->setEnabled(has_layer && !layer->locked);
     lissajous_group_->setEnabled(has_layer && !layer->locked);
     harmonograph_group_->setEnabled(has_layer && !layer->locked);
+    transform_group_->setEnabled(has_layer && !layer->locked);
+    copies_group_->setEnabled(has_layer && !layer->locked);
     appearance_group_->setEnabled(has_layer && !layer->locked);
 }
 

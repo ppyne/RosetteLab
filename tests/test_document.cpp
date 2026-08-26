@@ -138,7 +138,11 @@ void test_layer_duplication()
     source->appearance.fill_rule = rosettelab::document::FillRule::EvenOdd;
     source->appearance.opacity = 0.75;
     source->appearance.blend_mode = rosettelab::document::BlendMode::Multiply;
+    source->transform = {20.0, -10.0, 1.25, 0.8, false, 22.5};
+    source->copies = {7, 360.0 / 49.0, 0.96, 1.5, -2.0};
     const auto expected_appearance = source->appearance;
+    const auto expected_transform = source->transform;
+    const auto expected_copies = source->copies;
 
     const auto* duplicate = document.duplicate_layer(source_id);
     require(duplicate != nullptr, "existing layer should be duplicable");
@@ -148,6 +152,10 @@ void test_layer_duplication()
     require(!duplicate->locked, "duplicate should start unlocked");
     require(duplicate->appearance == expected_appearance,
             "duplicate should preserve all appearance properties");
+    require(duplicate->transform == expected_transform,
+            "duplicate should preserve its layer transform");
+    require(duplicate->copies == expected_copies,
+            "duplicate should preserve its copy composition");
     require(std::get<rosettelab::curves::PolarRoseParameters>(duplicate->parameters).k == 11.0,
             "duplicate should preserve mathematical parameters");
     require(std::get<rosettelab::curves::PolarRoseParameters>(duplicate->parameters).bezier_tolerance == 0.0125,

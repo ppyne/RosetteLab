@@ -2,8 +2,10 @@
 
 #include <QPainter>
 #include <QPainterPath>
+#include <QTransform>
 
 #include <algorithm>
+#include <cmath>
 #include <exception>
 
 namespace rosettelab::render {
@@ -132,7 +134,20 @@ void render_document(
         painter.setBrush(layer.appearance.fill_enabled
             ? QBrush(to_qcolor(layer.appearance.fill))
             : QBrush(Qt::NoBrush));
-        painter.drawPath(path);
+        const int copy_count = std::clamp(layer.copies.count, 1, 1000);
+        for (int copy = 0; copy < copy_count; ++copy) {
+            const double copy_scale = std::pow(layer.copies.scale_step, copy);
+            QTransform transform;
+            transform.translate(
+                layer.transform.position_x + copy * layer.copies.offset_x_step,
+                layer.transform.position_y + copy * layer.copies.offset_y_step);
+            transform.rotate(
+                layer.transform.rotation_degrees + copy * layer.copies.rotation_step_degrees);
+            transform.scale(
+                layer.transform.scale_x * copy_scale,
+                layer.transform.scale_y * copy_scale);
+            painter.drawPath(transform.map(path));
+        }
         painter.restore();
     }
     painter.restore();

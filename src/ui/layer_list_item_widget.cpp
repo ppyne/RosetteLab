@@ -12,6 +12,7 @@
 #include <QTransform>
 
 #include <algorithm>
+#include <cmath>
 #include <exception>
 #include <utility>
 
@@ -134,6 +135,22 @@ QPixmap layer_preview(
         ? Qt::OddEvenFill
         : Qt::WindingFill);
 
+    QPainterPath composed_path;
+    const int copy_count = std::clamp(layer.copies.count, 1, 1000);
+    for (int copy = 0; copy < copy_count; ++copy) {
+        const double copy_scale = std::pow(layer.copies.scale_step, copy);
+        QTransform layer_transform;
+        layer_transform.translate(
+            layer.transform.position_x + copy * layer.copies.offset_x_step,
+            layer.transform.position_y + copy * layer.copies.offset_y_step);
+        layer_transform.rotate(
+            layer.transform.rotation_degrees + copy * layer.copies.rotation_step_degrees);
+        layer_transform.scale(
+            layer.transform.scale_x * copy_scale,
+            layer.transform.scale_y * copy_scale);
+        composed_path.addPath(layer_transform.map(path));
+    }
+    path = composed_path;
     const auto bounds = path.boundingRect();
     if (bounds.width() <= 0.0 || bounds.height() <= 0.0) {
         return pixmap;

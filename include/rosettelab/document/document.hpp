@@ -37,6 +37,27 @@ using CurveParameters = std::variant<
     curves::LissajousParameters,
     curves::HarmonographParameters>;
 
+struct LayerTransform {
+    double position_x{0.0};
+    double position_y{0.0};
+    double scale_x{1.0};
+    double scale_y{1.0};
+    bool link_scales{true};
+    double rotation_degrees{0.0};
+
+    friend constexpr bool operator==(const LayerTransform&, const LayerTransform&) = default;
+};
+
+struct LayerCopies {
+    int count{1};
+    double rotation_step_degrees{0.0};
+    double scale_step{1.0};
+    double offset_x_step{0.0};
+    double offset_y_step{0.0};
+
+    friend constexpr bool operator==(const LayerCopies&, const LayerCopies&) = default;
+};
+
 struct CurveLayer {
     LayerId id{};
     std::string name;
@@ -45,6 +66,8 @@ struct CurveLayer {
     bool visible{true};
     bool locked{false};
     LayerAppearance appearance{};
+    LayerTransform transform{};
+    LayerCopies copies{};
     std::string preset_id;
     bool preset_customized{false};
 };

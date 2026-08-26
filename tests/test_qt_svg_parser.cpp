@@ -47,6 +47,8 @@ void test_save_open_round_trip()
     layer.appearance.blend_mode = rosettelab::document::BlendMode::Multiply;
     layer.preset_id = "rose-seven";
     layer.preset_customized = true;
+    layer.transform = {12.5, -8.0, 1.5, 0.75, false, 30.0};
+    layer.copies = {5, 17.0, 0.9, 2.0, -1.0};
     const auto expected_fill = layer.appearance.fill;
     rosettelab::curves::EllipseParameters ellipse_parameters;
     ellipse_parameters.radius_x = 75.0;
@@ -87,6 +89,10 @@ void test_save_open_round_trip()
             "blend mode should round-trip");
     require(restored.preset_id == "rose-seven" && restored.preset_customized,
             "preset identity and customized state should round-trip");
+    require(restored.transform == layer.transform,
+            "layer transform should round-trip");
+    require(restored.copies == layer.copies,
+            "copy settings should round-trip");
     const auto& restored_parameters = std::get<rosettelab::curves::PolarRoseParameters>(restored.parameters);
     require(restored_parameters.k_mode == rosettelab::curves::PolarKMode::Fraction,
             "fraction mode should round-trip");

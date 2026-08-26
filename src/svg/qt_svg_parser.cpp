@@ -68,6 +68,30 @@ bool parse_boolean(const QString& text, const QString& field)
     throw parse_error(QStringLiteral("Invalid boolean value for %1").arg(field));
 }
 
+double optional_metadata_double(
+    const QXmlStreamAttributes& attributes, const QString& metadata_ns,
+    const QString& name, const double fallback)
+{
+    const auto value = attributes.value(metadata_ns, name);
+    return value.isNull() ? fallback : parse_double(value.toString(), name);
+}
+
+int optional_metadata_integer(
+    const QXmlStreamAttributes& attributes, const QString& metadata_ns,
+    const QString& name, const int fallback)
+{
+    const auto value = attributes.value(metadata_ns, name);
+    return value.isNull() ? fallback : parse_integer(value.toString(), name);
+}
+
+bool optional_metadata_boolean(
+    const QXmlStreamAttributes& attributes, const QString& metadata_ns,
+    const QString& name, const bool fallback)
+{
+    const auto value = attributes.value(metadata_ns, name);
+    return value.isNull() ? fallback : parse_boolean(value.toString(), name);
+}
+
 document::RgbaColor parse_rgb(const QString& text, const double alpha)
 {
     if (text.size() != 7 || !text.startsWith('#')) {
@@ -250,6 +274,32 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
         required_metadata_attribute(group_attributes, metadata_ns, "visible"), "visible");
     layer.locked = parse_boolean(
         required_metadata_attribute(group_attributes, metadata_ns, "locked"), "locked");
+    layer.transform.position_x = optional_metadata_double(
+        group_attributes, metadata_ns, "position-x", 0.0);
+    layer.transform.position_y = optional_metadata_double(
+        group_attributes, metadata_ns, "position-y", 0.0);
+    layer.transform.scale_x = optional_metadata_double(
+        group_attributes, metadata_ns, "scale-x", 1.0);
+    layer.transform.scale_y = optional_metadata_double(
+        group_attributes, metadata_ns, "scale-y", 1.0);
+    layer.transform.link_scales = optional_metadata_boolean(
+        group_attributes, metadata_ns, "link-scales", true);
+    layer.transform.rotation_degrees = optional_metadata_double(
+        group_attributes, metadata_ns, "layer-rotation-degrees", 0.0);
+    layer.copies.count = optional_metadata_integer(
+        group_attributes, metadata_ns, "copy-count", 1);
+    layer.copies.rotation_step_degrees = optional_metadata_double(
+        group_attributes, metadata_ns, "copy-rotation-degrees", 0.0);
+    layer.copies.scale_step = optional_metadata_double(
+        group_attributes, metadata_ns, "copy-scale-step", 1.0);
+    layer.copies.offset_x_step = optional_metadata_double(
+        group_attributes, metadata_ns, "copy-offset-x", 0.0);
+    layer.copies.offset_y_step = optional_metadata_double(
+        group_attributes, metadata_ns, "copy-offset-y", 0.0);
+    if (layer.transform.scale_x <= 0.0 || layer.transform.scale_y <= 0.0 ||
+        layer.copies.count < 1 || layer.copies.count > 1000 || layer.copies.scale_step <= 0.0) {
+        throw parse_error("Invalid layer transform or copy settings");
+    }
     const auto preset_id = group_attributes.value(metadata_ns, "preset-id");
     if (!preset_id.isNull()) {
         layer.preset_id = preset_id.toString().toStdString();

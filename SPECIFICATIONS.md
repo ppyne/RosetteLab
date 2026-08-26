@@ -414,6 +414,24 @@ The SVG stores:
 - blend mode and opacity;
 - preset provenance when applicable.
 
+### 10.3.1 Layer transforms and copy compositions
+
+Every curve layer has a non-destructive transform applied after mathematical curve generation:
+
+- horizontal and vertical position in document units;
+- uniform scale by default, with an explicit link control for independent X/Y scales;
+- global layer rotation;
+- **Reset transform**, which restores position 0/0, linked scale 100%, and rotation 0 degrees without changing curve parameters or copy settings.
+
+Every curve layer can also render a copy composition from the same parametric path:
+
+- copy count (1–1000);
+- rotation added for each successive copy;
+- multiplicative scale progression, expressed as a percentage in the UI (for example, 95% yields factors 1, 0.95, 0.95², …);
+- horizontal and vertical offset added for each successive copy.
+
+Transform and copy values are editable independently from curve-family parameters and presets. They are stored in RosetteLab SVG metadata, emitted as SVG path transforms, restored on open, duplicated with the layer, and applied identically in the live preview, layer thumbnail, PNG, JPEG, PDF, and SVG output. Each edit creates a normal document-history entry and is therefore supported by Undo/Redo.
+
 ### 10.4 Round-trip requirement
 
 Saving, reopening, and saving without edits must preserve the visible composition and all supported RosetteLab parameters. Unknown metadata from a newer schema must not be discarded silently.
@@ -488,7 +506,7 @@ Platform-specific native widgets should be avoided unless isolated behind an abs
 
 ### 13.5 Milestone 1.0 — first stable release
 
-- copy-based superposition;
+- non-destructive per-layer transforms and copy-based superposition;
 - PNG and JPEG export;
 - fully vector PDF export with native PDF blend modes, with rasterization retained only as an explicit compatibility fallback;
 - undo/redo for document edits;
