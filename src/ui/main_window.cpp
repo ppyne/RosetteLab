@@ -216,6 +216,7 @@ MainWindow::MainWindow(QWidget* parent)
     ellipse_radius_y_->setRange(0.01, 100000.0);
     ellipse_radius_y_->setValue(50.0);
     ellipse_radius_y_->setDecimals(2);
+    ellipse_link_radii_ = new QCheckBox("Perfect circle — link radii", ellipse_group_);
     ellipse_rotation_ = angle_control(ellipse_group_);
     ellipse_tolerance_ = new QDoubleSpinBox(ellipse_group_);
     ellipse_tolerance_->setRange(0.001, 10.0);
@@ -225,6 +226,7 @@ MainWindow::MainWindow(QWidget* parent)
     ellipse_tolerance_->setSuffix(" units");
     ellipse_tolerance_->setToolTip(
         "Maximum geometric deviation from the mathematical ellipse; smaller values are more precise.");
+    ellipse_form->addRow("Constraint", ellipse_link_radii_);
     ellipse_form->addRow("Horizontal radius", ellipse_radius_x_);
     ellipse_form->addRow("Vertical radius", ellipse_radius_y_);
     ellipse_form->addRow("Rotation", ellipse_rotation_);
@@ -390,8 +392,22 @@ MainWindow::MainWindow(QWidget* parent)
     connect(phase_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(ellipse_radius_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(ellipse_radius_x_, &QDoubleSpinBox::valueChanged, this, [this] {
+        if (ellipse_link_radii_->isChecked()) {
+            const QSignalBlocker blocker(ellipse_radius_y_);
+            ellipse_radius_y_->setValue(ellipse_radius_x_->value());
+        }
+        update_preview();
+    });
     connect(ellipse_radius_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(ellipse_link_radii_, &QCheckBox::toggled, this, [this](const bool linked) {
+        if (linked) {
+            const QSignalBlocker blocker(ellipse_radius_y_);
+            ellipse_radius_y_->setValue(ellipse_radius_x_->value());
+        }
+        refresh_ellipse_radius_controls();
+        update_preview();
+    });
     connect(ellipse_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(ellipse_tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(trochoid_fixed_radius_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
@@ -1012,6 +1028,7 @@ void MainWindow::load_active_layer()
     const QSignalBlocker tolerance_blocker(tolerance_);
     const QSignalBlocker ellipse_radius_x_blocker(ellipse_radius_x_);
     const QSignalBlocker ellipse_radius_y_blocker(ellipse_radius_y_);
+    const QSignalBlocker ellipse_link_blocker(ellipse_link_radii_);
     const QSignalBlocker ellipse_rotation_blocker(ellipse_rotation_);
     const QSignalBlocker ellipse_tolerance_blocker(ellipse_tolerance_);
     const QSignalBlocker trochoid_fixed_blocker(trochoid_fixed_radius_);
@@ -1039,6 +1056,7 @@ void MainWindow::load_active_layer()
     } else if (ellipse_parameters != nullptr) {
         ellipse_radius_x_->setValue(ellipse_parameters->radius_x);
         ellipse_radius_y_->setValue(ellipse_parameters->radius_y);
+        ellipse_link_radii_->setChecked(ellipse_parameters->link_radii);
         ellipse_rotation_->setValue(ellipse_parameters->rotation_degrees);
         ellipse_tolerance_->setValue(ellipse_parameters->bezier_tolerance);
     } else if (trochoid_parameters != nullptr) {
@@ -1061,6 +1079,7 @@ void MainWindow::load_active_layer()
     blend_mode_->setCurrentIndex(blend_mode_->findData(static_cast<int>(layer->appearance.blend_mode)));
     refresh_color_buttons();
     refresh_k_mode_controls();
+    refresh_ellipse_radius_controls();
     refresh_trochoid_trace_controls();
 }
 
@@ -1071,6 +1090,11 @@ void MainWindow::refresh_k_mode_controls()
     k_->setEnabled(decimal);
     numerator_->setEnabled(!decimal);
     denominator_->setEnabled(!decimal);
+}
+
+void MainWindow::refresh_ellipse_radius_controls()
+{
+    ellipse_radius_y_->setEnabled(!ellipse_link_radii_->isChecked());
 }
 
 void MainWindow::refresh_trochoid_trace_controls()
@@ -1280,7 +1304,10 @@ void MainWindow::update_preview()
         parameters->bezier_tolerance = tolerance_->value();
     } else if (auto* parameters = std::get_if<curves::EllipseParameters>(&layer->parameters)) {
         parameters->radius_x = ellipse_radius_x_->value();
-        parameters->radius_y = ellipse_radius_y_->value();
+        parameters->link_radii = ellipse_link_radii_->isChecked();
+        parameters->radius_y = parameters->link_radii
+            ? parameters->radius_x
+            : ellipse_radius_y_->value();
         parameters->rotation_degrees = ellipse_rotation_->value();
         parameters->bezier_tolerance = ellipse_tolerance_->value();
     } else if (auto* parameters = std::get_if<curves::TrochoidParameters>(&layer->parameters)) {

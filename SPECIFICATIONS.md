@@ -141,8 +141,11 @@ Parameters:
 
 - horizontal radius \(r_x\);
 - vertical radius \(r_y\);
+- **Perfect circle — link radii** constraint;
 - angular rotation;
 - adaptive Bézier tolerance in document units.
+
+When the circle constraint is enabled, \(r_y\) is immediately set to \(r_x\), the vertical-radius field is disabled, and every subsequent change to \(r_x\) updates \(r_y\). Disabling the constraint restores independent editing without changing the current values. The constraint participates in Undo/Redo and is stored explicitly in native SVG metadata; older project files without the attribute default to independent radii.
 
 Ellipses are represented preferentially as cubic Bézier arcs, use the common layer appearance controls, and preserve all parameters in native RosetteLab SVG metadata.
 

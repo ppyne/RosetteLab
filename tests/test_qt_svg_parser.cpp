@@ -47,7 +47,8 @@ void test_save_open_round_trip()
     const auto expected_fill = layer.appearance.fill;
     rosettelab::curves::EllipseParameters ellipse_parameters;
     ellipse_parameters.radius_x = 75.0;
-    ellipse_parameters.radius_y = 25.0;
+    ellipse_parameters.radius_y = 75.0;
+    ellipse_parameters.link_radii = true;
     ellipse_parameters.rotation_degrees = 15.0;
     static_cast<void>(source.add_ellipse(ellipse_parameters, "Tilted ellipse"));
     rosettelab::curves::TrochoidParameters trochoid_parameters;
@@ -84,7 +85,7 @@ void test_save_open_round_trip()
     require(restored_ellipse.type == rosettelab::document::CurveType::Ellipse,
             "ellipse type should round-trip");
     const auto& ellipse = std::get<rosettelab::curves::EllipseParameters>(restored_ellipse.parameters);
-    require(ellipse.radius_x == 75.0 && ellipse.radius_y == 25.0 &&
+    require(ellipse.radius_x == 75.0 && ellipse.radius_y == 75.0 && ellipse.link_radii &&
             ellipse.rotation_degrees == 15.0,
             "ellipse parameters should round-trip");
     const auto& restored_trochoid = loaded.layers()[2];

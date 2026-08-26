@@ -135,6 +135,13 @@ void parse_curve_metadata(
 {
     parameters.radius_x = parse_double(required_attribute(attributes, "radius-x"), "radius-x");
     parameters.radius_y = parse_double(required_attribute(attributes, "radius-y"), "radius-y");
+    if (attributes.hasAttribute("link-radii")) {
+        parameters.link_radii = parse_boolean(
+            attributes.value("link-radii").toString(), "link-radii");
+    }
+    if (parameters.link_radii) {
+        parameters.radius_y = parameters.radius_x;
+    }
     parameters.rotation_degrees = parse_double(
         required_attribute(attributes, "rotation-degrees"), "rotation-degrees");
     parameters.bezier_tolerance = parse_double(

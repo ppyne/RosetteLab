@@ -7,6 +7,7 @@ namespace rosettelab::curves {
 struct EllipseParameters {
     double radius_x{80.0};
     double radius_y{50.0};
+    bool link_radii{false};
     double rotation_degrees{0.0};
     double bezier_tolerance{0.05};
 };

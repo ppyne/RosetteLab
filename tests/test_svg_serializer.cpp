@@ -77,13 +77,15 @@ void test_ellipse_contains_editable_metadata_and_beziers()
     rosettelab::document::Document document;
     rosettelab::curves::EllipseParameters parameters;
     parameters.radius_x = 90.0;
-    parameters.radius_y = 35.0;
+    parameters.radius_y = 90.0;
+    parameters.link_radii = true;
     parameters.rotation_degrees = 27.0;
     static_cast<void>(document.add_ellipse(parameters));
     const auto svg = rosettelab::svg::serialize_rosettelab_svg(document);
     require(contains(svg, "rosettelab:type=\"ellipse\""), "ellipse type should be stored");
     require(contains(svg, "radius-x=\"90\""), "horizontal radius should be stored");
-    require(contains(svg, "radius-y=\"35\""), "vertical radius should be stored");
+    require(contains(svg, "radius-y=\"90\""), "vertical radius should be stored");
+    require(contains(svg, "link-radii=\"true\""), "linked radii should be stored");
     require(contains(svg, "rotation-degrees=\"27\""), "ellipse rotation should be stored");
     require(contains(svg, " C "), "ellipse should render as cubic Bezier segments");
 }

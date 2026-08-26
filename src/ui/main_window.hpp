@@ -77,6 +77,7 @@ private:
     void update_document_settings();
     void load_document_settings();
     void refresh_k_mode_controls();
+    void refresh_ellipse_radius_controls();
     void refresh_trochoid_trace_controls();
     void refresh_color_buttons();
     void refresh_layer_actions();
@@ -109,6 +110,7 @@ private:
     QGroupBox* ellipse_group_{};
     QDoubleSpinBox* ellipse_radius_x_{};
     QDoubleSpinBox* ellipse_radius_y_{};
+    QCheckBox* ellipse_link_radii_{};
     QDoubleSpinBox* ellipse_rotation_{};
     QDoubleSpinBox* ellipse_tolerance_{};
     QGroupBox* trochoid_group_{};

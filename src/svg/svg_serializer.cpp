@@ -160,6 +160,7 @@ void write_ellipse(std::ostringstream& output, const document::CurveLayer& layer
     output << "    <rosettelab:curve"
            << " radius-x=\"" << number(parameters->radius_x) << "\""
            << " radius-y=\"" << number(parameters->radius_y) << "\""
+           << " link-radii=\"" << (parameters->link_radii ? "true" : "false") << "\""
            << " rotation-degrees=\"" << number(parameters->rotation_degrees) << "\""
            << " bezier-tolerance=\"" << number(parameters->bezier_tolerance) << "\"/>\n";
     write_rendered_path(output, path, layer.appearance);
