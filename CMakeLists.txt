@@ -70,6 +70,21 @@ if(ROSETTELAB_BUILD_GUI)
             target_include_directories(rosettelab_qt_svg_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
             target_link_libraries(rosettelab_qt_svg_tests PRIVATE rosettelab_core Qt6::Core)
             add_test(NAME rosettelab_qt_svg_tests COMMAND rosettelab_qt_svg_tests)
+
+            add_executable(rosettelab_main_window_tests
+                src/render/document_renderer.cpp
+                src/ui/color_editor_dialog.cpp
+                src/ui/color_preview_button.cpp
+                src/ui/main_window.cpp
+                src/ui/layer_list_item_widget.cpp
+                src/ui/preview_widget.cpp
+                src/svg/qt_svg_parser.cpp
+                tests/test_main_window.cpp
+            )
+            target_include_directories(rosettelab_main_window_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+            target_link_libraries(rosettelab_main_window_tests PRIVATE rosettelab_core Qt6::Widgets)
+            add_test(NAME rosettelab_main_window_tests COMMAND rosettelab_main_window_tests)
+            set_tests_properties(rosettelab_main_window_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
         endif()
     else()
         message(WARNING "Qt 6 Widgets was not found; building the core without the GUI")

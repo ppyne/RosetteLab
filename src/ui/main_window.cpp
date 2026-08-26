@@ -531,7 +531,7 @@ MainWindow::MainWindow(QWidget* parent)
     // The initial row was selected before the layer-list signals were connected.
     // Explicitly run the same synchronization used by New and Open.
     load_active_layer();
-    update_preview();
+    preview_->update();
     refresh_layer_actions();
 
     QSettings settings;
