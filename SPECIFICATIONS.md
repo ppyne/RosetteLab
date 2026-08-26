@@ -71,6 +71,25 @@ Before **New**, opening another document (including through **Open Recent**), or
 
 The **Edit** menu provides **Undo** and **Redo** using the platform-standard Qt key sequences, including Command-Z and Shift-Command-Z on macOS. History covers document settings, curve parameters, layer geometry and appearance, visibility, locking, naming, ordering, addition, duplication, and removal. View-only changes are excluded.
 
+### 3.4 Document defaults and zoom
+
+The last page width, page height, and RGBA background chosen in the **Document**
+block are stored in application preferences and used for the next application launch
+and for **New** documents. **Reset defaults** restores a white `210 × 210 mm` page
+and updates both the current document and the saved defaults.
+
+Zoom remains directly editable from `0.10%` through `3200.00%`. The **View** block
+also offers the following exact predefined levels: `0.10`, `0.20`, `0.30`, `0.40`,
+`0.50`, `0.75`, `1.00`, `1.50`, `2.00`, `3.00`, `4.00`, `5.00`, `6.25`, `8.33`,
+`12.50`, `16.67`, `25.00`, `33.33`, `50.00`, `66.67`, `100.00`, `125.00`,
+`150.00`, `200.00`, `300.00`, `400.00`, `500.00`, `600.00`, `800.00`,
+`1200.00`, `1600.00`, and `3200.00` percent.
+
+**Fit to workspace** computes the greatest zoom that contains the complete page in
+the preview viewport, including the preview margin. It is the default view mode at
+startup and is recomputed after relevant window or splitter resizing. Choosing or
+typing another zoom leaves fit mode and does not modify the document or its history.
+
 The history retains up to 200 complete document states. A new edit after Undo discards the former Redo branch. The saved history position is tracked independently: returning to it clears the modified indicator, while discarding that saved state through a new history branch keeps the document marked as modified. Creating or opening a document starts a new history; saving establishes the current state as its saved position.
 
 ## 4. Layer model

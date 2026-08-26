@@ -22,6 +22,8 @@ class QListWidgetItem;
 class QLabel;
 class QMenu;
 class QPushButton;
+class QResizeEvent;
+class QScrollArea;
 class QSplitter;
 class QSpinBox;
 
@@ -36,6 +38,7 @@ public:
 
 protected:
     void closeEvent(QCloseEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 private:
     void add_polar_rose();
@@ -78,6 +81,12 @@ private:
     void update_appearance();
     void update_document_settings();
     void load_document_settings();
+    void load_saved_document_defaults();
+    void save_document_defaults();
+    void reset_document_defaults();
+    void fit_to_workspace();
+    void apply_zoom_level();
+    void synchronize_zoom_level();
     void refresh_k_mode_controls();
     void refresh_ellipse_radius_controls();
     void refresh_trochoid_trace_controls();
@@ -100,6 +109,7 @@ private:
     QDoubleSpinBox* page_width_{};
     QDoubleSpinBox* page_height_{};
     ColorPreviewButton* page_background_button_{};
+    QPushButton* reset_document_defaults_button_{};
     QColor page_background_{Qt::white};
     QLabel* curve_type_label_{};
     QComboBox* preset_{};
@@ -112,7 +122,11 @@ private:
     QDoubleSpinBox* phase_{};
     QDoubleSpinBox* rotation_{};
     QDoubleSpinBox* tolerance_{};
-    QSpinBox* zoom_{};
+    QDoubleSpinBox* zoom_{};
+    QComboBox* zoom_levels_{};
+    QPushButton* fit_workspace_button_{};
+    QScrollArea* preview_scroll_{};
+    bool applying_zoom_{false};
     QGroupBox* curve_group_{};
     QGroupBox* ellipse_group_{};
     QDoubleSpinBox* ellipse_radius_x_{};

@@ -4,6 +4,7 @@
 #include "rosettelab/document/document.hpp"
 
 #include <QWidget>
+#include <QSizeF>
 
 namespace rosettelab::ui {
 
@@ -14,6 +15,7 @@ public:
     void set_document(const document::Document* document);
     void set_zoom_percent(double zoom_percent);
     void refresh_document_geometry();
+    [[nodiscard]] double fit_zoom_percent(const QSizeF& available_size) const;
 
 protected:
     void paintEvent(QPaintEvent* event) override;

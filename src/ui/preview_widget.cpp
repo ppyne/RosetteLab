@@ -57,8 +57,18 @@ void PreviewWidget::refresh_document_geometry()
 
 void PreviewWidget::set_zoom_percent(const double zoom_percent)
 {
-    zoom_percent_ = std::clamp(zoom_percent, 10.0, 800.0);
+    zoom_percent_ = std::clamp(zoom_percent, 0.1, 3200.0);
     update_canvas_size();
+}
+
+double PreviewWidget::fit_zoom_percent(const QSizeF& available_size) const
+{
+    constexpr double margin=40.0;
+    const double page_width=document_!=nullptr?document_->settings().page_width:210.0;
+    const double page_height=document_!=nullptr?document_->settings().page_height:210.0;
+    const double width=std::max(1.0,available_size.width()-margin);
+    const double height=std::max(1.0,available_size.height()-margin);
+    return std::clamp(100.0*std::min(width/page_width,height/page_height)/pixels_per_unit_,0.1,3200.0);
 }
 
 void PreviewWidget::update_canvas_size()

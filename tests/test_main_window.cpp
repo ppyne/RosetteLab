@@ -16,5 +16,11 @@ int main(int argc, char** argv)
         std::cerr << "Initial Polar rose layer did not select Sevenfold garden\n";
         return 1;
     }
+    const auto* zoom_levels=window.findChild<QComboBox*>("zoomLevelSelector");
+    if (zoom_levels==nullptr || zoom_levels->currentData().toDouble()>=0.0 ||
+        zoom_levels->findData(0.10)<0 || zoom_levels->findData(3200.00)<0) {
+        std::cerr << "Zoom levels or default fit mode were not initialized\n";
+        return 1;
+    }
     return 0;
 }

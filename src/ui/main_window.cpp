@@ -40,10 +40,12 @@
 #endif
 #include <QPushButton>
 #include <QScrollArea>
+#include <QResizeEvent>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QSpinBox>
 #include <QSplitter>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -154,9 +156,11 @@ MainWindow::MainWindow(QWidget* parent)
     page_height_->setDecimals(2);
     page_height_->setSuffix(" mm");
     page_background_button_ = new ColorPreviewButton(document_group);
+    reset_document_defaults_button_ = new QPushButton("Reset defaults", document_group);
     document_form->addRow("Page width", page_width_);
     document_form->addRow("Page height", page_height_);
     document_form->addRow("Background", page_background_button_);
+    document_form->addRow("", reset_document_defaults_button_);
     parameters_layout->addWidget(document_group);
     style_color_button(page_background_button_, page_background_);
 
@@ -390,22 +394,36 @@ MainWindow::MainWindow(QWidget* parent)
 
     auto* view_group = new QGroupBox("View", parameters_panel);
     auto* view_form = new QFormLayout(view_group);
-    zoom_ = new QSpinBox(view_group);
-    zoom_->setRange(10, 800);
-    zoom_->setValue(100);
+    zoom_ = new QDoubleSpinBox(view_group);
+    zoom_->setObjectName("zoomField");
+    zoom_->setRange(0.1, 3200.0);
+    zoom_->setDecimals(2);
+    zoom_->setValue(100.0);
     zoom_->setSuffix(" %");
+    zoom_levels_ = new QComboBox(view_group);
+    zoom_levels_->setObjectName("zoomLevelSelector");
+    zoom_levels_->addItem("Fit to workspace", -1.0);
+    zoom_levels_->addItem("Custom", 0.0);
+    for (const double level : {0.10,0.20,0.30,0.40,0.50,0.75,1.00,1.50,2.00,3.00,4.00,5.00,
+            6.25,8.33,12.50,16.67,25.00,33.33,50.00,66.67,100.00,125.00,150.00,200.00,
+            300.00,400.00,500.00,600.00,800.00,1200.00,1600.00,3200.00}) {
+        zoom_levels_->addItem(QStringLiteral("%1 %").arg(level,0,'f',2),level);
+    }
+    fit_workspace_button_ = new QPushButton("Fit to workspace", view_group);
     view_form->addRow("Zoom", zoom_);
+    view_form->addRow("Zoom level", zoom_levels_);
+    view_form->addRow("", fit_workspace_button_);
     parameters_layout->addWidget(view_group);
     parameters_layout->addStretch();
 
-    auto* preview_scroll = new QScrollArea(main_splitter_);
-    preview_scroll->setWidgetResizable(false);
-    preview_scroll->setAlignment(Qt::AlignCenter);
-    preview_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    preview_scroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    preview_scroll_ = new QScrollArea(main_splitter_);
+    preview_scroll_->setWidgetResizable(false);
+    preview_scroll_->setAlignment(Qt::AlignCenter);
+    preview_scroll_->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    preview_scroll_->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     preview_ = new PreviewWidget;
     preview_->set_document(&document_);
-    preview_scroll->setWidget(preview_);
+    preview_scroll_->setWidget(preview_);
 
     auto* layers_panel = new QWidget(main_splitter_);
     auto* layers_layout = new QVBoxLayout(layers_panel);
@@ -414,6 +432,7 @@ MainWindow::MainWindow(QWidget* parent)
     layers_->setDragDropMode(QAbstractItemView::InternalMove);
     auto& initial = document_.add_polar_rose();
     initial.preset_id = "rose-seven";
+    load_saved_document_defaults();
     active_layer_id_ = initial.id;
     auto* initial_layer = add_layer_row(initial);
     layers_->setCurrentItem(initial_layer);
@@ -451,6 +470,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(page_width_, &QDoubleSpinBox::valueChanged, this, [this] { update_document_settings(); });
     connect(page_height_, &QDoubleSpinBox::valueChanged, this, [this] { update_document_settings(); });
     connect(page_background_button_, &QPushButton::clicked, this, [this] { choose_page_background(); });
+    connect(reset_document_defaults_button_, &QPushButton::clicked, this, [this] { reset_document_defaults(); });
     connect(preset_, &QComboBox::currentIndexChanged, this, [this](const int index) {
         if (index > 0 && !applying_preset_) apply_selected_preset();
     });
@@ -512,8 +532,16 @@ MainWindow::MainWindow(QWidget* parent)
     connect(fill_rule_, &QComboBox::currentIndexChanged, this, [this] { update_appearance(); });
     connect(layer_opacity_, &QSpinBox::valueChanged, this, [this] { update_appearance(); });
     connect(blend_mode_, &QComboBox::currentIndexChanged, this, [this] { update_appearance(); });
-    connect(zoom_, &QSpinBox::valueChanged, this, [this](const int value) {
-        preview_->set_zoom_percent(static_cast<double>(value));
+    connect(zoom_, &QDoubleSpinBox::valueChanged, this, [this](const double value) {
+        preview_->set_zoom_percent(value);
+        if (!applying_zoom_) synchronize_zoom_level();
+    });
+    connect(zoom_levels_, &QComboBox::currentIndexChanged, this, [this] { apply_zoom_level(); });
+    connect(fit_workspace_button_, &QPushButton::clicked, this, [this] {
+        zoom_levels_->setCurrentIndex(0); fit_to_workspace();
+    });
+    connect(main_splitter_, &QSplitter::splitterMoved, this, [this] {
+        if (zoom_levels_->currentData().toDouble()<0.0) fit_to_workspace();
     });
     connect(add_button, &QPushButton::clicked, this, [this] { add_polar_rose(); });
     connect(rename_button_, &QPushButton::clicked, this, [this] { rename_active_layer(); });
@@ -531,6 +559,7 @@ MainWindow::MainWindow(QWidget* parent)
     // The initial row was selected before the layer-list signals were connected.
     // Explicitly run the same synchronization used by New and Open.
     load_active_layer();
+    load_document_settings();
     preview_->update();
     refresh_layer_actions();
 
@@ -545,6 +574,7 @@ MainWindow::MainWindow(QWidget* parent)
     }
     track_document_changes_ = true;
     reset_history();
+    QTimer::singleShot(0,this,[this]{ fit_to_workspace(); });
 }
 
 void MainWindow::closeEvent(QCloseEvent* event)
@@ -557,6 +587,13 @@ void MainWindow::closeEvent(QCloseEvent* event)
     settings.setValue("mainWindow/geometry", saveGeometry());
     settings.setValue("mainWindow/splitterState", main_splitter_->saveState());
     QMainWindow::closeEvent(event);
+}
+
+void MainWindow::resizeEvent(QResizeEvent* event)
+{
+    QMainWindow::resizeEvent(event);
+    if (zoom_levels_!=nullptr && zoom_levels_->currentData().toDouble()<0.0)
+        QTimer::singleShot(0,this,[this]{ fit_to_workspace(); });
 }
 
 void MainWindow::open_file()
@@ -576,12 +613,15 @@ void MainWindow::new_document()
         return;
     }
     document_ = document::Document{};
+    load_saved_document_defaults();
     auto& initial = document_.add_polar_rose();
     initial.preset_id = "rose-seven";
     active_layer_id_ = initial.id;
     current_file_path_.clear();
     rebuild_layer_list();
     load_document_settings();
+    zoom_levels_->setCurrentIndex(0);
+    fit_to_workspace();
     preview_->update();
     save_action_->setEnabled(false);
     reset_history();
@@ -783,8 +823,72 @@ void MainWindow::update_document_settings()
     document_.settings().unit = "mm";
     document_.settings().background = rgba_from_qcolor(page_background_);
     preview_->refresh_document_geometry();
+    save_document_defaults();
+    if (zoom_levels_->currentData().toDouble()<0.0) fit_to_workspace();
     refresh_all_layer_previews();
     mark_document_modified();
+}
+
+void MainWindow::load_saved_document_defaults()
+{
+    QSettings settings;
+    auto& document_settings=document_.settings();
+    document_settings.page_width=settings.value("documentDefaults/pageWidth",210.0).toDouble();
+    document_settings.page_height=settings.value("documentDefaults/pageHeight",210.0).toDouble();
+    document_settings.unit="mm";
+    const auto color=settings.value("documentDefaults/background",QColor(Qt::white)).value<QColor>();
+    document_settings.background=rgba_from_qcolor(color.isValid()?color:QColor(Qt::white));
+}
+
+void MainWindow::save_document_defaults()
+{
+    QSettings settings;
+    settings.setValue("documentDefaults/pageWidth",document_.settings().page_width);
+    settings.setValue("documentDefaults/pageHeight",document_.settings().page_height);
+    settings.setValue("documentDefaults/background",qcolor_from_rgba(document_.settings().background));
+}
+
+void MainWindow::reset_document_defaults()
+{
+    const QSignalBlocker width_blocker(page_width_),height_blocker(page_height_);
+    page_width_->setValue(210.0);
+    page_height_->setValue(210.0);
+    page_background_=QColor(Qt::white);
+    style_color_button(page_background_button_,page_background_);
+    update_document_settings();
+}
+
+void MainWindow::fit_to_workspace()
+{
+    if (preview_==nullptr || preview_scroll_==nullptr) return;
+    const double level=preview_->fit_zoom_percent(preview_scroll_->viewport()->size());
+    applying_zoom_=true;
+    zoom_->setValue(level);
+    preview_->set_zoom_percent(level);
+    applying_zoom_=false;
+}
+
+void MainWindow::apply_zoom_level()
+{
+    if (applying_zoom_) return;
+    const double level=zoom_levels_->currentData().toDouble();
+    if (level<0.0) { fit_to_workspace(); return; }
+    if (level==0.0) return;
+    applying_zoom_=true;
+    zoom_->setValue(level);
+    preview_->set_zoom_percent(level);
+    applying_zoom_=false;
+}
+
+void MainWindow::synchronize_zoom_level()
+{
+    const double value=zoom_->value();
+    int found=-1;
+    for (int index=2;index<zoom_levels_->count();++index) {
+        if (std::abs(zoom_levels_->itemData(index).toDouble()-value)<0.005) { found=index; break; }
+    }
+    const QSignalBlocker blocker(zoom_levels_);
+    zoom_levels_->setCurrentIndex(found>=0?found:1);
 }
 
 void MainWindow::load_document_settings()
@@ -796,6 +900,7 @@ void MainWindow::load_document_settings()
     page_background_ = qcolor_from_rgba(document_.settings().background);
     style_color_button(page_background_button_, page_background_);
     preview_->refresh_document_geometry();
+    if (zoom_levels_!=nullptr && zoom_levels_->currentData().toDouble()<0.0) fit_to_workspace();
     refresh_all_layer_previews();
 }
 
