@@ -98,6 +98,28 @@ void test_fractional_k_uses_complete_period()
             "1/3 should close after three pi radians");
 }
 
+void test_integer_period_does_not_retrace_odd_roses()
+{
+    auto parameters=rosettelab::curves::PolarRoseParameters{};
+    parameters.k=7.0;
+    require(std::abs(rosettelab::curves::polar_rose_period(parameters)-std::numbers::pi)<1e-12,
+            "odd integer roses should close after pi without being retraced");
+    parameters.k=4.0;
+    require(std::abs(rosettelab::curves::polar_rose_period(parameters)-2.0*std::numbers::pi)<1e-12,
+            "even integer roses should close after two pi");
+}
+
+void test_fractional_polyline_uses_effective_k()
+{
+    auto parameters=rosettelab::curves::PolarRoseParameters{};
+    parameters.k_mode=rosettelab::curves::PolarKMode::Fraction;
+    parameters.numerator=1;
+    parameters.denominator=2;
+    const auto curve=rosettelab::curves::generate_polar_rose(parameters);
+    require(curve.closed && curve.points.front()==curve.points.back(),
+            "fractional reference polyline should use the rational k value and close");
+}
+
 void test_decimal_fraction_is_not_forced_closed()
 {
     auto parameters = rosettelab::curves::PolarRoseParameters{};
@@ -121,6 +143,8 @@ int main()
         test_bezier_curve_is_closed_and_compact();
         test_tighter_bezier_tolerance_adds_detail();
         test_fractional_k_uses_complete_period();
+        test_integer_period_does_not_retrace_odd_roses();
+        test_fractional_polyline_uses_effective_k();
         test_decimal_fraction_is_not_forced_closed();
         std::cout << "All RosetteLab core tests passed\n";
         return 0;

@@ -157,6 +157,12 @@ Initial parameters:
 
 The mathematical meaning of k, including the odd/even petal behavior, must be documented in the interface help. Decimal approximations such as 0.33 must never be silently interpreted as the exact fraction 1/3. RosetteLab must not forcibly close an incomplete decimal trace.
 
+Closed roses are generated over their smallest exact closing period. An odd integer
+`k` uses \(\pi\), while an even integer `k` uses \(2\pi\). More generally, a reduced
+fraction `n/d` uses \(d\pi\) when both integers are odd and \(2d\pi\) otherwise.
+The generator must not retrace an already complete curve: duplicate traversal would
+cancel the visible fill under the default `Even-odd` rule.
+
 ### 5.2 Ellipse
 
 Canonical form:

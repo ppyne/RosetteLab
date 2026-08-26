@@ -130,6 +130,11 @@ double effective_k(const PolarRoseParameters& parameters)
 double polar_rose_period(const PolarRoseParameters& parameters)
 {
     if (parameters.k_mode == PolarKMode::Decimal) {
+        if (std::isfinite(parameters.k) &&
+            std::abs(parameters.k-std::round(parameters.k))<1e-12) {
+            const auto integer=static_cast<long long>(std::llround(std::abs(parameters.k)));
+            return (integer%2!=0?1.0:2.0)*std::numbers::pi;
+        }
         return 2.0 * std::numbers::pi;
     }
 
@@ -170,7 +175,7 @@ core::Polyline generate_polar_rose(const PolarRoseParameters& parameters)
     for (std::size_t index = 0; index <= parameters.samples; ++index) {
         const double theta = full_turn * static_cast<double>(index) /
                              static_cast<double>(parameters.samples);
-        const double radius = parameters.radius * std::cos(parameters.k * theta + phase);
+        const double radius = parameters.radius * std::cos(effective_k(parameters) * theta + phase);
         const double angle = theta + rotation;
         result.points.push_back({radius * std::cos(angle), radius * std::sin(angle)});
     }
