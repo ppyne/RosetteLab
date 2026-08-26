@@ -94,6 +94,9 @@ typing another zoom leaves fit mode and does not modify the document or its hist
 While the pointer is over the preview, moving the mouse wheel toward the user steps
 up through the predefined levels and enlarges the page; moving it upward steps down
 and reduces it. A custom or fitted value starts from the nearest predefined level.
+When the page exceeds the viewport, the mathematical point beneath the pointer stays
+under the pointer after each wheel step; this pointer anchor replaces corner-based
+zooming. An axis on which the complete page fits remains automatically centered.
 Holding the left mouse button over the preview displays a closed-hand cursor and
 pans the page by dragging both scroll positions, allowing navigation without direct
 use of the scroll bars.

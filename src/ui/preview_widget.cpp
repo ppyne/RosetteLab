@@ -74,7 +74,7 @@ double PreviewWidget::fit_zoom_percent(const QSizeF& available_size) const
     return std::clamp(100.0*std::min(width/page_width,height/page_height)/pixels_per_unit_,0.1,3200.0);
 }
 
-void PreviewWidget::set_wheel_zoom_handler(std::function<void(int)> handler)
+void PreviewWidget::set_wheel_zoom_handler(std::function<void(int, const QPoint&)> handler)
 {
     wheel_zoom_handler_=std::move(handler);
 }
@@ -88,7 +88,7 @@ void PreviewWidget::wheelEvent(QWheelEvent* event)
 {
     const int delta=event->angleDelta().y();
     if (wheel_zoom_handler_ && delta!=0) {
-        wheel_zoom_handler_(delta<0?1:-1);
+        wheel_zoom_handler_(delta<0?1:-1,event->position().toPoint());
         event->accept();
         return;
     }

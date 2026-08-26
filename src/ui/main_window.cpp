@@ -426,7 +426,8 @@ MainWindow::MainWindow(QWidget* parent)
     preview_scroll_->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     preview_ = new PreviewWidget;
     preview_->set_document(&document_);
-    preview_->set_wheel_zoom_handler([this](const int direction){ step_zoom_level(direction); });
+    preview_->set_wheel_zoom_handler(
+        [this](const int direction,const QPoint& anchor){ step_zoom_level(direction,anchor); });
     preview_->set_pan_handler([this](const QPoint& movement){ pan_preview(movement); });
     preview_scroll_->setWidget(preview_);
 
@@ -903,9 +904,14 @@ void MainWindow::set_zoom_to_actual_size()
     if (index>=0) zoom_levels_->setCurrentIndex(index);
 }
 
-void MainWindow::step_zoom_level(const int direction)
+void MainWindow::step_zoom_level(const int direction, const QPoint& anchor)
 {
     if (direction==0) return;
+    constexpr double margin=40.0;
+    const QSize old_size=preview_->size();
+    const QPoint viewport_anchor=preview_->mapTo(preview_scroll_->viewport(),anchor);
+    const double normalized_x=(anchor.x()-old_size.width()/2.0)/std::max(1.0,old_size.width()-margin);
+    const double normalized_y=(anchor.y()-old_size.height()/2.0)/std::max(1.0,old_size.height()-margin);
     const double current=zoom_->value();
     int nearest=2;
     double distance=std::numeric_limits<double>::max();
@@ -920,6 +926,18 @@ void MainWindow::step_zoom_level(const int direction)
     else if (direction<0 && nearest_value>=current-0.005) --target;
     target=std::clamp(target,2,zoom_levels_->count()-1);
     zoom_levels_->setCurrentIndex(target);
+
+    const QSize new_size=preview_->size();
+    const QPoint new_anchor(
+        qRound(new_size.width()/2.0+normalized_x*std::max(1.0,new_size.width()-margin)),
+        qRound(new_size.height()/2.0+normalized_y*std::max(1.0,new_size.height()-margin)));
+    const QPoint mapped=preview_->mapTo(preview_scroll_->viewport(),new_anchor);
+    auto* horizontal=preview_scroll_->horizontalScrollBar();
+    auto* vertical=preview_scroll_->verticalScrollBar();
+    if (horizontal->maximum()>0)
+        horizontal->setValue(horizontal->value()+mapped.x()-viewport_anchor.x());
+    if (vertical->maximum()>0)
+        vertical->setValue(vertical->value()+mapped.y()-viewport_anchor.y());
 }
 
 void MainWindow::pan_preview(const QPoint& movement)

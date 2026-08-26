@@ -88,7 +88,7 @@ private:
     void apply_zoom_level();
     void synchronize_zoom_level();
     void set_zoom_to_actual_size();
-    void step_zoom_level(int direction);
+    void step_zoom_level(int direction, const QPoint& anchor);
     void pan_preview(const QPoint& movement);
     void refresh_k_mode_controls();
     void refresh_ellipse_radius_controls();
