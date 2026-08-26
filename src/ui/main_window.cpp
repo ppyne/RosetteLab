@@ -138,9 +138,11 @@ MainWindow::MainWindow(QWidget* parent)
 
     auto* edit_menu = menuBar()->addMenu("&Edit");
     undo_action_ = edit_menu->addAction("Undo");
+    undo_action_->setObjectName("undoAction");
     undo_action_->setShortcut(QKeySequence::Undo);
     connect(undo_action_, &QAction::triggered, this, [this] { undo(); });
     redo_action_ = edit_menu->addAction("Redo");
+    redo_action_->setObjectName("redoAction");
     redo_action_->setShortcut(QKeySequence::Redo);
     connect(redo_action_, &QAction::triggered, this, [this] { redo(); });
 
@@ -186,6 +188,7 @@ MainWindow::MainWindow(QWidget* parent)
     preset_ = new QComboBox(preset_group);
     preset_->setObjectName("presetSelector");
     restore_preset_button_ = new QPushButton("Restore preset", preset_group);
+    restore_preset_button_->setObjectName("restorePresetButton");
     restore_preset_button_->setEnabled(false);
     preset_layout->addWidget(preset_, 1);
     preset_layout->addWidget(restore_preset_button_);
@@ -204,6 +207,7 @@ MainWindow::MainWindow(QWidget* parent)
     k_mode_->addItem("Fraction", static_cast<int>(curves::PolarKMode::Fraction));
 
     k_ = new QDoubleSpinBox(curve_group_);
+    k_->setObjectName("polarKField");
     k_->setRange(-1000.0, 1000.0);
     k_->setValue(7.0);
     k_->setDecimals(3);
@@ -364,6 +368,7 @@ MainWindow::MainWindow(QWidget* parent)
     transform_group_ = new QGroupBox("Layer transform", parameters_panel);
     auto* transform_form = new QFormLayout(transform_group_);
     transform_x_ = new QDoubleSpinBox(transform_group_);
+    transform_x_->setObjectName("transformXField");
     transform_y_ = new QDoubleSpinBox(transform_group_);
     for (auto* control : {transform_x_, transform_y_}) {
         control->setRange(-100000.0, 100000.0);
@@ -382,6 +387,7 @@ MainWindow::MainWindow(QWidget* parent)
     transform_link_scales_->setChecked(true);
     transform_rotation_ = angle_control(transform_group_);
     reset_transform_button_ = new QPushButton("Reset transform", transform_group_);
+    reset_transform_button_->setObjectName("resetTransformButton");
     transform_form->addRow("Position X", transform_x_);
     transform_form->addRow("Position Y", transform_y_);
     transform_form->addRow("Scale X", transform_scale_x_);
@@ -393,6 +399,7 @@ MainWindow::MainWindow(QWidget* parent)
     copies_group_ = new QGroupBox("Copies", parameters_panel);
     auto* copies_form = new QFormLayout(copies_group_);
     copy_count_ = new QSpinBox(copies_group_);
+    copy_count_->setObjectName("copyCountField");
     copy_count_->setRange(1, 1000);
     copy_rotation_ = angle_control(copies_group_);
     copy_scale_ = new QDoubleSpinBox(copies_group_);
@@ -413,6 +420,7 @@ MainWindow::MainWindow(QWidget* parent)
     copies_form->addRow("Offset X per copy", copy_offset_x_);
     copies_form->addRow("Offset Y per copy", copy_offset_y_);
     reset_copies_button_ = new QPushButton("Reset copies", copies_group_);
+    reset_copies_button_->setObjectName("resetCopiesButton");
     copies_form->addRow("", reset_copies_button_);
 
     appearance_group_ = new QGroupBox("Appearance", parameters_panel);
@@ -822,6 +830,11 @@ bool MainWindow::confirm_discard_changes()
 void MainWindow::mark_document_modified()
 {
     if (!track_document_changes_) {
+        return;
+    }
+    if (!history_.empty() && history_index_ < history_.size() &&
+        history_[history_index_].document == document_ &&
+        history_[history_index_].active_layer_id == active_layer_id_) {
         return;
     }
     if (history_index_ + 1 < history_.size()) {
@@ -1899,6 +1912,8 @@ void MainWindow::apply_selected_preset()
         layer->preset_customized=false;
     }
     applying_preset_=true;
+    const bool was_tracking_document_changes = track_document_changes_;
+    track_document_changes_ = false;
     if (id=="rose-seven") { k_mode_->setCurrentIndex(0); radius_->setValue(100); k_->setValue(7); phase_->setValue(0); rotation_->setValue(0); }
     else if (id=="rose-eleven") { k_mode_->setCurrentIndex(0); radius_->setValue(100); k_->setValue(11); phase_->setValue(8); rotation_->setValue(0); }
     else if (id=="rose-compass") { k_mode_->setCurrentIndex(0); radius_->setValue(95); k_->setValue(4); phase_->setValue(0); rotation_->setValue(22.5); }
@@ -1935,6 +1950,7 @@ void MainWindow::apply_selected_preset()
     }
     restore_preset_button_->setEnabled(true);
     update_preview();
+    track_document_changes_ = was_tracking_document_changes;
     applying_preset_=false;
     mark_document_modified();
 }

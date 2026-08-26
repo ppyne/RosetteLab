@@ -70,6 +70,8 @@ struct CurveLayer {
     LayerCopies copies{};
     std::string preset_id;
     bool preset_customized{false};
+
+    friend bool operator==(const CurveLayer&, const CurveLayer&) = default;
 };
 
 struct DocumentSettings {
@@ -83,6 +85,8 @@ struct DocumentSettings {
 
 class Document {
 public:
+    friend bool operator==(const Document&, const Document&) = default;
+
     [[nodiscard]] CurveLayer& add_polar_rose(
         const curves::PolarRoseParameters& parameters = {},
         std::optional<std::string> name = std::nullopt);

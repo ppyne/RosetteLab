@@ -13,6 +13,8 @@ struct LissajousParameters {
     double phase_y_degrees{0.0};
     double rotation_degrees{0.0};
     double bezier_tolerance{0.05};
+
+    friend constexpr bool operator==(const LissajousParameters&, const LissajousParameters&) = default;
 };
 
 [[nodiscard]] core::BezierPath generate_lissajous_bezier(

@@ -21,6 +21,8 @@ struct PolarRoseParameters {
     double rotation_degrees{0.0};
     double bezier_tolerance{0.05};
     std::size_t samples{720};
+
+    friend constexpr bool operator==(const PolarRoseParameters&, const PolarRoseParameters&) = default;
 };
 
 [[nodiscard]] double effective_k(const PolarRoseParameters& parameters);

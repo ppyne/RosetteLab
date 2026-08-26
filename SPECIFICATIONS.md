@@ -440,6 +440,8 @@ The **Reset copies** command restores one copy, zero rotation and offsets, and 1
 
 Transform and copy values are editable independently from curve-family parameters and presets. They are stored in RosetteLab SVG metadata, emitted as SVG path transforms, restored on open, duplicated with the layer, and applied identically in the live preview, layer thumbnail, PNG, JPEG, PDF, and SVG output. Each edit creates a normal document-history entry and is therefore supported by Undo/Redo.
 
+Undo/Redo history must never contain consecutive duplicate document states. Composite actions—including applying or restoring a preset, Reset transform, and Reset copies—produce exactly one history entry, so one Undo always restores the complete state immediately preceding the action and one Redo reapplies it.
+
 ### 10.4 Round-trip requirement
 
 Saving, reopening, and saving without edits must preserve the visible composition and all supported RosetteLab parameters. Unknown metadata from a newer schema must not be discarded silently.

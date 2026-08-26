@@ -10,6 +10,8 @@ struct EllipseParameters {
     bool link_radii{false};
     double rotation_degrees{0.0};
     double bezier_tolerance{0.05};
+
+    friend constexpr bool operator==(const EllipseParameters&, const EllipseParameters&) = default;
 };
 
 [[nodiscard]] core::BezierPath generate_ellipse_bezier(

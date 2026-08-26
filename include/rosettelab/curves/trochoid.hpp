@@ -23,6 +23,8 @@ struct TrochoidParameters {
     double turns{2.0};
     bool close_limited_path{false};
     double bezier_tolerance{0.05};
+
+    friend constexpr bool operator==(const TrochoidParameters&, const TrochoidParameters&) = default;
 };
 
 [[nodiscard]] double trochoid_trace_end(
