@@ -81,6 +81,9 @@ private:
     void refresh_k_mode_controls();
     void refresh_ellipse_radius_controls();
     void refresh_trochoid_trace_controls();
+    void refresh_preset_choices();
+    void apply_selected_preset();
+    void restore_active_preset();
     void refresh_color_buttons();
     void refresh_layer_actions();
     void refresh_layer_preview(document::LayerId id);
@@ -99,6 +102,8 @@ private:
     ColorPreviewButton* page_background_button_{};
     QColor page_background_{Qt::white};
     QLabel* curve_type_label_{};
+    QComboBox* preset_{};
+    QPushButton* restore_preset_button_{};
     QDoubleSpinBox* radius_{};
     QComboBox* k_mode_{};
     QDoubleSpinBox* k_{};
@@ -165,6 +170,8 @@ private:
     QString current_file_path_;
     bool document_modified_{false};
     bool track_document_changes_{false};
+    bool applying_preset_{false};
+    QString active_preset_id_;
     struct HistoryEntry {
         document::Document document;
         document::LayerId active_layer_id{};

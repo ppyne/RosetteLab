@@ -4,6 +4,10 @@ RosetteLab is a desktop application for designing, layering, editing, and export
 
 It combines a live drawing canvas, an editable layer stack, and curve-specific controls. Unlike a one-shot SVG generator, RosetteLab preserves every layer's mathematical parameters inside the SVG so a composition can be reopened and edited later.
 
+Each implemented family includes editable presets: choosing one fills the parameter
+controls, manual changes switch the layer to `Custom`, and **Restore preset** reloads
+the selected starting point without changing the layer's appearance.
+
 ## Implemented curve families
 
 - Polar roses

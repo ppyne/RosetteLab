@@ -221,17 +221,24 @@ the physical drawing process and the serializer must not add an artificial closi
 segment. It is rendered as adaptive cubic Bézier segments and all parameters are
 stored in RosetteLab SVG metadata for lossless reopening and editing.
 
-More complete multi-pendulum models and harmonograph presets are explicitly deferred.
+More complete multi-pendulum models are explicitly deferred.
 
 ## 6. Presets
 
 Each curve family offers a curated set of mathematically notable and visually distinctive presets.
+
+The initial catalog contains 25 editable starting points: four each for polar roses,
+ellipses, hypotrochoids, epitrochoids, and Lissajous curves, plus five harmonographs.
+The catalog includes both canonical mathematical cases and deliberately surprising
+near-resonant or asymmetric configurations.
 
 Requirements:
 
 - selecting a preset writes its values into the actual editable fields;
 - editing a field keeps the layer editable and marks the state as modified/custom;
 - a reset action restores the selected preset;
+- the reset action remains available after the selector changes to `Custom` and
+  restores the last preset chosen for the active layer;
 - presets may include geometry, copies, rotations, and scale progressions;
 - user-selected colors and stroke widths are not overwritten unless a preset explicitly declares an appearance theme and the user opts into it.
 

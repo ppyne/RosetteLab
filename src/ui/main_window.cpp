@@ -160,6 +160,15 @@ MainWindow::MainWindow(QWidget* parent)
     parameters_layout->addWidget(document_group);
     style_color_button(page_background_button_, page_background_);
 
+    auto* preset_group = new QGroupBox("Preset", parameters_panel);
+    auto* preset_layout = new QHBoxLayout(preset_group);
+    preset_ = new QComboBox(preset_group);
+    restore_preset_button_ = new QPushButton("Restore preset", preset_group);
+    restore_preset_button_->setEnabled(false);
+    preset_layout->addWidget(preset_, 1);
+    preset_layout->addWidget(restore_preset_button_);
+    parameters_layout->addWidget(preset_group);
+
     curve_group_ = new QGroupBox("Curve parameters", parameters_panel);
     auto* form = new QFormLayout(curve_group_);
 
@@ -440,6 +449,10 @@ MainWindow::MainWindow(QWidget* parent)
     connect(page_width_, &QDoubleSpinBox::valueChanged, this, [this] { update_document_settings(); });
     connect(page_height_, &QDoubleSpinBox::valueChanged, this, [this] { update_document_settings(); });
     connect(page_background_button_, &QPushButton::clicked, this, [this] { choose_page_background(); });
+    connect(preset_, &QComboBox::currentIndexChanged, this, [this](const int index) {
+        if (index > 0 && !applying_preset_) apply_selected_preset();
+    });
+    connect(restore_preset_button_, &QPushButton::clicked, this, [this] { restore_active_preset(); });
     connect(k_mode_, &QComboBox::currentIndexChanged, this, [this] {
         refresh_k_mode_controls();
         update_preview();
@@ -1106,6 +1119,7 @@ void MainWindow::load_active_layer()
         return;
     }
     curve_type_label_->setText(QString::fromStdString(document::curve_type_name(layer->type)));
+    refresh_preset_choices();
     const auto* parameters = std::get_if<curves::PolarRoseParameters>(&layer->parameters);
     const auto* ellipse_parameters = std::get_if<curves::EllipseParameters>(&layer->parameters);
     const auto* trochoid_parameters = std::get_if<curves::TrochoidParameters>(&layer->parameters);
@@ -1267,7 +1281,7 @@ void MainWindow::update_appearance()
     refresh_color_buttons();
     refresh_layer_preview(active_layer_id_);
     preview_->update();
-    mark_document_modified();
+    if (!applying_preset_) mark_document_modified();
 }
 
 void MainWindow::refresh_color_buttons()
@@ -1423,6 +1437,10 @@ void MainWindow::update_preview()
     if (layer == nullptr || layer->locked) {
         return;
     }
+    if (!applying_preset_ && preset_->currentIndex() > 0) {
+        const QSignalBlocker blocker(preset_);
+        preset_->setCurrentIndex(0);
+    }
     if (auto* parameters = std::get_if<curves::PolarRoseParameters>(&layer->parameters)) {
         parameters->radius = radius_->value();
         parameters->k_mode = static_cast<curves::PolarKMode>(k_mode_->currentData().toInt());
@@ -1469,6 +1487,94 @@ void MainWindow::update_preview()
     refresh_layer_preview(active_layer_id_);
     preview_->update();
     mark_document_modified();
+}
+
+void MainWindow::refresh_preset_choices()
+{
+    const auto* layer=document_.find_layer(active_layer_id_);
+    const QSignalBlocker blocker(preset_);
+    preset_->clear(); preset_->addItem("Custom", "");
+    if (layer==nullptr) { restore_preset_button_->setEnabled(false); return; }
+    const auto add=[this](const char* name,const char* id){ preset_->addItem(name,id); };
+    switch (layer->type) {
+    case document::CurveType::PolarRose:
+        add("Sevenfold garden","rose-seven"); add("Prime lace 11","rose-eleven");
+        add("Compass bloom","rose-compass"); add("Solar flower 32","rose-solar"); break;
+    case document::CurveType::Ellipse:
+        add("Perfect circle","ellipse-circle"); add("Golden ellipse","ellipse-golden");
+        add("Tilted medallion","ellipse-tilted"); add("Needle orbit","ellipse-needle"); break;
+    case document::CurveType::Hypotrochoid:
+        add("Deep sevenfold star","hypo-seven"); add("Nested deltoid","hypo-deltoid");
+        add("Rotating astroid","hypo-astroid"); add("Wide stellar web","hypo-web"); break;
+    case document::CurveType::Epitrochoid:
+        add("Two-turn outer orbit 32/63","epi-orbit"); add("Crowned epicycloid","epi-crown");
+        add("Prime outer lace","epi-prime"); add("Wide orbital bloom","epi-bloom"); break;
+    case document::CurveType::Lissajous:
+        add("Classic 3:2","liss-3-2"); add("Cathedral weave 5:4","liss-5-4");
+        add("Prime knot 7:5","liss-7-5"); add("Woven lattice 9:8","liss-9-8"); break;
+    case document::CurveType::Harmonograph:
+        add("Whispering ellipse","harm-whisper"); add("Decaying flower 5:4","harm-flower");
+        add("Dense weave 7:5","harm-weave"); add("Damped butterfly","harm-butterfly");
+        add("Long-decay meditation","harm-meditation"); break;
+    case document::CurveType::Count: break;
+    }
+    active_preset_id_.clear();
+    restore_preset_button_->setEnabled(false);
+}
+
+void MainWindow::apply_selected_preset()
+{
+    const auto id=preset_->currentData().toString();
+    if (id.isEmpty()) return;
+    active_preset_id_=id;
+    applying_preset_=true;
+    if (id=="rose-seven") { k_mode_->setCurrentIndex(0); radius_->setValue(100); k_->setValue(7); phase_->setValue(0); rotation_->setValue(0); }
+    else if (id=="rose-eleven") { k_mode_->setCurrentIndex(0); radius_->setValue(100); k_->setValue(11); phase_->setValue(8); rotation_->setValue(0); }
+    else if (id=="rose-compass") { k_mode_->setCurrentIndex(0); radius_->setValue(95); k_->setValue(4); phase_->setValue(0); rotation_->setValue(22.5); }
+    else if (id=="rose-solar") { k_mode_->setCurrentIndex(0); radius_->setValue(100); k_->setValue(16); phase_->setValue(5.625); rotation_->setValue(0); }
+    else if (id=="ellipse-circle") { ellipse_radius_x_->setValue(75); ellipse_link_radii_->setChecked(true); ellipse_rotation_->setValue(0); }
+    else if (id=="ellipse-golden") { ellipse_link_radii_->setChecked(false); ellipse_radius_x_->setValue(80); ellipse_radius_y_->setValue(49.443); ellipse_rotation_->setValue(0); }
+    else if (id=="ellipse-tilted") { ellipse_link_radii_->setChecked(false); ellipse_radius_x_->setValue(82); ellipse_radius_y_->setValue(48); ellipse_rotation_->setValue(45); }
+    else if (id=="ellipse-needle") { ellipse_link_radii_->setChecked(false); ellipse_radius_x_->setValue(100); ellipse_radius_y_->setValue(22); ellipse_rotation_->setValue(30); }
+    else if (id.startsWith("hypo-")) {
+        trochoid_trace_mode_->setCurrentIndex(trochoid_trace_mode_->findData(static_cast<int>(curves::TraceMode::Complete)));
+        if (id=="hypo-seven") { trochoid_fixed_radius_->setValue(105); trochoid_rolling_radius_->setValue(45); trochoid_pen_offset_->setValue(32); }
+        else if (id=="hypo-deltoid") { trochoid_fixed_radius_->setValue(90); trochoid_rolling_radius_->setValue(30); trochoid_pen_offset_->setValue(30); }
+        else if (id=="hypo-astroid") { trochoid_fixed_radius_->setValue(100); trochoid_rolling_radius_->setValue(25); trochoid_pen_offset_->setValue(25); trochoid_rotation_->setValue(45); }
+        else { trochoid_fixed_radius_->setValue(105); trochoid_rolling_radius_->setValue(60); trochoid_pen_offset_->setValue(52); }
+    } else if (id.startsWith("epi-")) {
+        trochoid_trace_mode_->setCurrentIndex(trochoid_trace_mode_->findData(static_cast<int>(id=="epi-orbit"?curves::TraceMode::Limited:curves::TraceMode::Complete)));
+        if (id=="epi-orbit") { trochoid_fixed_radius_->setValue(32); trochoid_rolling_radius_->setValue(63); trochoid_pen_offset_->setValue(44.5); trochoid_turns_->setValue(2); trochoid_close_limited_->setChecked(false); }
+        else if (id=="epi-crown") { trochoid_fixed_radius_->setValue(80); trochoid_rolling_radius_->setValue(30); trochoid_pen_offset_->setValue(30); }
+        else if (id=="epi-prime") { trochoid_fixed_radius_->setValue(70); trochoid_rolling_radius_->setValue(27); trochoid_pen_offset_->setValue(24); }
+        else { trochoid_fixed_radius_->setValue(55); trochoid_rolling_radius_->setValue(34); trochoid_pen_offset_->setValue(45); }
+    } else if (id.startsWith("liss-")) {
+        lissajous_amplitude_x_->setValue(80); lissajous_amplitude_y_->setValue(80); lissajous_phase_x_->setValue(90);
+        if (id=="liss-3-2") { lissajous_frequency_x_->setValue(3); lissajous_frequency_y_->setValue(2); lissajous_phase_y_->setValue(0); }
+        else if (id=="liss-5-4") { lissajous_frequency_x_->setValue(5); lissajous_frequency_y_->setValue(4); lissajous_phase_y_->setValue(117); }
+        else if (id=="liss-7-5") { lissajous_frequency_x_->setValue(7); lissajous_frequency_y_->setValue(5); lissajous_phase_y_->setValue(38.571); }
+        else { lissajous_frequency_x_->setValue(9); lissajous_frequency_y_->setValue(8); lissajous_phase_y_->setValue(80); }
+    } else if (id.startsWith("harm-")) {
+        harmonograph_amplitude_x_->setValue(80); harmonograph_amplitude_y_->setValue(80); harmonograph_rotation_->setValue(0);
+        if (id=="harm-whisper") { harmonograph_frequency_x_->setValue(1); harmonograph_frequency_y_->setValue(1.005); harmonograph_phase_x_->setValue(0); harmonograph_phase_y_->setValue(90); harmonograph_damping_x_->setValue(.01); harmonograph_damping_y_->setValue(.012); harmonograph_duration_->setValue(140); }
+        else if (id=="harm-flower") { harmonograph_frequency_x_->setValue(5); harmonograph_frequency_y_->setValue(4.03); harmonograph_phase_x_->setValue(90); harmonograph_phase_y_->setValue(0); harmonograph_damping_x_->setValue(.018); harmonograph_damping_y_->setValue(.012); harmonograph_duration_->setValue(45); }
+        else if (id=="harm-weave") { harmonograph_frequency_x_->setValue(7); harmonograph_frequency_y_->setValue(5.02); harmonograph_phase_x_->setValue(90); harmonograph_phase_y_->setValue(12); harmonograph_damping_x_->setValue(.012); harmonograph_damping_y_->setValue(.009); harmonograph_duration_->setValue(55); }
+        else if (id=="harm-butterfly") { harmonograph_frequency_x_->setValue(2); harmonograph_frequency_y_->setValue(1.01); harmonograph_phase_x_->setValue(0); harmonograph_phase_y_->setValue(90); harmonograph_damping_x_->setValue(.025); harmonograph_damping_y_->setValue(.01); harmonograph_duration_->setValue(90); }
+        else { harmonograph_frequency_x_->setValue(1); harmonograph_frequency_y_->setValue(1.003); harmonograph_phase_x_->setValue(90); harmonograph_phase_y_->setValue(0); harmonograph_damping_x_->setValue(.003); harmonograph_damping_y_->setValue(.004); harmonograph_duration_->setValue(300); }
+    }
+    restore_preset_button_->setEnabled(true);
+    update_preview();
+    applying_preset_=false;
+    mark_document_modified();
+}
+
+void MainWindow::restore_active_preset()
+{
+    if (active_preset_id_.isEmpty()) return;
+    const int index=preset_->findData(active_preset_id_);
+    if (index<0) return;
+    { const QSignalBlocker blocker(preset_); preset_->setCurrentIndex(index); }
+    apply_selected_preset();
 }
 
 } // namespace rosettelab::ui
