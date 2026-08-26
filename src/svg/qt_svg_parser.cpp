@@ -173,10 +173,17 @@ void parse_curve_metadata(
 
 void parse_path_appearance(
     const QXmlStreamAttributes& attributes,
+    const QString& metadata_ns,
     document::LayerAppearance& appearance)
 {
     const double stroke_alpha = parse_double(required_attribute(attributes, "stroke-opacity"), "stroke-opacity");
-    appearance.stroke = parse_rgb(required_attribute(attributes, "stroke"), stroke_alpha);
+    const auto stroke = required_attribute(attributes, "stroke");
+    appearance.stroke_enabled = stroke != "none";
+    appearance.stroke = parse_rgb(
+        appearance.stroke_enabled
+            ? stroke
+            : required_metadata_attribute(attributes, metadata_ns, "stroke-color"),
+        stroke_alpha);
     appearance.stroke_width = parse_double(required_attribute(attributes, "stroke-width"), "stroke-width");
 
     const auto fill = required_attribute(attributes, "fill");
@@ -231,7 +238,7 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
             found_curve = true;
             reader.skipCurrentElement();
         } else if (reader.namespaceUri() == "http://www.w3.org/2000/svg" && reader.name() == "path") {
-            parse_path_appearance(reader.attributes(), layer.appearance);
+            parse_path_appearance(reader.attributes(), metadata_ns, layer.appearance);
             found_path = true;
             reader.skipCurrentElement();
         } else {

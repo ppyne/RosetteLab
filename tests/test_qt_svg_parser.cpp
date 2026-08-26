@@ -41,6 +41,7 @@ void test_save_open_round_trip()
     parameters.denominator = 3;
     auto& layer = source.add_polar_rose(parameters, "Fractional rose");
     layer.locked = true;
+    layer.appearance.stroke_enabled = false;
     layer.appearance.fill_enabled = true;
     layer.appearance.fill = {0.1, 0.2, 0.3, 0.4};
     layer.appearance.blend_mode = rosettelab::document::BlendMode::Multiply;
@@ -72,6 +73,7 @@ void test_save_open_round_trip()
     const auto& restored = loaded.layers().front();
     require(restored.name == "Fractional rose", "name should round-trip");
     require(restored.locked, "lock should round-trip");
+    require(!restored.appearance.stroke_enabled, "disabled stroke should round-trip");
     require(color_close(restored.appearance.fill, expected_fill),
             "fill RGBA should round-trip within 8-bit SVG precision");
     require(restored.appearance.blend_mode == rosettelab::document::BlendMode::Multiply,

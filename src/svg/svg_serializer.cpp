@@ -114,7 +114,8 @@ void write_rendered_path(
     const document::LayerAppearance& appearance)
 {
     output << "    <path d=\"" << path_data(path) << "\""
-           << " stroke=\"" << rgb_hex(appearance.stroke) << "\""
+           << " stroke=\"" << (appearance.stroke_enabled ? rgb_hex(appearance.stroke) : "none") << "\""
+           << " rosettelab:stroke-color=\"" << rgb_hex(appearance.stroke) << "\""
            << " stroke-opacity=\"" << number(std::clamp(appearance.stroke.alpha, 0.0, 1.0)) << "\""
            << " stroke-width=\"" << number(std::max(0.0, appearance.stroke_width)) << "\""
            << " fill=\"" << (appearance.fill_enabled ? rgb_hex(appearance.fill) : "none") << "\"";

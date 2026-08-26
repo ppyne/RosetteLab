@@ -256,11 +256,14 @@ User-facing precision presets map to documented geometric tolerances, with an op
 
 ### 8.1 Stroke
 
+- **Enabled** checkbox, enabled by default and displayed above the stroke-color control;
 - default color: opaque black;
 - color;
 - opacity from 0 to 100%;
 - width;
 - line cap and join when relevant.
+
+Disabling Stroke removes the contour from the canvas, thumbnails, SVG rendering, and exports while preserving its editable color, alpha, and width. Stroke color and width controls are disabled visually until Stroke is re-enabled. The enabled state and inactive stroke color round-trip through RosetteLab SVG metadata and participate in Undo/Redo.
 
 ### 8.2 Fill
 

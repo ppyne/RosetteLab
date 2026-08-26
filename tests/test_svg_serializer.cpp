@@ -72,6 +72,18 @@ void test_hidden_layer_remains_in_project()
     require(contains(svg, "<path d=\"M "), "hidden editable geometry should remain in the file");
 }
 
+void test_disabled_stroke_preserves_editable_color()
+{
+    rosettelab::document::Document document;
+    auto& layer = document.add_polar_rose();
+    layer.appearance.stroke_enabled = false;
+    layer.appearance.stroke = {0.2, 0.4, 0.6, 0.5};
+    const auto svg = rosettelab::svg::serialize_rosettelab_svg(document);
+    require(contains(svg, "stroke=\"none\""), "disabled stroke should not render");
+    require(contains(svg, "rosettelab:stroke-color=\"#336699\""),
+            "disabled stroke color should remain editable");
+}
+
 void test_ellipse_contains_editable_metadata_and_beziers()
 {
     rosettelab::document::Document document;
@@ -117,6 +129,7 @@ int main()
     try {
         test_native_svg_contains_geometry_and_metadata();
         test_hidden_layer_remains_in_project();
+        test_disabled_stroke_preserves_editable_color();
         test_ellipse_contains_editable_metadata_and_beziers();
         test_trochoid_contains_trace_metadata();
         std::cout << "All RosetteLab SVG serializer tests passed\n";

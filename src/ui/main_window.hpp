@@ -123,6 +123,7 @@ private:
     QCheckBox* trochoid_close_limited_{};
     QDoubleSpinBox* trochoid_tolerance_{};
     QGroupBox* appearance_group_{};
+    QCheckBox* stroke_enabled_{};
     ColorPreviewButton* stroke_color_button_{};
     ColorPreviewButton* fill_color_button_{};
     QDoubleSpinBox* stroke_width_{};

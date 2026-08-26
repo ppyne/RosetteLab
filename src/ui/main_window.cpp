@@ -277,6 +277,8 @@ MainWindow::MainWindow(QWidget* parent)
 
     appearance_group_ = new QGroupBox("Appearance", parameters_panel);
     auto* appearance_form = new QFormLayout(appearance_group_);
+    stroke_enabled_ = new QCheckBox("Enabled", appearance_group_);
+    stroke_enabled_->setChecked(true);
     stroke_color_button_ = new ColorPreviewButton(appearance_group_);
     fill_color_button_ = new ColorPreviewButton(appearance_group_);
 
@@ -309,6 +311,7 @@ MainWindow::MainWindow(QWidget* parent)
         blend_mode_->addItem(name, static_cast<int>(mode));
     }
 
+    appearance_form->addRow("Stroke", stroke_enabled_);
     appearance_form->addRow("Stroke color", stroke_color_button_);
     appearance_form->addRow("Stroke width", stroke_width_);
     appearance_form->addRow("Fill", fill_enabled_);
@@ -423,6 +426,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(trochoid_tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(stroke_color_button_, &QPushButton::clicked, this, [this] { choose_stroke_color(); });
     connect(fill_color_button_, &QPushButton::clicked, this, [this] { choose_fill_color(); });
+    connect(stroke_enabled_, &QCheckBox::toggled, this, [this] { update_appearance(); });
     connect(stroke_width_, &QDoubleSpinBox::valueChanged, this, [this] { update_appearance(); });
     connect(fill_enabled_, &QCheckBox::toggled, this, [this] { update_appearance(); });
     connect(fill_rule_, &QComboBox::currentIndexChanged, this, [this] { update_appearance(); });
@@ -1039,6 +1043,7 @@ void MainWindow::load_active_layer()
     const QSignalBlocker trochoid_turns_blocker(trochoid_turns_);
     const QSignalBlocker trochoid_close_blocker(trochoid_close_limited_);
     const QSignalBlocker trochoid_tolerance_blocker(trochoid_tolerance_);
+    const QSignalBlocker stroke_enabled_blocker(stroke_enabled_);
     const QSignalBlocker stroke_width_blocker(stroke_width_);
     const QSignalBlocker fill_enabled_blocker(fill_enabled_);
     const QSignalBlocker fill_rule_blocker(fill_rule_);
@@ -1072,6 +1077,7 @@ void MainWindow::load_active_layer()
     }
     stroke_color_ = qcolor_from_rgba(layer->appearance.stroke);
     fill_color_ = qcolor_from_rgba(layer->appearance.fill);
+    stroke_enabled_->setChecked(layer->appearance.stroke_enabled);
     stroke_width_->setValue(layer->appearance.stroke_width);
     fill_enabled_->setChecked(layer->appearance.fill_enabled);
     fill_rule_->setCurrentIndex(fill_rule_->findData(static_cast<int>(layer->appearance.fill_rule)));
@@ -1132,6 +1138,7 @@ void MainWindow::update_appearance()
         return;
     }
     layer->appearance.stroke = rgba_from_qcolor(stroke_color_);
+    layer->appearance.stroke_enabled = stroke_enabled_->isChecked();
     layer->appearance.stroke_width = stroke_width_->value();
     layer->appearance.fill_enabled = fill_enabled_->isChecked();
     layer->appearance.fill = rgba_from_qcolor(fill_color_);
@@ -1148,6 +1155,8 @@ void MainWindow::refresh_color_buttons()
 {
     style_color_button(stroke_color_button_, stroke_color_);
     style_color_button(fill_color_button_, fill_color_);
+    stroke_color_button_->setEnabled(stroke_enabled_->isChecked());
+    stroke_width_->setEnabled(stroke_enabled_->isChecked());
     const bool fill_controls_enabled = fill_enabled_->isChecked();
     fill_color_button_->setEnabled(fill_controls_enabled);
     fill_rule_->setEnabled(fill_controls_enabled);

@@ -141,14 +141,18 @@ QPixmap layer_preview(
 
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setOpacity(std::clamp(layer.appearance.opacity, 0.0, 1.0));
-    QPen pen(to_qcolor(layer.appearance.stroke));
-    constexpr double minimum_preview_stroke = 0.8;
-    constexpr double maximum_preview_stroke = 4.0;
-    pen.setWidthF(std::clamp(
-        layer.appearance.stroke_width * scale,
-        minimum_preview_stroke,
-        maximum_preview_stroke));
-    painter.setPen(pen);
+    if (layer.appearance.stroke_enabled) {
+        QPen pen(to_qcolor(layer.appearance.stroke));
+        constexpr double minimum_preview_stroke = 0.8;
+        constexpr double maximum_preview_stroke = 4.0;
+        pen.setWidthF(std::clamp(
+            layer.appearance.stroke_width * scale,
+            minimum_preview_stroke,
+            maximum_preview_stroke));
+        painter.setPen(pen);
+    } else {
+        painter.setPen(Qt::NoPen);
+    }
     painter.setBrush(layer.appearance.fill_enabled
         ? QBrush(to_qcolor(layer.appearance.fill))
         : QBrush(Qt::NoBrush));

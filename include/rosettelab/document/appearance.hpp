@@ -36,6 +36,7 @@ enum class BlendMode {
 };
 
 struct LayerAppearance {
+    bool stroke_enabled{true};
     RgbaColor stroke{0.0, 0.0, 0.0, 1.0};
     double stroke_width{0.6};
     bool fill_enabled{false};
@@ -48,4 +49,3 @@ struct LayerAppearance {
 };
 
 } // namespace rosettelab::document
-

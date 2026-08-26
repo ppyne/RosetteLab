@@ -116,9 +116,13 @@ void render_document(
         painter.save();
         painter.setOpacity(std::clamp(layer.appearance.opacity, 0.0, 1.0));
         painter.setCompositionMode(composition_mode(layer.appearance.blend_mode));
-        QPen pen(to_qcolor(layer.appearance.stroke));
-        pen.setWidthF(std::max(0.0, layer.appearance.stroke_width));
-        painter.setPen(pen);
+        if (layer.appearance.stroke_enabled) {
+            QPen pen(to_qcolor(layer.appearance.stroke));
+            pen.setWidthF(std::max(0.0, layer.appearance.stroke_width));
+            painter.setPen(pen);
+        } else {
+            painter.setPen(Qt::NoPen);
+        }
         painter.setBrush(layer.appearance.fill_enabled
             ? QBrush(to_qcolor(layer.appearance.fill))
             : QBrush(Qt::NoBrush));
