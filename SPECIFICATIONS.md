@@ -198,7 +198,9 @@ x(t)=A_x\sin(f_x t+\phi_x),\qquad
 y(t)=A_y\sin(f_y t+\phi_y)
 ]
 
-Parameters include both amplitudes, both frequencies, phases, duration, and precision.
+Parameters include both amplitudes, both frequencies, both phases, angular rotation, and adaptive Bézier tolerance. This single general parametrization must remain the only Lissajous mode; paper-specific auxiliary variables must not complicate the editor.
+
+The English user documentation includes the 56 configurations shown in Figure 1 of Wang, Zhang, and You, *Design rules for dense and rapid Lissajous scanning*. They are documented as seven frequency ratios combined with eight derived phase values. The paper's auxiliary value \(k\) remains explanatory documentation rather than a RosetteLab field, is allowed to take non-integer values, and must be distinguished explicitly from the polar-rose parameter \(k\).
 
 ### 5.5 Harmonograph
 
