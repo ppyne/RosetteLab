@@ -65,6 +65,7 @@ private:
     void restore_history_entry(std::size_t index);
     void update_history_actions();
     void export_raster(bool jpeg);
+    void export_svg();
     void export_pdf();
     void rebuild_layer_list();
     QListWidgetItem* add_layer_row(const document::CurveLayer& layer, int row = -1);

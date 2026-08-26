@@ -174,6 +174,35 @@ void test_preset_state_is_metadata()
     require(contains(svg,"rosettelab:preset-customized=\"true\""),"customized state should be stored");
 }
 
+void test_clean_svg_contains_only_visible_rendered_content()
+{
+    rosettelab::document::Document document;
+    document.settings().background = {0.2, 0.4, 0.6, 0.5};
+    auto& visible = document.add_polar_rose({}, "Visible & clean");
+    visible.copies.count = 3;
+    visible.copies.rotation_step_degrees = 12.0;
+    visible.appearance.fill_enabled = true;
+    visible.appearance.blend_mode = rosettelab::document::BlendMode::Multiply;
+    auto& hidden = document.add_ellipse({}, "Hidden layer");
+    hidden.visible = false;
+
+    const auto svg = rosettelab::svg::serialize_clean_svg(document);
+    require(!contains(svg, "xmlns:rosettelab"),
+            "clean SVG should not declare the RosetteLab namespace");
+    require(!contains(svg, "rosettelab:"),
+            "clean SVG should not contain RosetteLab metadata attributes or elements");
+    require(contains(svg, "<title>Visible &amp; clean</title>"),
+            "clean SVG should retain the visible layer name as a standard title");
+    require(!contains(svg, "Hidden layer"),
+            "clean SVG should omit hidden layers");
+    require(occurrence_count(svg, "    <path d=\"") == 3,
+            "clean SVG should render every parametric copy");
+    require(contains(svg, "fill-opacity=\"0.5\""),
+            "clean SVG should retain document background transparency");
+    require(contains(svg, "mix-blend-mode:multiply"),
+            "clean SVG should retain visible blend modes");
+}
+
 } // namespace
 
 int main()
@@ -186,6 +215,7 @@ int main()
         test_trochoid_contains_trace_metadata();
         test_lissajous_contains_editable_metadata();
         test_preset_state_is_metadata();
+        test_clean_svg_contains_only_visible_rendered_content();
         std::cout << "All RosetteLab SVG serializer tests passed\n";
         return 0;
     } catch (const std::exception& error) {

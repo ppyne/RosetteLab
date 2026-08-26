@@ -132,6 +132,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(save_as_action, &QAction::triggered, this, [this] { save_as(); });
     file_menu->addSeparator();
     auto* export_menu = file_menu->addMenu("Export");
+    export_menu->addAction("To SVG...", this, [this] { export_svg(); });
     export_menu->addAction("To PNG...", this, [this] { export_raster(false); });
     export_menu->addAction("To JPEG...", this, [this] { export_raster(true); });
     export_menu->addAction("To PDF...", this, [this] { export_pdf(); });
@@ -1173,6 +1174,45 @@ bool MainWindow::save_document(const QString& path)
     set_document_modified(false);
     update_history_actions();
     return true;
+}
+
+void MainWindow::export_svg()
+{
+    auto path = QFileDialog::getSaveFileName(
+        this, "Export clean SVG", remembered_directory(export_directory_setting),
+        "SVG image (*.svg)");
+    if (path.isEmpty()) {
+        return;
+    }
+    if (!path.endsWith(".svg", Qt::CaseInsensitive)) {
+        path += ".svg";
+    }
+    const auto absolute_path = QFileInfo(path).absoluteFilePath();
+    if (!current_file_path_.isEmpty() && absolute_path == current_file_path_) {
+        QMessageBox::warning(
+            this,
+            "Choose another export file",
+            "A clean SVG cannot replace the current editable RosetteLab project. Choose another filename.");
+        return;
+    }
+    remember_selected_directory(export_directory_setting, absolute_path);
+
+    std::string svg_text;
+    try {
+        svg_text = svg::serialize_clean_svg(document_);
+    } catch (const std::exception& error) {
+        QMessageBox::critical(this, "Unable to export", error.what());
+        return;
+    }
+    QFile file(absolute_path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        QMessageBox::critical(this, "Unable to export", file.errorString());
+        return;
+    }
+    const auto data = QByteArray::fromStdString(svg_text);
+    if (file.write(data) != data.size()) {
+        QMessageBox::critical(this, "Unable to export", file.errorString());
+    }
 }
 
 void MainWindow::export_raster(const bool jpeg)

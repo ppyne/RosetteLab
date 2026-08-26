@@ -123,7 +123,8 @@ void write_rendered_path(
     std::ostringstream& output,
     const core::BezierPath& path,
     const document::LayerAppearance& appearance,
-    const document::CurveLayer& layer)
+    const document::CurveLayer& layer,
+    const bool include_editing_metadata = true)
 {
     const int copy_count = std::clamp(layer.copies.count, 1, 1000);
     for (int copy = 0; copy < copy_count; ++copy) {
@@ -134,8 +135,11 @@ void write_rendered_path(
            << number(placement.rotation_degrees)
            << ") scale(" << number(layer.transform.scale_x * placement.scale) << ' '
            << number(layer.transform.scale_y * placement.scale) << ")\""
-           << " stroke=\"" << (appearance.stroke_enabled ? rgb_hex(appearance.stroke) : "none") << "\""
-           << " rosettelab:stroke-color=\"" << rgb_hex(appearance.stroke) << "\""
+           << " stroke=\"" << (appearance.stroke_enabled ? rgb_hex(appearance.stroke) : "none") << "\"";
+        if (include_editing_metadata) {
+            output << " rosettelab:stroke-color=\"" << rgb_hex(appearance.stroke) << "\"";
+        }
+        output
            << " stroke-opacity=\"" << number(std::clamp(appearance.stroke.alpha, 0.0, 1.0)) << "\""
            << " stroke-width=\"" << number(std::max(0.0, appearance.stroke_width)) << "\""
            << " fill=\"" << (appearance.fill_enabled ? rgb_hex(appearance.fill) : "none") << "\"";
@@ -146,6 +150,29 @@ void write_rendered_path(
            << " opacity=\"" << number(std::clamp(appearance.opacity, 0.0, 1.0)) << "\""
            << " style=\"mix-blend-mode:" << blend_mode_name(appearance.blend_mode) << "\"/>\n";
     }
+}
+
+core::BezierPath generated_layer_path(const document::CurveLayer& layer)
+{
+    if (const auto* p = std::get_if<curves::PolarRoseParameters>(&layer.parameters)) {
+        return curves::generate_polar_rose_bezier(*p, p->bezier_tolerance);
+    }
+    if (const auto* p = std::get_if<curves::EllipseParameters>(&layer.parameters)) {
+        return curves::generate_ellipse_bezier(*p, p->bezier_tolerance);
+    }
+    if (const auto* p = std::get_if<curves::TrochoidParameters>(&layer.parameters)) {
+        const auto kind = layer.type == document::CurveType::Hypotrochoid
+            ? curves::TrochoidKind::Hypotrochoid
+            : curves::TrochoidKind::Epitrochoid;
+        return curves::generate_trochoid_bezier(kind, *p, p->bezier_tolerance);
+    }
+    if (const auto* p = std::get_if<curves::LissajousParameters>(&layer.parameters)) {
+        return curves::generate_lissajous_bezier(*p, p->bezier_tolerance);
+    }
+    if (const auto* p = std::get_if<curves::HarmonographParameters>(&layer.parameters)) {
+        return curves::generate_harmonograph_bezier(*p, p->bezier_tolerance);
+    }
+    throw std::invalid_argument("Layer has incompatible curve parameters");
 }
 
 void write_polar_rose(std::ostringstream& output, const document::CurveLayer& layer)
@@ -337,6 +364,44 @@ std::string serialize_rosettelab_svg(
         } else if (layer.type == document::CurveType::Harmonograph) {
             write_harmonograph(output, layer);
         }
+        output << "  </g>\n";
+    }
+    output << "</svg>\n";
+    return output.str();
+}
+
+std::string serialize_clean_svg(const document::Document& document)
+{
+    const auto& settings = document.settings();
+    if (!std::isfinite(settings.page_width) || !std::isfinite(settings.page_height) ||
+        settings.page_width <= 0.0 || settings.page_height <= 0.0 || settings.unit.empty()) {
+        throw std::invalid_argument("SVG dimensions must be finite and positive");
+    }
+
+    const double left = -settings.page_width / 2.0;
+    const double top = -settings.page_height / 2.0;
+    std::ostringstream output;
+    output.imbue(std::locale::classic());
+    output << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+           << "<svg xmlns=\"http://www.w3.org/2000/svg\""
+           << " width=\"" << number(settings.page_width) << xml_escape(settings.unit) << "\""
+           << " height=\"" << number(settings.page_height) << xml_escape(settings.unit) << "\""
+           << " viewBox=\"" << number(left) << ' ' << number(top) << ' '
+           << number(settings.page_width) << ' ' << number(settings.page_height) << "\">\n"
+           << "  <rect x=\"" << number(left) << "\" y=\"" << number(top)
+           << "\" width=\"" << number(settings.page_width) << "\" height=\""
+           << number(settings.page_height) << "\" fill=\"" << rgb_hex(settings.background)
+           << "\" fill-opacity=\"" << number(std::clamp(settings.background.alpha, 0.0, 1.0))
+           << "\"/>\n";
+
+    for (const auto& layer : document.layers()) {
+        if (!layer.visible) {
+            continue;
+        }
+        output << "  <g id=\"layer-" << layer.id << "\">\n"
+               << "    <title>" << xml_escape(layer.name) << "</title>\n";
+        const auto path = generated_layer_path(layer);
+        write_rendered_path(output, path, layer.appearance, layer, false);
         output << "  </g>\n";
     }
     output << "</svg>\n";
