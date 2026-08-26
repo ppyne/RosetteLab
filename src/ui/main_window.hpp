@@ -46,6 +46,10 @@ private:
     void add_recent_file(const QString& path);
     void refresh_recent_files_menu();
     void clean_recent_files();
+    bool confirm_discard_changes();
+    void mark_document_modified();
+    void set_document_modified(bool modified);
+    void update_window_title();
     void export_raster(bool jpeg);
     void export_pdf();
     void rebuild_layer_list();
@@ -122,6 +126,8 @@ private:
     document::Document document_;
     document::LayerId active_layer_id_{};
     QString current_file_path_;
+    bool document_modified_{false};
+    bool track_document_changes_{false};
 };
 
 } // namespace rosettelab::ui

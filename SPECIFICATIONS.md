@@ -61,6 +61,12 @@ The **File** menu provides:
 
 **New**, **Open…**, **Save**, and **Save As…** use the platform-standard Qt key sequences, including Command-N, Command-O, Command-S, and Shift-Command-S on macOS. Cleaning the recent-file history does not close or alter the current document.
 
+### 3.2 Unsaved-change protection
+
+Any change to document settings, curve parameters, layer geometry, appearance, visibility, locking, naming, order, addition, duplication, or removal marks the document as modified. The native modified indicator is shown in the window title. A successful **Open…**, **Save**, or **Save As…** operation clears the modified state; view-only changes such as zoom and panel resizing do not set it.
+
+Before **New**, opening another document (including through **Open Recent**), or closing the main window can discard unsaved changes, RosetteLab presents **Save**, **Discard**, and **Cancel**. **Save** continues only after a successful save, **Discard** performs the requested operation without saving, and **Cancel** leaves the current document untouched.
+
 ## 4. Layer model
 
 Every curve layer has:

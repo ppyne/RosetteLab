@@ -432,10 +432,16 @@ MainWindow::MainWindow(QWidget* parent)
     if (!splitter_state.isEmpty()) {
         main_splitter_->restoreState(splitter_state);
     }
+    track_document_changes_ = true;
+    set_document_modified(false);
 }
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
+    if (!confirm_discard_changes()) {
+        event->ignore();
+        return;
+    }
     QSettings settings;
     settings.setValue("mainWindow/geometry", saveGeometry());
     settings.setValue("mainWindow/splitterState", main_splitter_->saveState());
@@ -455,6 +461,9 @@ void MainWindow::open_file()
 
 void MainWindow::new_document()
 {
+    if (!confirm_discard_changes()) {
+        return;
+    }
     document_ = document::Document{};
     auto& initial = document_.add_polar_rose();
     active_layer_id_ = initial.id;
@@ -463,11 +472,14 @@ void MainWindow::new_document()
     load_document_settings();
     preview_->update();
     save_action_->setEnabled(false);
-    setWindowTitle("RosetteLab");
+    set_document_modified(false);
 }
 
 void MainWindow::open_document(const QString& path)
 {
+    if (!confirm_discard_changes()) {
+        return;
+    }
 
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
@@ -487,7 +499,7 @@ void MainWindow::open_document(const QString& path)
     current_file_path_ = QFileInfo(path).absoluteFilePath();
     save_action_->setEnabled(true);
     add_recent_file(current_file_path_);
-    setWindowTitle(QStringLiteral("RosetteLab - %1").arg(QFileInfo(path).fileName()));
+    set_document_modified(false);
 }
 
 void MainWindow::add_recent_file(const QString& path)
@@ -527,6 +539,51 @@ void MainWindow::clean_recent_files()
     refresh_recent_files_menu();
 }
 
+bool MainWindow::confirm_discard_changes()
+{
+    if (!document_modified_) {
+        return true;
+    }
+    const auto answer = QMessageBox::warning(
+        this,
+        "Unsaved changes",
+        "The current document has unsaved changes.",
+        QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
+        QMessageBox::Save);
+    if (answer == QMessageBox::Cancel) {
+        return false;
+    }
+    if (answer == QMessageBox::Save) {
+        save();
+        return !document_modified_;
+    }
+    return true;
+}
+
+void MainWindow::mark_document_modified()
+{
+    if (track_document_changes_) {
+        set_document_modified(true);
+    }
+}
+
+void MainWindow::set_document_modified(const bool modified)
+{
+    document_modified_ = modified;
+    setWindowModified(modified);
+    update_window_title();
+}
+
+void MainWindow::update_window_title()
+{
+    if (current_file_path_.isEmpty()) {
+        setWindowTitle("RosetteLab[*]");
+    } else {
+        setWindowTitle(QStringLiteral("RosetteLab - %1[*]")
+            .arg(QFileInfo(current_file_path_).fileName()));
+    }
+}
+
 void MainWindow::choose_page_background()
 {
     ColorEditorDialog dialog(page_background_, "Page background", this);
@@ -545,6 +602,7 @@ void MainWindow::update_document_settings()
     document_.settings().background = rgba_from_qcolor(page_background_);
     preview_->refresh_document_geometry();
     refresh_all_layer_previews();
+    mark_document_modified();
 }
 
 void MainWindow::load_document_settings()
@@ -620,7 +678,7 @@ bool MainWindow::save_document(const QString& path)
     current_file_path_ = QFileInfo(path).absoluteFilePath();
     save_action_->setEnabled(true);
     add_recent_file(current_file_path_);
-    setWindowTitle(QStringLiteral("RosetteLab - %1").arg(QFileInfo(path).fileName()));
+    set_document_modified(false);
     return true;
 }
 
@@ -761,6 +819,7 @@ void MainWindow::add_polar_rose()
     auto* item = add_layer_row(layer);
     layers_->setCurrentItem(item);
     preview_->update();
+    mark_document_modified();
 }
 
 void MainWindow::add_ellipse()
@@ -778,6 +837,7 @@ void MainWindow::add_ellipse()
     auto* item = add_layer_row(layer);
     layers_->setCurrentItem(item);
     preview_->update();
+    mark_document_modified();
 }
 
 void MainWindow::add_trochoid(const document::CurveType type)
@@ -795,6 +855,7 @@ void MainWindow::add_trochoid(const document::CurveType type)
     auto* item = add_layer_row(layer);
     layers_->setCurrentItem(item);
     preview_->update();
+    mark_document_modified();
 }
 
 QListWidgetItem* MainWindow::add_layer_row(const document::CurveLayer& layer, const int row)
@@ -818,6 +879,7 @@ QListWidgetItem* MainWindow::add_layer_row(const document::CurveLayer& layer, co
             select_layer_row(id);
             static_cast<void>(document_.set_layer_visible(id, visible));
             preview_->update();
+            mark_document_modified();
         },
         [this, id = layer.id](const bool locked) {
             select_layer_row(id);
@@ -975,6 +1037,7 @@ void MainWindow::update_appearance()
     refresh_color_buttons();
     refresh_layer_preview(active_layer_id_);
     preview_->update();
+    mark_document_modified();
 }
 
 void MainWindow::refresh_color_buttons()
@@ -1010,6 +1073,7 @@ void MainWindow::rename_active_layer()
         if (widget != nullptr) {
             widget->set_name(name);
         }
+        mark_document_modified();
     }
 }
 
@@ -1024,6 +1088,7 @@ void MainWindow::duplicate_active_layer()
     auto* item = add_layer_row(*duplicate, source_row);
     layers_->setCurrentItem(item);
     preview_->update();
+    mark_document_modified();
 }
 
 void MainWindow::delete_active_layer()
@@ -1050,12 +1115,14 @@ void MainWindow::delete_active_layer()
     }
     preview_->update();
     refresh_layer_actions();
+    mark_document_modified();
 }
 
 void MainWindow::set_active_layer_locked(const bool locked)
 {
     if (document_.set_layer_locked(active_layer_id_, locked)) {
         refresh_layer_actions();
+        mark_document_modified();
     }
 }
 
@@ -1113,6 +1180,7 @@ void MainWindow::sync_layer_order()
         static_cast<void>(document_.move_layer(current, static_cast<std::size_t>(target)));
     }
     preview_->update();
+    mark_document_modified();
 }
 
 void MainWindow::update_preview()
@@ -1148,6 +1216,7 @@ void MainWindow::update_preview()
     }
     refresh_layer_preview(active_layer_id_);
     preview_->update();
+    mark_document_modified();
 }
 
 } // namespace rosettelab::ui
