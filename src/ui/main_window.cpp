@@ -15,6 +15,7 @@
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QDoubleSpinBox>
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -58,6 +59,21 @@
 
 namespace rosettelab::ui {
 namespace {
+
+constexpr auto open_directory_setting = "paths/openDirectory";
+constexpr auto save_as_directory_setting = "paths/saveAsDirectory";
+constexpr auto export_directory_setting = "paths/exportDirectory";
+
+QString remembered_directory(const char* setting)
+{
+    const auto directory = QSettings{}.value(setting).toString();
+    return directory.isEmpty() ? QDir::homePath() : directory;
+}
+
+void remember_selected_directory(const char* setting, const QString& path)
+{
+    QSettings{}.setValue(setting, QFileInfo(path).absolutePath());
+}
 
 QDoubleSpinBox* angle_control(QWidget* parent)
 {
@@ -685,10 +701,12 @@ void MainWindow::resizeEvent(QResizeEvent* event)
 void MainWindow::open_file()
 {
     const auto path = QFileDialog::getOpenFileName(
-        this, "Open RosetteLab SVG", {}, "RosetteLab SVG (*.svg)");
+        this, "Open RosetteLab SVG", remembered_directory(open_directory_setting),
+        "RosetteLab SVG (*.svg)");
     if (path.isEmpty()) {
         return;
     }
+    remember_selected_directory(open_directory_setting, path);
 
     open_document(path);
 }
@@ -1057,13 +1075,15 @@ void MainWindow::rebuild_layer_list()
 void MainWindow::save_as()
 {
     auto path = QFileDialog::getSaveFileName(
-        this, "Save RosetteLab SVG", {}, "RosetteLab SVG (*.svg)");
+        this, "Save RosetteLab SVG", remembered_directory(save_as_directory_setting),
+        "RosetteLab SVG (*.svg)");
     if (path.isEmpty()) {
         return;
     }
     if (!path.endsWith(".svg", Qt::CaseInsensitive)) {
         path += ".svg";
     }
+    remember_selected_directory(save_as_directory_setting, path);
 
     static_cast<void>(save_document(path));
 }
@@ -1134,7 +1154,7 @@ void MainWindow::export_raster(const bool jpeg)
     auto path = QFileDialog::getSaveFileName(
         this,
         jpeg ? "Export JPEG" : "Export PNG",
-        {},
+        remembered_directory(export_directory_setting),
         jpeg ? "JPEG image (*.jpg)" : "PNG image (*.png)");
     if (path.isEmpty()) {
         return;
@@ -1147,6 +1167,7 @@ void MainWindow::export_raster(const bool jpeg)
     } else if (!jpeg && !path.endsWith(".png", Qt::CaseInsensitive)) {
         path += ".png";
     }
+    remember_selected_directory(export_directory_setting, path);
 
     QImage image(width, height, QImage::Format_ARGB32_Premultiplied);
     image.fill(jpeg ? Qt::white : Qt::transparent);
@@ -1178,13 +1199,16 @@ void MainWindow::export_pdf()
     }
 #endif
 
-    auto path = QFileDialog::getSaveFileName(this, "Export PDF", {}, "PDF document (*.pdf)");
+    auto path = QFileDialog::getSaveFileName(
+        this, "Export PDF", remembered_directory(export_directory_setting),
+        "PDF document (*.pdf)");
     if (path.isEmpty()) {
         return;
     }
     if (!path.endsWith(".pdf", Qt::CaseInsensitive)) {
         path += ".pdf";
     }
+    remember_selected_directory(export_directory_setting, path);
 
     QPdfWriter writer(path);
     writer.setTitle("RosetteLab export");

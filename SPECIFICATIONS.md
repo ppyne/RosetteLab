@@ -63,6 +63,8 @@ The **File** menu provides:
 - **Save**: writes directly to the established path and is enabled only after a document has been opened or successfully saved with **Save As…**;
 - **Save As…**: requests an SVG path, saves the document, establishes that path for subsequent **Save** commands, and adds it to the recent-file history.
 
+RosetteLab stores three independent last-used directories in application preferences: one for **Open…**, one for **Save As…**, and one shared by all **File → Export** commands. Each file dialog starts in its corresponding remembered directory, falling back to the user's home directory when no value exists. A directory is updated only after the user validates a file selection; cancelling a dialog leaves the stored value unchanged.
+
 **New**, **Open…**, **Save**, and **Save As…** use the platform-standard Qt key sequences, including Command-N, Command-O, Command-S, and Shift-Command-S on macOS. Cleaning the recent-file history does not close or alter the current document.
 
 ### 3.2 Unsaved-change protection
