@@ -21,7 +21,8 @@ The main window contains three primary regions:
 
 1. **Preview canvas**
    - Displays all visible layers in stack order.
-   - Uses an opaque white page by default, independently of the operating-system UI theme.\n   - When the selected page background is transparent or translucent, the preview displays it over a checkerboard made of alternating white and 50% grey (`RGB 127, 127, 127`) squares.
+   - Uses an opaque white page by default, independently of the operating-system UI theme.
+   - When the selected page background is transparent or translucent, the preview displays it over a checkerboard made of alternating white and 50% grey (`RGB 127, 127, 127`) squares.
    - Supports zoom, pan, fit-to-document, and a configurable background.
    - Shows horizontal and vertical scroll bars automatically whenever the zoomed page exceeds the preview viewport.
    - Reflects parameter and appearance changes without requiring an Apply action.
@@ -30,22 +31,25 @@ The main window contains three primary regions:
    - Displays controls for the selected layer's curve family.
    - Includes curve geometry, drawing, color, opacity, and compositing controls.
    - Provides named presets whose values populate editable controls.
-   - Any subsequent edit is permitted and does not destroy the preset's starting values.\n   - The complete editor is vertically scrollable whenever its controls exceed the available window height. Switching curve families must not resize the main window.
+   - Any subsequent edit is permitted and does not destroy the preset's starting values.
+   - The complete editor is vertically scrollable whenever its controls exceed the available window height. Switching curve families must not resize the main window.
 
 3. **Layer stack**
    - Shows one row per curve.
    - Supports drag-and-drop reordering.
    - Recalls the selected layer's parameters in the editor.
-   - Each layer row is ordered as: visibility glyph, lock glyph, visual layer thumbnail, then layer name.\n   - The thumbnail has the same square dimensions as the visibility and lock controls and previews the layer's current geometry and appearance. Its background reproduces the document background: an opaque document background is shown as a solid color, while a transparent or translucent document background is composited over the standard alternating white and 50% grey (`RGB 127, 127, 127`) checkerboard. Stroke width is reduced proportionally to the thumbnail geometry scale, with a small documented minimum that keeps thin strokes visible and a cap that prevents thick strokes from obscuring the thumbnail. It updates when curve parameters, appearance parameters, or the document background change.
+   - Each layer row is ordered as: visibility glyph, lock glyph, visual layer thumbnail, then layer name.
+   - The thumbnail has the same square dimensions as the visibility and lock controls and previews the layer's current geometry and appearance. Its background reproduces the document background: an opaque document background is shown as a solid color, while a transparent or translucent document background is composited over the standard alternating white and 50% grey (`RGB 127, 127, 127`) checkerboard. Stroke width is reduced to half of its geometrically scaled width, with a 0.25 px visibility minimum and a 1.25 px cap so that fill remains visually dominant. It updates when curve parameters, appearance parameters, transforms, copies, or the document background change.
    - The visibility control uses clickable open-eye and closed-eye UTF-8 glyphs instead of a checkbox.
    - The lock control uses clickable unlocked and locked UTF-8 padlock glyphs instead of a separate Lock/Unlock button.
    - Both glyph controls have stable dimensions, tooltips, keyboard access, and accessible names; changing state must never resize the layer panel.
    - Supports add, duplicate, rename, and delete operations.
-   - The primary `Add…` command opens a curve-type selector rather than creating a predetermined family directly.
+   - The primary **Add new layer…** command opens a curve-type selector rather than creating a predetermined family directly.
    - The selector lists Polar rose, Ellipse, Hypotrochoid, Epitrochoid, Lissajous, and Harmonograph; only implemented families are enabled.
    - Creating a layer prompts for its name, prefilled as `Curve type N`, where the type is the English curve-family name and (N) is the next number for that family (for example, `Polar rose 1`, `Polar rose 2`, or `Lissajous 1`).
    - Default names do not change when mathematical parameters change.
-   - A user-defined name remains unchanged until explicitly renamed.\n   - A name wider than the available row width is elided with a trailing ellipsis. Hovering the elided name displays its complete value in a tooltip.
+   - A user-defined name remains unchanged until explicitly renamed.
+   - A name wider than the available row width is elided with a trailing ellipsis. Hovering the elided name displays its complete value in a tooltip.
 
 The layout must remain usable on laptop-sized displays. Resizable panes and sensible minimum sizes are required. The application restores the last main-window size, position, and maximized state on the next launch; Qt must keep a restored window reachable when the previous screen arrangement is no longer available. The widths of the parameter editor, preview canvas, and layer stack are persisted through the main horizontal splitter state and restored on the next launch.
 

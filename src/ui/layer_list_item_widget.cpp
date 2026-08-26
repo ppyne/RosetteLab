@@ -166,10 +166,11 @@ QPixmap layer_preview(
     painter.setOpacity(std::clamp(layer.appearance.opacity, 0.0, 1.0));
     if (layer.appearance.stroke_enabled) {
         QPen pen(to_qcolor(layer.appearance.stroke));
-        constexpr double minimum_preview_stroke = 0.8;
-        constexpr double maximum_preview_stroke = 4.0;
+        constexpr double preview_stroke_reduction = 0.5;
+        constexpr double minimum_preview_stroke = 0.25;
+        constexpr double maximum_preview_stroke = 1.25;
         pen.setWidthF(std::clamp(
-            layer.appearance.stroke_width * scale,
+            layer.appearance.stroke_width * scale * preview_stroke_reduction,
             minimum_preview_stroke,
             maximum_preview_stroke));
         painter.setPen(pen);

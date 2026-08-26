@@ -373,7 +373,6 @@ MainWindow::MainWindow(QWidget* parent)
     transform_form->addRow("", transform_link_scales_);
     transform_form->addRow("Rotation", transform_rotation_);
     transform_form->addRow("", reset_transform_button_);
-    parameters_layout->addWidget(transform_group_);
 
     copies_group_ = new QGroupBox("Copies", parameters_panel);
     auto* copies_form = new QFormLayout(copies_group_);
@@ -397,7 +396,6 @@ MainWindow::MainWindow(QWidget* parent)
     copies_form->addRow("Scale per copy", copy_scale_);
     copies_form->addRow("Offset X per copy", copy_offset_x_);
     copies_form->addRow("Offset Y per copy", copy_offset_y_);
-    parameters_layout->addWidget(copies_group_);
 
     appearance_group_ = new QGroupBox("Appearance", parameters_panel);
     auto* appearance_form = new QFormLayout(appearance_group_);
@@ -445,6 +443,8 @@ MainWindow::MainWindow(QWidget* parent)
     appearance_form->addRow("Layer opacity", layer_opacity_);
     appearance_form->addRow("Blend mode", blend_mode_);
     parameters_layout->addWidget(appearance_group_);
+    parameters_layout->addWidget(transform_group_);
+    parameters_layout->addWidget(copies_group_);
     refresh_color_buttons();
 
     auto* view_group = new QGroupBox("View", parameters_panel);
@@ -497,7 +497,7 @@ MainWindow::MainWindow(QWidget* parent)
     auto* initial_layer = add_layer_row(initial);
     layers_->setCurrentItem(initial_layer);
     layers_layout->addWidget(layers_);
-    auto* add_button = new QPushButton("Add...", layers_panel);
+    auto* add_button = new QPushButton("Add new layer...", layers_panel);
     auto* add_menu = new QMenu(add_button);
     add_menu->addAction("Polar rose", this, [this] { add_polar_rose(); });
     add_menu->addAction("Ellipse", this, [this] { add_ellipse(); });
