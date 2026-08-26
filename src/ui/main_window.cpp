@@ -163,6 +163,7 @@ MainWindow::MainWindow(QWidget* parent)
     auto* preset_group = new QGroupBox("Preset", parameters_panel);
     auto* preset_layout = new QHBoxLayout(preset_group);
     preset_ = new QComboBox(preset_group);
+    preset_->setObjectName("presetSelector");
     restore_preset_button_ = new QPushButton("Restore preset", preset_group);
     restore_preset_button_->setEnabled(false);
     preset_layout->addWidget(preset_, 1);
@@ -526,6 +527,9 @@ MainWindow::MainWindow(QWidget* parent)
     connect(layers_->model(), &QAbstractItemModel::rowsMoved, this,
         [this] { sync_layer_order(); });
 
+    // The initial row was selected before the layer-list signals were connected.
+    // Explicitly run the same synchronization used by New and Open.
+    load_active_layer();
     update_preview();
     refresh_layer_actions();
 
