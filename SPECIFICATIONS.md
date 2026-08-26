@@ -89,6 +89,14 @@ also offers the following exact predefined levels: `0.10`, `0.20`, `0.30`, `0.40
 the preview viewport, including the preview margin. It is the default view mode at
 startup and is recomputed after relevant window or splitter resizing. Choosing or
 typing another zoom leaves fit mode and does not modify the document or its history.
+**Actual size (100%)** immediately selects the `100.00%` predefined level.
+
+While the pointer is over the preview, moving the mouse wheel toward the user steps
+up through the predefined levels and enlarges the page; moving it upward steps down
+and reduces it. A custom or fitted value starts from the nearest predefined level.
+Holding the left mouse button over the preview displays a closed-hand cursor and
+pans the page by dragging both scroll positions, allowing navigation without direct
+use of the scroll bars.
 
 The history retains up to 200 complete document states. A new edit after Undo discards the former Redo branch. The saved history position is tracked independently: returning to it clears the modified indicator, while discarding that saved state through a new history branch keeps the document marked as modified. Creating or opening a document starts a new history; saving establishes the current state as its saved position.
 

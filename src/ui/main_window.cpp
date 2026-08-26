@@ -40,6 +40,7 @@
 #endif
 #include <QPushButton>
 #include <QScrollArea>
+#include <QScrollBar>
 #include <QResizeEvent>
 #include <QSettings>
 #include <QSignalBlocker>
@@ -410,9 +411,11 @@ MainWindow::MainWindow(QWidget* parent)
         zoom_levels_->addItem(QStringLiteral("%1 %").arg(level,0,'f',2),level);
     }
     fit_workspace_button_ = new QPushButton("Fit to workspace", view_group);
+    actual_size_button_ = new QPushButton("Actual size (100%)", view_group);
     view_form->addRow("Zoom", zoom_);
     view_form->addRow("Zoom level", zoom_levels_);
     view_form->addRow("", fit_workspace_button_);
+    view_form->addRow("", actual_size_button_);
     parameters_layout->addWidget(view_group);
     parameters_layout->addStretch();
 
@@ -423,6 +426,8 @@ MainWindow::MainWindow(QWidget* parent)
     preview_scroll_->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     preview_ = new PreviewWidget;
     preview_->set_document(&document_);
+    preview_->set_wheel_zoom_handler([this](const int direction){ step_zoom_level(direction); });
+    preview_->set_pan_handler([this](const QPoint& movement){ pan_preview(movement); });
     preview_scroll_->setWidget(preview_);
 
     auto* layers_panel = new QWidget(main_splitter_);
@@ -540,6 +545,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(fit_workspace_button_, &QPushButton::clicked, this, [this] {
         zoom_levels_->setCurrentIndex(0); fit_to_workspace();
     });
+    connect(actual_size_button_, &QPushButton::clicked, this, [this] { set_zoom_to_actual_size(); });
     connect(main_splitter_, &QSplitter::splitterMoved, this, [this] {
         if (zoom_levels_->currentData().toDouble()<0.0) fit_to_workspace();
     });
@@ -889,6 +895,39 @@ void MainWindow::synchronize_zoom_level()
     }
     const QSignalBlocker blocker(zoom_levels_);
     zoom_levels_->setCurrentIndex(found>=0?found:1);
+}
+
+void MainWindow::set_zoom_to_actual_size()
+{
+    const int index=zoom_levels_->findData(100.0);
+    if (index>=0) zoom_levels_->setCurrentIndex(index);
+}
+
+void MainWindow::step_zoom_level(const int direction)
+{
+    if (direction==0) return;
+    const double current=zoom_->value();
+    int nearest=2;
+    double distance=std::numeric_limits<double>::max();
+    for (int index=2;index<zoom_levels_->count();++index) {
+        const double candidate=zoom_levels_->itemData(index).toDouble();
+        const double candidate_distance=std::abs(candidate-current);
+        if (candidate_distance<distance) { distance=candidate_distance; nearest=index; }
+    }
+    int target=nearest;
+    const double nearest_value=zoom_levels_->itemData(nearest).toDouble();
+    if (direction>0 && nearest_value<=current+0.005) ++target;
+    else if (direction<0 && nearest_value>=current-0.005) --target;
+    target=std::clamp(target,2,zoom_levels_->count()-1);
+    zoom_levels_->setCurrentIndex(target);
+}
+
+void MainWindow::pan_preview(const QPoint& movement)
+{
+    auto* horizontal=preview_scroll_->horizontalScrollBar();
+    auto* vertical=preview_scroll_->verticalScrollBar();
+    horizontal->setValue(horizontal->value()-movement.x());
+    vertical->setValue(vertical->value()-movement.y());
 }
 
 void MainWindow::load_document_settings()

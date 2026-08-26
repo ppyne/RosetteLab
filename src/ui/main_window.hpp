@@ -87,6 +87,9 @@ private:
     void fit_to_workspace();
     void apply_zoom_level();
     void synchronize_zoom_level();
+    void set_zoom_to_actual_size();
+    void step_zoom_level(int direction);
+    void pan_preview(const QPoint& movement);
     void refresh_k_mode_controls();
     void refresh_ellipse_radius_controls();
     void refresh_trochoid_trace_controls();
@@ -125,6 +128,7 @@ private:
     QDoubleSpinBox* zoom_{};
     QComboBox* zoom_levels_{};
     QPushButton* fit_workspace_button_{};
+    QPushButton* actual_size_button_{};
     QScrollArea* preview_scroll_{};
     bool applying_zoom_{false};
     QGroupBox* curve_group_{};

@@ -3,9 +3,12 @@
 
 #include <QPainter>
 #include <QPalette>
+#include <QMouseEvent>
+#include <QWheelEvent>
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace rosettelab::ui {
 namespace {
@@ -69,6 +72,65 @@ double PreviewWidget::fit_zoom_percent(const QSizeF& available_size) const
     const double width=std::max(1.0,available_size.width()-margin);
     const double height=std::max(1.0,available_size.height()-margin);
     return std::clamp(100.0*std::min(width/page_width,height/page_height)/pixels_per_unit_,0.1,3200.0);
+}
+
+void PreviewWidget::set_wheel_zoom_handler(std::function<void(int)> handler)
+{
+    wheel_zoom_handler_=std::move(handler);
+}
+
+void PreviewWidget::set_pan_handler(std::function<void(const QPoint&)> handler)
+{
+    pan_handler_=std::move(handler);
+}
+
+void PreviewWidget::wheelEvent(QWheelEvent* event)
+{
+    const int delta=event->angleDelta().y();
+    if (wheel_zoom_handler_ && delta!=0) {
+        wheel_zoom_handler_(delta<0?1:-1);
+        event->accept();
+        return;
+    }
+    QWidget::wheelEvent(event);
+}
+
+void PreviewWidget::mousePressEvent(QMouseEvent* event)
+{
+    if (event->button()==Qt::LeftButton) {
+        panning_=true;
+        last_pan_position_=event->globalPosition().toPoint();
+        setCursor(Qt::ClosedHandCursor);
+        grabMouse();
+        event->accept();
+        return;
+    }
+    QWidget::mousePressEvent(event);
+}
+
+void PreviewWidget::mouseMoveEvent(QMouseEvent* event)
+{
+    if (panning_) {
+        const QPoint current=event->globalPosition().toPoint();
+        const QPoint movement=current-last_pan_position_;
+        last_pan_position_=current;
+        if (pan_handler_) pan_handler_(movement);
+        event->accept();
+        return;
+    }
+    QWidget::mouseMoveEvent(event);
+}
+
+void PreviewWidget::mouseReleaseEvent(QMouseEvent* event)
+{
+    if (panning_ && event->button()==Qt::LeftButton) {
+        panning_=false;
+        releaseMouse();
+        unsetCursor();
+        event->accept();
+        return;
+    }
+    QWidget::mouseReleaseEvent(event);
 }
 
 void PreviewWidget::update_canvas_size()
