@@ -171,6 +171,20 @@ void parse_curve_metadata(
         required_attribute(attributes, "bezier-tolerance"), "bezier-tolerance");
 }
 
+void parse_curve_metadata(
+    const QXmlStreamAttributes& attributes,
+    curves::LissajousParameters& p)
+{
+    p.amplitude_x = parse_double(required_attribute(attributes, "amplitude-x"), "amplitude-x");
+    p.amplitude_y = parse_double(required_attribute(attributes, "amplitude-y"), "amplitude-y");
+    p.frequency_x = parse_integer(required_attribute(attributes, "frequency-x"), "frequency-x");
+    p.frequency_y = parse_integer(required_attribute(attributes, "frequency-y"), "frequency-y");
+    p.phase_x_degrees = parse_double(required_attribute(attributes, "phase-x-degrees"), "phase-x-degrees");
+    p.phase_y_degrees = parse_double(required_attribute(attributes, "phase-y-degrees"), "phase-y-degrees");
+    p.rotation_degrees = parse_double(required_attribute(attributes, "rotation-degrees"), "rotation-degrees");
+    p.bezier_tolerance = parse_double(required_attribute(attributes, "bezier-tolerance"), "bezier-tolerance");
+}
+
 void parse_path_appearance(
     const QXmlStreamAttributes& attributes,
     const QString& metadata_ns,
@@ -214,6 +228,7 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
     else if (type == "ellipse") layer.type = document::CurveType::Ellipse;
     else if (type == "hypotrochoid") layer.type = document::CurveType::Hypotrochoid;
     else if (type == "epitrochoid") layer.type = document::CurveType::Epitrochoid;
+    else if (type == "lissajous") layer.type = document::CurveType::Lissajous;
     else throw parse_error("Unsupported RosetteLab curve type");
     layer.visible = parse_boolean(
         required_metadata_attribute(group_attributes, metadata_ns, "visible"), "visible");
@@ -225,6 +240,8 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
         parameters = curves::PolarRoseParameters{};
     } else if (layer.type == document::CurveType::Ellipse) {
         parameters = curves::EllipseParameters{};
+    } else if (layer.type == document::CurveType::Lissajous) {
+        parameters = curves::LissajousParameters{};
     } else {
         parameters = curves::TrochoidParameters{};
     }

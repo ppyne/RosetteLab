@@ -59,6 +59,18 @@ void test_default_fill_rule_is_even_odd()
             "new layers should default to the even-odd fill rule");
 }
 
+void test_lissajous_names_and_parameters()
+{
+    rosettelab::document::Document document;
+    rosettelab::curves::LissajousParameters parameters;
+    parameters.frequency_x = 5;
+    parameters.frequency_y = 4;
+    const auto& layer = document.add_lissajous(parameters);
+    require(layer.name == "Lissajous 1", "Lissajous should have its own name sequence");
+    require(std::get<rosettelab::curves::LissajousParameters>(layer.parameters).frequency_x == 5,
+            "Lissajous parameters should be retained");
+}
+
 void test_trochoid_names_and_parameters()
 {
     rosettelab::document::Document document;
@@ -175,6 +187,7 @@ int main()
         test_default_names_and_stable_ids();
         test_ellipse_names_and_parameters();
         test_default_fill_rule_is_even_odd();
+        test_lissajous_names_and_parameters();
         test_trochoid_names_and_parameters();
         test_custom_name_and_layer_state();
         test_layer_reordering();

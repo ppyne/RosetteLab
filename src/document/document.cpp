@@ -80,6 +80,17 @@ CurveLayer& Document::add_trochoid(
     return layers_.back();
 }
 
+CurveLayer& Document::add_lissajous(
+    const curves::LissajousParameters& parameters,
+    std::optional<std::string> name)
+{
+    const auto default_name = next_default_name(CurveType::Lissajous);
+    if (!name.has_value() || name->empty()) name = default_name;
+    layers_.push_back({next_id_++, std::move(*name), CurveType::Lissajous,
+                       parameters, true, false, {}});
+    return layers_.back();
+}
+
 std::string Document::suggested_default_name(const CurveType type) const
 {
     const auto index = static_cast<std::size_t>(type);
@@ -129,6 +140,8 @@ bool Document::import_layer(CurveLayer layer)
          std::holds_alternative<curves::PolarRoseParameters>(layer.parameters)) ||
         (layer.type == CurveType::Ellipse &&
          std::holds_alternative<curves::EllipseParameters>(layer.parameters)) ||
+        (layer.type == CurveType::Lissajous &&
+         std::holds_alternative<curves::LissajousParameters>(layer.parameters)) ||
         ((layer.type == CurveType::Hypotrochoid || layer.type == CurveType::Epitrochoid) &&
          std::holds_alternative<curves::TrochoidParameters>(layer.parameters));
     if (!compatible) {

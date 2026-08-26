@@ -122,6 +122,20 @@ void test_trochoid_contains_trace_metadata()
     require(contains(svg, "turns=\"2\""), "limited turn count should be stored");
 }
 
+void test_lissajous_contains_editable_metadata()
+{
+    rosettelab::document::Document document;
+    rosettelab::curves::LissajousParameters parameters;
+    parameters.frequency_x = 5;
+    parameters.frequency_y = 4;
+    parameters.phase_y_degrees = 117.0;
+    static_cast<void>(document.add_lissajous(parameters));
+    const auto svg = rosettelab::svg::serialize_rosettelab_svg(document);
+    require(contains(svg, "rosettelab:type=\"lissajous\""), "Lissajous type should be stored");
+    require(contains(svg, "frequency-x=\"5\""), "Lissajous X frequency should be stored");
+    require(contains(svg, "phase-y-degrees=\"117\""), "Lissajous Y phase should be stored");
+}
+
 } // namespace
 
 int main()
@@ -132,6 +146,7 @@ int main()
         test_disabled_stroke_preserves_editable_color();
         test_ellipse_contains_editable_metadata_and_beziers();
         test_trochoid_contains_trace_metadata();
+        test_lissajous_contains_editable_metadata();
         std::cout << "All RosetteLab SVG serializer tests passed\n";
         return 0;
     } catch (const std::exception& error) {

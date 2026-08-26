@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rosettelab/curves/ellipse.hpp"
+#include "rosettelab/curves/lissajous.hpp"
 #include "rosettelab/curves/polar_rose.hpp"
 #include "rosettelab/curves/trochoid.hpp"
 #include "rosettelab/document/appearance.hpp"
@@ -31,7 +32,8 @@ using LayerId = std::uint64_t;
 using CurveParameters = std::variant<
     curves::PolarRoseParameters,
     curves::EllipseParameters,
-    curves::TrochoidParameters>;
+    curves::TrochoidParameters,
+    curves::LissajousParameters>;
 
 struct CurveLayer {
     LayerId id{};
@@ -59,6 +61,9 @@ public:
         std::optional<std::string> name = std::nullopt);
     [[nodiscard]] CurveLayer& add_ellipse(
         const curves::EllipseParameters& parameters = {},
+        std::optional<std::string> name = std::nullopt);
+    [[nodiscard]] CurveLayer& add_lissajous(
+        const curves::LissajousParameters& parameters = {},
         std::optional<std::string> name = std::nullopt);
     [[nodiscard]] CurveLayer& add_trochoid(
         CurveType type,

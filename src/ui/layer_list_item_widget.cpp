@@ -77,6 +77,9 @@ core::BezierPath layer_path(const document::CurveLayer& layer)
             : curves::TrochoidKind::Epitrochoid;
         return curves::generate_trochoid_bezier(kind, *parameters, parameters->bezier_tolerance);
     }
+    if (const auto* parameters = std::get_if<curves::LissajousParameters>(&layer.parameters)) {
+        return curves::generate_lissajous_bezier(*parameters, parameters->bezier_tolerance);
+    }
     return {};
 }
 

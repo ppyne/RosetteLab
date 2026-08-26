@@ -41,6 +41,7 @@ private:
     void add_polar_rose();
     void add_ellipse();
     void add_trochoid(document::CurveType type);
+    void add_lissajous();
     void new_document();
     void open_file();
     void open_document(const QString& path);
@@ -122,6 +123,15 @@ private:
     QDoubleSpinBox* trochoid_turns_{};
     QCheckBox* trochoid_close_limited_{};
     QDoubleSpinBox* trochoid_tolerance_{};
+    QGroupBox* lissajous_group_{};
+    QDoubleSpinBox* lissajous_amplitude_x_{};
+    QDoubleSpinBox* lissajous_amplitude_y_{};
+    QSpinBox* lissajous_frequency_x_{};
+    QSpinBox* lissajous_frequency_y_{};
+    QDoubleSpinBox* lissajous_phase_x_{};
+    QDoubleSpinBox* lissajous_phase_y_{};
+    QDoubleSpinBox* lissajous_rotation_{};
+    QDoubleSpinBox* lissajous_tolerance_{};
     QGroupBox* appearance_group_{};
     QCheckBox* stroke_enabled_{};
     ColorPreviewButton* stroke_color_button_{};

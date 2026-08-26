@@ -190,6 +190,23 @@ void write_trochoid(std::ostringstream& output, const document::CurveLayer& laye
     write_rendered_path(output, path, layer.appearance);
 }
 
+void write_lissajous(std::ostringstream& output, const document::CurveLayer& layer)
+{
+    const auto* p = std::get_if<curves::LissajousParameters>(&layer.parameters);
+    if (p == nullptr) throw std::invalid_argument("Lissajous layer has incompatible parameters");
+    const auto path = curves::generate_lissajous_bezier(*p, p->bezier_tolerance);
+    output << "    <rosettelab:curve"
+           << " amplitude-x=\"" << number(p->amplitude_x) << "\""
+           << " amplitude-y=\"" << number(p->amplitude_y) << "\""
+           << " frequency-x=\"" << p->frequency_x << "\""
+           << " frequency-y=\"" << p->frequency_y << "\""
+           << " phase-x-degrees=\"" << number(p->phase_x_degrees) << "\""
+           << " phase-y-degrees=\"" << number(p->phase_y_degrees) << "\""
+           << " rotation-degrees=\"" << number(p->rotation_degrees) << "\""
+           << " bezier-tolerance=\"" << number(p->bezier_tolerance) << "\"/>\n";
+    write_rendered_path(output, path, layer.appearance);
+}
+
 const char* curve_type_id(const document::CurveType type)
 {
     switch (type) {
@@ -197,6 +214,7 @@ const char* curve_type_id(const document::CurveType type)
     case document::CurveType::Ellipse: return "ellipse";
     case document::CurveType::Hypotrochoid: return "hypotrochoid";
     case document::CurveType::Epitrochoid: return "epitrochoid";
+    case document::CurveType::Lissajous: return "lissajous";
     default: throw std::invalid_argument("Unsupported curve type for SVG export");
     }
 }
@@ -256,6 +274,8 @@ std::string serialize_rosettelab_svg(
         } else if (layer.type == document::CurveType::Hypotrochoid ||
                    layer.type == document::CurveType::Epitrochoid) {
             write_trochoid(output, layer);
+        } else if (layer.type == document::CurveType::Lissajous) {
+            write_lissajous(output, layer);
         }
         output << "  </g>\n";
     }

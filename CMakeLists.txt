@@ -15,6 +15,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(rosettelab_core
     src/curves/ellipse.cpp
+    src/curves/lissajous.cpp
     src/curves/polar_rose.cpp
     src/curves/trochoid.cpp
     src/document/document.cpp
@@ -78,6 +79,10 @@ if(ROSETTELAB_BUILD_TESTS)
     add_executable(rosettelab_ellipse_tests tests/test_ellipse.cpp)
     target_link_libraries(rosettelab_ellipse_tests PRIVATE rosettelab_core)
     add_test(NAME rosettelab_ellipse_tests COMMAND rosettelab_ellipse_tests)
+
+    add_executable(rosettelab_lissajous_tests tests/test_lissajous.cpp)
+    target_link_libraries(rosettelab_lissajous_tests PRIVATE rosettelab_core)
+    add_test(NAME rosettelab_lissajous_tests COMMAND rosettelab_lissajous_tests)
 
     add_executable(rosettelab_trochoid_tests tests/test_trochoid.cpp)
     target_link_libraries(rosettelab_trochoid_tests PRIVATE rosettelab_core)

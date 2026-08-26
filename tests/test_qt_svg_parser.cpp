@@ -62,10 +62,15 @@ void test_save_open_round_trip()
         rosettelab::document::CurveType::Epitrochoid,
         trochoid_parameters,
         "Two-turn orbit"));
+    rosettelab::curves::LissajousParameters lissajous_parameters;
+    lissajous_parameters.frequency_x = 5;
+    lissajous_parameters.frequency_y = 4;
+    lissajous_parameters.phase_y_degrees = 117.0;
+    static_cast<void>(source.add_lissajous(lissajous_parameters, "Paper example"));
 
     const auto text = rosettelab::svg::serialize_rosettelab_svg(source);
     const auto loaded = rosettelab::svg::parse_rosettelab_svg(QByteArray::fromStdString(text));
-    require(loaded.layers().size() == 3, "all implemented curve families should round-trip");
+    require(loaded.layers().size() == 4, "all implemented curve families should round-trip");
     require(loaded.settings().page_width == 297.0 && loaded.settings().page_height == 210.0,
             "page dimensions should round-trip");
     require(color_close(loaded.settings().background, source.settings().background),
@@ -99,6 +104,11 @@ void test_save_open_round_trip()
             trochoid.pen_offset == 44.5 && trochoid.turns == 2.0 &&
             trochoid.trace_mode == rosettelab::curves::TraceMode::Limited,
             "trochoid parameters should round-trip");
+    const auto& lissajous = std::get<rosettelab::curves::LissajousParameters>(
+        loaded.layers()[3].parameters);
+    require(lissajous.frequency_x == 5 && lissajous.frequency_y == 4 &&
+            lissajous.phase_y_degrees == 117.0,
+            "Lissajous parameters should round-trip");
 }
 
 void test_rejects_ordinary_or_unsafe_svg()
