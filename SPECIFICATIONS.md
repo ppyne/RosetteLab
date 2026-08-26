@@ -243,6 +243,8 @@ Requirements:
   customized; both values persist in RosetteLab SVG metadata;
 - switching layers or reopening a document selects the remembered preset only while
   its parameters remain unmodified, otherwise the selector displays `Custom`;
+- a newly created layer whose default parameters exactly match a built-in preset is
+  associated with that preset rather than being labelled `Custom`;
 - presets may include geometry, copies, rotations, and scale progressions;
 - user-selected colors and stroke widths are not overwritten unless a preset explicitly declares an appearance theme and the user opts into it.
 

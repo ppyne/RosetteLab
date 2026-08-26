@@ -413,6 +413,7 @@ MainWindow::MainWindow(QWidget* parent)
     layers_ = new QListWidget(layers_panel);
     layers_->setDragDropMode(QAbstractItemView::InternalMove);
     auto& initial = document_.add_polar_rose();
+    initial.preset_id = "rose-seven";
     active_layer_id_ = initial.id;
     auto* initial_layer = add_layer_row(initial);
     layers_->setCurrentItem(initial_layer);
@@ -576,6 +577,7 @@ void MainWindow::new_document()
     }
     document_ = document::Document{};
     auto& initial = document_.add_polar_rose();
+    initial.preset_id = "rose-seven";
     active_layer_id_ = initial.id;
     current_file_path_.clear();
     rebuild_layer_list();
@@ -998,6 +1000,7 @@ void MainWindow::add_polar_rose()
     }
 
     auto& layer = document_.add_polar_rose({}, name.toStdString());
+    layer.preset_id = "rose-seven";
     auto* item = add_layer_row(layer);
     layers_->setCurrentItem(item);
     preview_->update();
@@ -1050,6 +1053,7 @@ void MainWindow::add_lissajous()
         suggested, &accepted).trimmed();
     if (!accepted || name.isEmpty()) return;
     auto& layer = document_.add_lissajous({}, name.toStdString());
+    layer.preset_id = "liss-3-2";
     auto* item = add_layer_row(layer);
     layers_->setCurrentItem(item);
     preview_->update();
