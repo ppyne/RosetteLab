@@ -1440,6 +1440,7 @@ void MainWindow::update_preview()
     if (!applying_preset_ && preset_->currentIndex() > 0) {
         const QSignalBlocker blocker(preset_);
         preset_->setCurrentIndex(0);
+        layer->preset_customized = true;
     }
     if (auto* parameters = std::get_if<curves::PolarRoseParameters>(&layer->parameters)) {
         parameters->radius = radius_->value();
@@ -1518,8 +1519,11 @@ void MainWindow::refresh_preset_choices()
         add("Long-decay meditation","harm-meditation"); break;
     case document::CurveType::Count: break;
     }
-    active_preset_id_.clear();
-    restore_preset_button_->setEnabled(false);
+    active_preset_id_=QString::fromStdString(layer->preset_id);
+    const int remembered=preset_->findData(active_preset_id_);
+    if (remembered>0 && !layer->preset_customized) preset_->setCurrentIndex(remembered);
+    else preset_->setCurrentIndex(0);
+    restore_preset_button_->setEnabled(remembered>0);
 }
 
 void MainWindow::apply_selected_preset()
@@ -1527,6 +1531,10 @@ void MainWindow::apply_selected_preset()
     const auto id=preset_->currentData().toString();
     if (id.isEmpty()) return;
     active_preset_id_=id;
+    if (auto* layer=document_.find_layer(active_layer_id_)) {
+        layer->preset_id=id.toStdString();
+        layer->preset_customized=false;
+    }
     applying_preset_=true;
     if (id=="rose-seven") { k_mode_->setCurrentIndex(0); radius_->setValue(100); k_->setValue(7); phase_->setValue(0); rotation_->setValue(0); }
     else if (id=="rose-eleven") { k_mode_->setCurrentIndex(0); radius_->setValue(100); k_->setValue(11); phase_->setValue(8); rotation_->setValue(0); }

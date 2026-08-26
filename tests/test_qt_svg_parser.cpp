@@ -45,6 +45,8 @@ void test_save_open_round_trip()
     layer.appearance.fill_enabled = true;
     layer.appearance.fill = {0.1, 0.2, 0.3, 0.4};
     layer.appearance.blend_mode = rosettelab::document::BlendMode::Multiply;
+    layer.preset_id = "rose-seven";
+    layer.preset_customized = true;
     const auto expected_fill = layer.appearance.fill;
     rosettelab::curves::EllipseParameters ellipse_parameters;
     ellipse_parameters.radius_x = 75.0;
@@ -83,6 +85,8 @@ void test_save_open_round_trip()
             "fill RGBA should round-trip within 8-bit SVG precision");
     require(restored.appearance.blend_mode == rosettelab::document::BlendMode::Multiply,
             "blend mode should round-trip");
+    require(restored.preset_id == "rose-seven" && restored.preset_customized,
+            "preset identity and customized state should round-trip");
     const auto& restored_parameters = std::get<rosettelab::curves::PolarRoseParameters>(restored.parameters);
     require(restored_parameters.k_mode == rosettelab::curves::PolarKMode::Fraction,
             "fraction mode should round-trip");

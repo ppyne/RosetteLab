@@ -45,6 +45,8 @@ struct CurveLayer {
     bool visible{true};
     bool locked{false};
     LayerAppearance appearance{};
+    std::string preset_id;
+    bool preset_customized{false};
 };
 
 struct DocumentSettings {

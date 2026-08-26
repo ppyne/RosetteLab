@@ -239,6 +239,10 @@ Requirements:
 - a reset action restores the selected preset;
 - the reset action remains available after the selector changes to `Custom` and
   restores the last preset chosen for the active layer;
+- each layer stores its last preset identifier and whether its parameters have been
+  customized; both values persist in RosetteLab SVG metadata;
+- switching layers or reopening a document selects the remembered preset only while
+  its parameters remain unmodified, otherwise the selector displays `Custom`;
 - presets may include geometry, copies, rotations, and scale progressions;
 - user-selected colors and stroke widths are not overwritten unless a preset explicitly declares an appearance theme and the user opts into it.
 

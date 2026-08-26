@@ -279,6 +279,11 @@ std::string serialize_rosettelab_svg(
                << " rosettelab:type=\"" << curve_type_id(layer.type) << "\""
                << " rosettelab:visible=\"" << (layer.visible ? "true" : "false") << "\""
                << " rosettelab:locked=\"" << (layer.locked ? "true" : "false") << "\"";
+        if (!layer.preset_id.empty()) {
+            output << " rosettelab:preset-id=\"" << xml_escape(layer.preset_id) << "\""
+                   << " rosettelab:preset-customized=\""
+                   << (layer.preset_customized ? "true" : "false") << "\"";
+        }
         if (!layer.visible) {
             output << " display=\"none\"";
         }

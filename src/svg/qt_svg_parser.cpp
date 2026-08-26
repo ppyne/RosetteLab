@@ -250,6 +250,13 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
         required_metadata_attribute(group_attributes, metadata_ns, "visible"), "visible");
     layer.locked = parse_boolean(
         required_metadata_attribute(group_attributes, metadata_ns, "locked"), "locked");
+    const auto preset_id = group_attributes.value(metadata_ns, "preset-id");
+    if (!preset_id.isNull()) {
+        layer.preset_id = preset_id.toString().toStdString();
+        const auto customized = group_attributes.value(metadata_ns, "preset-customized");
+        layer.preset_customized = !customized.isNull()
+            && parse_boolean(customized.toString(), "preset-customized");
+    }
 
     document::CurveParameters parameters;
     if (layer.type == document::CurveType::PolarRose) {

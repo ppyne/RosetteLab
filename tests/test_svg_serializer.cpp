@@ -136,6 +136,17 @@ void test_lissajous_contains_editable_metadata()
     require(contains(svg, "phase-y-degrees=\"117\""), "Lissajous Y phase should be stored");
 }
 
+void test_preset_state_is_metadata()
+{
+    rosettelab::document::Document document;
+    auto& layer=document.add_polar_rose();
+    layer.preset_id="rose-eleven";
+    layer.preset_customized=true;
+    const auto svg=rosettelab::svg::serialize_rosettelab_svg(document);
+    require(contains(svg,"rosettelab:preset-id=\"rose-eleven\""),"preset ID should be stored");
+    require(contains(svg,"rosettelab:preset-customized=\"true\""),"customized state should be stored");
+}
+
 } // namespace
 
 int main()
@@ -147,6 +158,7 @@ int main()
         test_ellipse_contains_editable_metadata_and_beziers();
         test_trochoid_contains_trace_metadata();
         test_lissajous_contains_editable_metadata();
+        test_preset_state_is_metadata();
         std::cout << "All RosetteLab SVG serializer tests passed\n";
         return 0;
     } catch (const std::exception& error) {

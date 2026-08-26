@@ -45,6 +45,8 @@ CurveLayer& Document::add_polar_rose(
         true,
         false,
         {},
+        "",
+        false,
     });
     return layers_.back();
 }
@@ -59,7 +61,7 @@ CurveLayer& Document::add_ellipse(
     }
 
     layers_.push_back({
-        next_id_++, std::move(*name), CurveType::Ellipse, parameters, true, false, {},
+        next_id_++, std::move(*name), CurveType::Ellipse, parameters, true, false, {}, "", false,
     });
     return layers_.back();
 }
@@ -76,7 +78,7 @@ CurveLayer& Document::add_trochoid(
     if (!name.has_value() || name->empty()) {
         name = default_name;
     }
-    layers_.push_back({next_id_++, std::move(*name), type, parameters, true, false, {}});
+    layers_.push_back({next_id_++, std::move(*name), type, parameters, true, false, {}, "", false});
     return layers_.back();
 }
 
@@ -87,7 +89,7 @@ CurveLayer& Document::add_lissajous(
     const auto default_name = next_default_name(CurveType::Lissajous);
     if (!name.has_value() || name->empty()) name = default_name;
     layers_.push_back({next_id_++, std::move(*name), CurveType::Lissajous,
-                       parameters, true, false, {}});
+                       parameters, true, false, {}, "", false});
     return layers_.back();
 }
 
@@ -98,7 +100,7 @@ CurveLayer& Document::add_harmonograph(
     const auto default_name = next_default_name(CurveType::Harmonograph);
     if (!name.has_value() || name->empty()) name = default_name;
     layers_.push_back({next_id_++, std::move(*name), CurveType::Harmonograph,
-                       parameters, true, false, {}});
+                       parameters, true, false, {}, "", false});
     return layers_.back();
 }
 
@@ -134,6 +136,8 @@ CurveLayer* Document::duplicate_layer(const LayerId id, std::optional<std::strin
         source.visible,
         false,
         source.appearance,
+        source.preset_id,
+        source.preset_customized,
     };
     const auto inserted = layers_.insert(
         layers_.begin() + static_cast<std::ptrdiff_t>(source_index + 1),
