@@ -117,6 +117,14 @@ MainWindow::MainWindow(QWidget* parent)
     export_menu->addAction("To JPEG...", this, [this] { export_raster(true); });
     export_menu->addAction("To PDF...", this, [this] { export_pdf(); });
 
+    auto* edit_menu = menuBar()->addMenu("&Edit");
+    undo_action_ = edit_menu->addAction("Undo");
+    undo_action_->setShortcut(QKeySequence::Undo);
+    connect(undo_action_, &QAction::triggered, this, [this] { undo(); });
+    redo_action_ = edit_menu->addAction("Redo");
+    redo_action_->setShortcut(QKeySequence::Redo);
+    connect(redo_action_, &QAction::triggered, this, [this] { redo(); });
+
     main_splitter_ = new QSplitter(Qt::Horizontal, this);
     main_splitter_->setObjectName("mainSplitter");
     setCentralWidget(main_splitter_);
@@ -433,7 +441,7 @@ MainWindow::MainWindow(QWidget* parent)
         main_splitter_->restoreState(splitter_state);
     }
     track_document_changes_ = true;
-    set_document_modified(false);
+    reset_history();
 }
 
 void MainWindow::closeEvent(QCloseEvent* event)
@@ -472,7 +480,7 @@ void MainWindow::new_document()
     load_document_settings();
     preview_->update();
     save_action_->setEnabled(false);
-    set_document_modified(false);
+    reset_history();
 }
 
 void MainWindow::open_document(const QString& path)
@@ -499,7 +507,7 @@ void MainWindow::open_document(const QString& path)
     current_file_path_ = QFileInfo(path).absoluteFilePath();
     save_action_->setEnabled(true);
     add_recent_file(current_file_path_);
-    set_document_modified(false);
+    reset_history();
 }
 
 void MainWindow::add_recent_file(const QString& path)
@@ -562,9 +570,30 @@ bool MainWindow::confirm_discard_changes()
 
 void MainWindow::mark_document_modified()
 {
-    if (track_document_changes_) {
-        set_document_modified(true);
+    if (!track_document_changes_) {
+        return;
     }
+    if (history_index_ + 1 < history_.size()) {
+        if (saved_history_index_ > history_index_) {
+            saved_history_index_ = no_history_index;
+        }
+        history_.erase(history_.begin() + static_cast<std::ptrdiff_t>(history_index_ + 1),
+                       history_.end());
+    }
+    history_.push_back({document_, active_layer_id_});
+    history_index_ = history_.size() - 1;
+    constexpr std::size_t maximum_history_entries = 200;
+    if (history_.size() > maximum_history_entries) {
+        history_.erase(history_.begin());
+        --history_index_;
+        if (saved_history_index_ == 0) {
+            saved_history_index_ = no_history_index;
+        } else if (saved_history_index_ != no_history_index) {
+            --saved_history_index_;
+        }
+    }
+    set_document_modified(history_index_ != saved_history_index_);
+    update_history_actions();
 }
 
 void MainWindow::set_document_modified(const bool modified)
@@ -582,6 +611,55 @@ void MainWindow::update_window_title()
         setWindowTitle(QStringLiteral("RosetteLab - %1[*]")
             .arg(QFileInfo(current_file_path_).fileName()));
     }
+}
+
+void MainWindow::reset_history()
+{
+    history_.clear();
+    history_.push_back({document_, active_layer_id_});
+    history_index_ = 0;
+    saved_history_index_ = 0;
+    set_document_modified(false);
+    update_history_actions();
+}
+
+void MainWindow::undo()
+{
+    if (history_index_ == 0 || history_.empty()) {
+        return;
+    }
+    restore_history_entry(history_index_ - 1);
+}
+
+void MainWindow::redo()
+{
+    if (history_.empty() || history_index_ + 1 >= history_.size()) {
+        return;
+    }
+    restore_history_entry(history_index_ + 1);
+}
+
+void MainWindow::restore_history_entry(const std::size_t index)
+{
+    track_document_changes_ = false;
+    document_ = history_[index].document;
+    const auto selected_id = history_[index].active_layer_id;
+    rebuild_layer_list();
+    load_document_settings();
+    if (document_.find_layer(selected_id) != nullptr) {
+        select_layer_row(selected_id);
+    }
+    preview_->update();
+    history_index_ = index;
+    track_document_changes_ = true;
+    set_document_modified(history_index_ != saved_history_index_);
+    update_history_actions();
+}
+
+void MainWindow::update_history_actions()
+{
+    undo_action_->setEnabled(!history_.empty() && history_index_ > 0);
+    redo_action_->setEnabled(!history_.empty() && history_index_ + 1 < history_.size());
 }
 
 void MainWindow::choose_page_background()
@@ -678,7 +756,9 @@ bool MainWindow::save_document(const QString& path)
     current_file_path_ = QFileInfo(path).absoluteFilePath();
     save_action_->setEnabled(true);
     add_recent_file(current_file_path_);
+    saved_history_index_ = history_index_;
     set_document_modified(false);
+    update_history_actions();
     return true;
 }
 

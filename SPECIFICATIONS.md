@@ -67,6 +67,12 @@ Any change to document settings, curve parameters, layer geometry, appearance, v
 
 Before **New**, opening another document (including through **Open Recent**), or closing the main window can discard unsaved changes, RosetteLab presents **Save**, **Discard**, and **Cancel**. **Save** continues only after a successful save, **Discard** performs the requested operation without saving, and **Cancel** leaves the current document untouched.
 
+### 3.3 Undo and redo
+
+The **Edit** menu provides **Undo** and **Redo** using the platform-standard Qt key sequences, including Command-Z and Shift-Command-Z on macOS. History covers document settings, curve parameters, layer geometry and appearance, visibility, locking, naming, ordering, addition, duplication, and removal. View-only changes are excluded.
+
+The history retains up to 200 complete document states. A new edit after Undo discards the former Redo branch. The saved history position is tracked independently: returning to it clears the modified indicator, while discarding that saved state through a new history branch keeps the document marked as modified. Creating or opening a document starts a new history; saving establishes the current state as its saved position.
+
 ## 4. Layer model
 
 Every curve layer has:

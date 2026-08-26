@@ -7,6 +7,10 @@
 #include <QMainWindow>
 #include <QString>
 
+#include <cstddef>
+#include <limits>
+#include <vector>
+
 class QAction;
 class QCheckBox;
 class QCloseEvent;
@@ -50,6 +54,11 @@ private:
     void mark_document_modified();
     void set_document_modified(bool modified);
     void update_window_title();
+    void reset_history();
+    void undo();
+    void redo();
+    void restore_history_entry(std::size_t index);
+    void update_history_actions();
     void export_raster(bool jpeg);
     void export_pdf();
     void rebuild_layer_list();
@@ -79,6 +88,8 @@ private:
     PreviewWidget* preview_{};
     QSplitter* main_splitter_{};
     QAction* save_action_{};
+    QAction* undo_action_{};
+    QAction* redo_action_{};
     QMenu* recent_files_menu_{};
     QDoubleSpinBox* page_width_{};
     QDoubleSpinBox* page_height_{};
@@ -128,6 +139,14 @@ private:
     QString current_file_path_;
     bool document_modified_{false};
     bool track_document_changes_{false};
+    struct HistoryEntry {
+        document::Document document;
+        document::LayerId active_layer_id{};
+    };
+    std::vector<HistoryEntry> history_;
+    std::size_t history_index_{0};
+    std::size_t saved_history_index_{0};
+    static constexpr std::size_t no_history_index = std::numeric_limits<std::size_t>::max();
 };
 
 } // namespace rosettelab::ui
