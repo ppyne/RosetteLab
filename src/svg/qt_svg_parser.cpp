@@ -286,6 +286,24 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
         group_attributes, metadata_ns, "link-scales", true);
     layer.transform.rotation_degrees = optional_metadata_double(
         group_attributes, metadata_ns, "layer-rotation-degrees", 0.0);
+    const auto arrangement = group_attributes.value(metadata_ns, "copy-arrangement");
+    if (arrangement.isNull()) {
+        const double legacy_offset_x = optional_metadata_double(
+            group_attributes, metadata_ns, "copy-offset-x", 0.0);
+        const double legacy_offset_y = optional_metadata_double(
+            group_attributes, metadata_ns, "copy-offset-y", 0.0);
+        layer.copies.arrangement = legacy_offset_x == 0.0 && legacy_offset_y == 0.0
+            ? document::CopyArrangement::Superimposed
+            : document::CopyArrangement::Linear;
+    } else if (arrangement == "superimposed") {
+        layer.copies.arrangement = document::CopyArrangement::Superimposed;
+    } else if (arrangement == "linear") {
+        layer.copies.arrangement = document::CopyArrangement::Linear;
+    } else if (arrangement == "circular") {
+        layer.copies.arrangement = document::CopyArrangement::Circular;
+    } else {
+        throw parse_error("Unsupported copy arrangement");
+    }
     layer.copies.count = optional_metadata_integer(
         group_attributes, metadata_ns, "copy-count", 1);
     layer.copies.rotation_step_degrees = optional_metadata_double(
@@ -296,8 +314,17 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
         group_attributes, metadata_ns, "copy-offset-x", 0.0);
     layer.copies.offset_y_step = optional_metadata_double(
         group_attributes, metadata_ns, "copy-offset-y", 0.0);
+    layer.copies.circular_radius = optional_metadata_double(
+        group_attributes, metadata_ns, "copy-circular-radius", 0.0);
+    layer.copies.circular_start_degrees = optional_metadata_double(
+        group_attributes, metadata_ns, "copy-circular-start-degrees", 0.0);
+    layer.copies.circular_angle_step_degrees = optional_metadata_double(
+        group_attributes, metadata_ns, "copy-circular-angle-degrees", 0.0);
+    layer.copies.rotate_with_orbit = optional_metadata_boolean(
+        group_attributes, metadata_ns, "copy-rotate-with-orbit", true);
     if (layer.transform.scale_x <= 0.0 || layer.transform.scale_y <= 0.0 ||
-        layer.copies.count < 1 || layer.copies.count > 1000 || layer.copies.scale_step <= 0.0) {
+        layer.copies.count < 1 || layer.copies.count > 1000 || layer.copies.scale_step <= 0.0 ||
+        layer.copies.circular_radius < 0.0) {
         throw parse_error("Invalid layer transform or copy settings");
     }
     const auto preset_id = group_attributes.value(metadata_ns, "preset-id");

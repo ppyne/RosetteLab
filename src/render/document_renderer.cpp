@@ -5,7 +5,6 @@
 #include <QTransform>
 
 #include <algorithm>
-#include <cmath>
 #include <exception>
 
 namespace rosettelab::render {
@@ -136,16 +135,13 @@ void render_document(
             : QBrush(Qt::NoBrush));
         const int copy_count = std::clamp(layer.copies.count, 1, 1000);
         for (int copy = 0; copy < copy_count; ++copy) {
-            const double copy_scale = std::pow(layer.copies.scale_step, copy);
+            const auto placement = document::copy_placement(layer, copy);
             QTransform transform;
-            transform.translate(
-                layer.transform.position_x + copy * layer.copies.offset_x_step,
-                layer.transform.position_y + copy * layer.copies.offset_y_step);
-            transform.rotate(
-                layer.transform.rotation_degrees + copy * layer.copies.rotation_step_degrees);
+            transform.translate(placement.position_x, placement.position_y);
+            transform.rotate(placement.rotation_degrees);
             transform.scale(
-                layer.transform.scale_x * copy_scale,
-                layer.transform.scale_y * copy_scale);
+                layer.transform.scale_x * placement.scale,
+                layer.transform.scale_y * placement.scale);
             painter.drawPath(transform.map(path));
         }
         painter.restore();

@@ -48,7 +48,14 @@ void test_save_open_round_trip()
     layer.preset_id = "rose-seven";
     layer.preset_customized = true;
     layer.transform = {12.5, -8.0, 1.5, 0.75, false, 30.0};
-    layer.copies = {5, 17.0, 0.9, 2.0, -1.0};
+    layer.copies.arrangement = rosettelab::document::CopyArrangement::Circular;
+    layer.copies.count = 5;
+    layer.copies.rotation_step_degrees = 17.0;
+    layer.copies.scale_step = 0.9;
+    layer.copies.circular_radius = 42.0;
+    layer.copies.circular_start_degrees = 12.0;
+    layer.copies.circular_angle_step_degrees = 72.0;
+    layer.copies.rotate_with_orbit = false;
     const auto expected_fill = layer.appearance.fill;
     const auto expected_transform = layer.transform;
     const auto expected_copies = layer.copies;

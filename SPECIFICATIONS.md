@@ -370,17 +370,15 @@ Unsupported backend modes must fail gracefully or be disabled rather than silent
 
 ## 9. Superposition and copies
 
-A layer may represent one curve or a generated group of related copies.
+A layer may represent one curve or a generated group of related copies. The supported arrangements are:
 
-Possible parameters:
+- **Superimposed**: every copy shares the layer position while progressive rotation and scale remain available;
+- **Linear**: each copy receives progressive horizontal and vertical offsets;
+- **Circular**: copy centres lie on an orbit around the layer position.
 
-- number of copies;
-- angular offset between copies;
-- scale progression;
-- optional parameter progression;
-- optional color progression.
+Circular arrangement provides orbit radius, start angle, angle per copy, and **Rotate with orbit**. Orbital position is computed from the exact cosine and sine of each copy angle. When orbital rotation is enabled, that angle is added to the layer rotation and the independent progressive copy rotation. **Distribute over 360 deg** sets the angular step to `360 / count` as one Undo/Redo operation. Count and angle remain independent so partial arcs, gaps, and multiple turns are possible.
 
-Version 1.0 requires copy count, angular offset, and scale progression. General parameter and color sequences are deferred.
+General mathematical-parameter and color sequences are deferred.
 
 ## 10. SVG project format
 
@@ -434,9 +432,10 @@ Every curve layer can also render a copy composition from the same parametric pa
 - copy count (1–1000);
 - rotation added for each successive copy;
 - multiplicative scale progression, expressed as a percentage in the UI (for example, 95% yields factors 1, 0.95, 0.95², …);
-- horizontal and vertical offset added for each successive copy.
+- horizontal and vertical offset added for each successive linear copy;
+- circular radius, start angle, angle per copy, and optional orbital orientation.
 
-The **Reset copies** command restores one copy, zero rotation and offsets, and 100% scale progression. It does not alter the layer transform, curve-family parameters, appearance, or preset state, and the reset is recorded as one Undo/Redo history operation.
+The **Reset copies** command restores Superimposed arrangement, one copy, zero rotation, offsets, orbit radius and orbit angles, 100% scale progression, and enabled orbital orientation. It does not alter the layer transform, curve-family parameters, appearance, or preset state, and the reset is recorded as one Undo/Redo history operation.
 
 Transform and copy values are editable independently from curve-family parameters and presets. They are stored in RosetteLab SVG metadata, emitted as SVG path transforms, restored on open, duplicated with the layer, and applied identically in the live preview, layer thumbnail, PNG, JPEG, PDF, and SVG output. Each edit creates a normal document-history entry and is therefore supported by Undo/Redo.
 

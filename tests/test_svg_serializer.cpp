@@ -49,7 +49,12 @@ void test_native_svg_contains_geometry_and_metadata()
     layer.appearance.opacity = 0.8;
     layer.appearance.blend_mode = rosettelab::document::BlendMode::Multiply;
     layer.transform = {12.5, -8.0, 1.5, 0.75, false, 30.0};
-    layer.copies = {3, 17.0, 0.9, 2.0, -1.0};
+    layer.copies.arrangement = rosettelab::document::CopyArrangement::Linear;
+    layer.copies.count = 3;
+    layer.copies.rotation_step_degrees = 17.0;
+    layer.copies.scale_step = 0.9;
+    layer.copies.offset_x_step = 2.0;
+    layer.copies.offset_y_step = -1.0;
 
     const auto svg = rosettelab::svg::serialize_rosettelab_svg(document);
     require(contains(svg, "xmlns:rosettelab=\"https://rosettelab.app/ns/1\""),
@@ -73,6 +78,8 @@ void test_native_svg_contains_geometry_and_metadata()
     require(contains(svg, "rosettelab:position-x=\"12.5\""), "layer X position should be stored");
     require(contains(svg, "rosettelab:scale-y=\"0.75\""), "independent Y scale should be stored");
     require(contains(svg, "rosettelab:copy-count=\"3\""), "copy count should be stored");
+    require(contains(svg, "rosettelab:copy-arrangement=\"linear\""),
+            "copy arrangement should be stored");
     require(contains(svg, "translate(14.5 -9) rotate(47) scale(1.35 0.675)"),
             "second rendered copy should use progressive transform settings");
     require(occurrence_count(svg, "    <path d=\"") == 3,

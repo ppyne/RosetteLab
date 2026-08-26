@@ -86,6 +86,17 @@ const char* blend_mode_name(const document::BlendMode mode)
     return "normal";
 }
 
+const char* copy_arrangement_name(const document::CopyArrangement arrangement)
+{
+    using enum document::CopyArrangement;
+    switch (arrangement) {
+    case Superimposed: return "superimposed";
+    case Linear: return "linear";
+    case Circular: return "circular";
+    }
+    return "superimposed";
+}
+
 std::string path_data(const core::BezierPath& path)
 {
     if (path.segments.empty()) {
@@ -116,14 +127,13 @@ void write_rendered_path(
 {
     const int copy_count = std::clamp(layer.copies.count, 1, 1000);
     for (int copy = 0; copy < copy_count; ++copy) {
-        const double copy_scale = std::pow(layer.copies.scale_step, copy);
+        const auto placement = document::copy_placement(layer, copy);
         output << "    <path d=\"" << path_data(path) << "\""
            << " transform=\"translate("
-           << number(layer.transform.position_x + copy * layer.copies.offset_x_step) << ' '
-           << number(layer.transform.position_y + copy * layer.copies.offset_y_step) << ") rotate("
-           << number(layer.transform.rotation_degrees + copy * layer.copies.rotation_step_degrees)
-           << ") scale(" << number(layer.transform.scale_x * copy_scale) << ' '
-           << number(layer.transform.scale_y * copy_scale) << ")\""
+           << number(placement.position_x) << ' ' << number(placement.position_y) << ") rotate("
+           << number(placement.rotation_degrees)
+           << ") scale(" << number(layer.transform.scale_x * placement.scale) << ' '
+           << number(layer.transform.scale_y * placement.scale) << ")\""
            << " stroke=\"" << (appearance.stroke_enabled ? rgb_hex(appearance.stroke) : "none") << "\""
            << " rosettelab:stroke-color=\"" << rgb_hex(appearance.stroke) << "\""
            << " stroke-opacity=\"" << number(std::clamp(appearance.stroke.alpha, 0.0, 1.0)) << "\""
@@ -296,11 +306,16 @@ std::string serialize_rosettelab_svg(
                << " rosettelab:scale-y=\"" << number(layer.transform.scale_y) << "\""
                << " rosettelab:link-scales=\"" << (layer.transform.link_scales ? "true" : "false") << "\""
                << " rosettelab:layer-rotation-degrees=\"" << number(layer.transform.rotation_degrees) << "\""
+               << " rosettelab:copy-arrangement=\"" << copy_arrangement_name(layer.copies.arrangement) << "\""
                << " rosettelab:copy-count=\"" << std::clamp(layer.copies.count, 1, 1000) << "\""
                << " rosettelab:copy-rotation-degrees=\"" << number(layer.copies.rotation_step_degrees) << "\""
                << " rosettelab:copy-scale-step=\"" << number(layer.copies.scale_step) << "\""
                << " rosettelab:copy-offset-x=\"" << number(layer.copies.offset_x_step) << "\""
-               << " rosettelab:copy-offset-y=\"" << number(layer.copies.offset_y_step) << "\"";
+               << " rosettelab:copy-offset-y=\"" << number(layer.copies.offset_y_step) << "\""
+               << " rosettelab:copy-circular-radius=\"" << number(layer.copies.circular_radius) << "\""
+               << " rosettelab:copy-circular-start-degrees=\"" << number(layer.copies.circular_start_degrees) << "\""
+               << " rosettelab:copy-circular-angle-degrees=\"" << number(layer.copies.circular_angle_step_degrees) << "\""
+               << " rosettelab:copy-rotate-with-orbit=\"" << (layer.copies.rotate_with_orbit ? "true" : "false") << "\"";
         if (!layer.preset_id.empty()) {
             output << " rosettelab:preset-id=\"" << xml_escape(layer.preset_id) << "\""
                    << " rosettelab:preset-customized=\""

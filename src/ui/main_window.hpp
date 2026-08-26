@@ -83,6 +83,8 @@ private:
     void reset_layer_transform();
     void reset_layer_copies();
     void refresh_transform_controls();
+    void refresh_copy_controls();
+    void distribute_copies_over_circle();
     void update_document_settings();
     void load_document_settings();
     void load_saved_document_defaults();
@@ -181,11 +183,17 @@ private:
     QDoubleSpinBox* transform_rotation_{};
     QPushButton* reset_transform_button_{};
     QGroupBox* copies_group_{};
+    QComboBox* copy_arrangement_{};
     QSpinBox* copy_count_{};
     QDoubleSpinBox* copy_rotation_{};
     QDoubleSpinBox* copy_scale_{};
     QDoubleSpinBox* copy_offset_x_{};
     QDoubleSpinBox* copy_offset_y_{};
+    QDoubleSpinBox* copy_circular_radius_{};
+    QDoubleSpinBox* copy_circular_start_{};
+    QDoubleSpinBox* copy_circular_angle_{};
+    QCheckBox* copy_rotate_with_orbit_{};
+    QPushButton* distribute_copies_button_{};
     QPushButton* reset_copies_button_{};
     QGroupBox* appearance_group_{};
     QCheckBox* stroke_enabled_{};

@@ -1,6 +1,7 @@
 #include "rosettelab/document/document.hpp"
 
 #include <exception>
+#include <cmath>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -139,7 +140,12 @@ void test_layer_duplication()
     source->appearance.opacity = 0.75;
     source->appearance.blend_mode = rosettelab::document::BlendMode::Multiply;
     source->transform = {20.0, -10.0, 1.25, 0.8, false, 22.5};
-    source->copies = {7, 360.0 / 49.0, 0.96, 1.5, -2.0};
+    source->copies.arrangement = rosettelab::document::CopyArrangement::Linear;
+    source->copies.count = 7;
+    source->copies.rotation_step_degrees = 360.0 / 49.0;
+    source->copies.scale_step = 0.96;
+    source->copies.offset_x_step = 1.5;
+    source->copies.offset_y_step = -2.0;
     const auto expected_appearance = source->appearance;
     const auto expected_transform = source->transform;
     const auto expected_copies = source->copies;
@@ -187,6 +193,28 @@ void test_document_settings_defaults()
             "default page background should be opaque white");
 }
 
+void test_circular_copy_placement()
+{
+    rosettelab::document::Document document;
+    auto& layer = document.add_polar_rose();
+    layer.transform.position_x = 10.0;
+    layer.transform.position_y = -5.0;
+    layer.transform.rotation_degrees = 15.0;
+    layer.copies.arrangement = rosettelab::document::CopyArrangement::Circular;
+    layer.copies.circular_radius = 40.0;
+    layer.copies.circular_start_degrees = 0.0;
+    layer.copies.circular_angle_step_degrees = 90.0;
+    layer.copies.rotation_step_degrees = 2.0;
+    layer.copies.rotate_with_orbit = true;
+    const auto placement = rosettelab::document::copy_placement(layer, 1);
+    require(std::abs(placement.position_x - 10.0) < 1e-12,
+            "circular copy X position should follow its orbit");
+    require(std::abs(placement.position_y - 35.0) < 1e-12,
+            "circular copy Y position should follow its orbit");
+    require(placement.rotation_degrees == 107.0,
+            "circular copy should combine layer, progressive, and orbital rotation");
+}
+
 } // namespace
 
 int main()
@@ -202,6 +230,7 @@ int main()
         test_layer_duplication();
         test_controlled_layer_import();
         test_document_settings_defaults();
+        test_circular_copy_placement();
         std::cout << "All RosetteLab document tests passed\n";
         return 0;
     } catch (const std::exception& error) {

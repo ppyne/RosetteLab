@@ -8,6 +8,7 @@
 #include "rosettelab/document/appearance.hpp"
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -48,14 +49,32 @@ struct LayerTransform {
     friend constexpr bool operator==(const LayerTransform&, const LayerTransform&) = default;
 };
 
+enum class CopyArrangement {
+    Superimposed,
+    Linear,
+    Circular,
+};
+
 struct LayerCopies {
+    CopyArrangement arrangement{CopyArrangement::Superimposed};
     int count{1};
     double rotation_step_degrees{0.0};
     double scale_step{1.0};
     double offset_x_step{0.0};
     double offset_y_step{0.0};
+    double circular_radius{0.0};
+    double circular_start_degrees{0.0};
+    double circular_angle_step_degrees{0.0};
+    bool rotate_with_orbit{true};
 
     friend constexpr bool operator==(const LayerCopies&, const LayerCopies&) = default;
+};
+
+struct CopyPlacement {
+    double position_x{};
+    double position_y{};
+    double rotation_degrees{};
+    double scale{1.0};
 };
 
 struct CurveLayer {
@@ -73,6 +92,33 @@ struct CurveLayer {
 
     friend bool operator==(const CurveLayer&, const CurveLayer&) = default;
 };
+
+[[nodiscard]] inline CopyPlacement copy_placement(
+    const CurveLayer& layer, const int copy_index)
+{
+    CopyPlacement placement{
+        layer.transform.position_x,
+        layer.transform.position_y,
+        layer.transform.rotation_degrees +
+            copy_index * layer.copies.rotation_step_degrees,
+        std::pow(layer.copies.scale_step, copy_index),
+    };
+    if (layer.copies.arrangement == CopyArrangement::Linear) {
+        placement.position_x += copy_index * layer.copies.offset_x_step;
+        placement.position_y += copy_index * layer.copies.offset_y_step;
+    } else if (layer.copies.arrangement == CopyArrangement::Circular) {
+        const double angle = layer.copies.circular_start_degrees +
+            copy_index * layer.copies.circular_angle_step_degrees;
+        constexpr double pi = 3.14159265358979323846;
+        const double radians = angle * pi / 180.0;
+        placement.position_x += layer.copies.circular_radius * std::cos(radians);
+        placement.position_y += layer.copies.circular_radius * std::sin(radians);
+        if (layer.copies.rotate_with_orbit) {
+            placement.rotation_degrees += angle;
+        }
+    }
+    return placement;
+}
 
 struct DocumentSettings {
     double page_width{210.0};

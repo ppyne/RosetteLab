@@ -33,10 +33,14 @@ int main(int argc, char** argv)
     auto* reset_transform=window.findChild<QPushButton*>("resetTransformButton");
     auto* copy_count=window.findChild<QSpinBox*>("copyCountField");
     auto* reset_copies=window.findChild<QPushButton*>("resetCopiesButton");
+    auto* copy_arrangement=window.findChild<QComboBox*>("copyArrangementSelector");
+    auto* circular_angle=window.findChild<QDoubleSpinBox*>("copyCircularAngleField");
+    auto* distribute_copies=window.findChild<QPushButton*>("distributeCopiesButton");
     auto* polar_k=window.findChild<QDoubleSpinBox*>("polarKField");
     auto* restore_preset=window.findChild<QPushButton*>("restorePresetButton");
     if (undo==nullptr || redo==nullptr || transform_x==nullptr || reset_transform==nullptr ||
-        copy_count==nullptr || reset_copies==nullptr || polar_k==nullptr ||
+        copy_count==nullptr || reset_copies==nullptr || copy_arrangement==nullptr ||
+        circular_angle==nullptr || distribute_copies==nullptr || polar_k==nullptr ||
         restore_preset==nullptr) {
         std::cerr << "Undo/Redo test controls were not initialized\n";
         return 1;
@@ -65,6 +69,19 @@ int main(int argc, char** argv)
     undo->trigger();
     if (copy_count->value()!=5) {
         std::cerr << "Reset copies was not undone as one operation\n";
+        return 1;
+    }
+    copy_arrangement->setCurrentIndex(copy_arrangement->findData(
+        static_cast<int>(rosettelab::document::CopyArrangement::Circular)));
+    copy_count->setValue(12);
+    distribute_copies->click();
+    if (circular_angle->value()!=30.0) {
+        std::cerr << "Circular copies were not distributed over 360 degrees\n";
+        return 1;
+    }
+    undo->trigger();
+    if (circular_angle->value()!=0.0) {
+        std::cerr << "Circular distribution was not undone as one operation\n";
         return 1;
     }
 

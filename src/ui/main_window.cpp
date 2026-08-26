@@ -398,6 +398,11 @@ MainWindow::MainWindow(QWidget* parent)
 
     copies_group_ = new QGroupBox("Copies", parameters_panel);
     auto* copies_form = new QFormLayout(copies_group_);
+    copy_arrangement_ = new QComboBox(copies_group_);
+    copy_arrangement_->setObjectName("copyArrangementSelector");
+    copy_arrangement_->addItem("Superimposed", static_cast<int>(document::CopyArrangement::Superimposed));
+    copy_arrangement_->addItem("Linear", static_cast<int>(document::CopyArrangement::Linear));
+    copy_arrangement_->addItem("Circular", static_cast<int>(document::CopyArrangement::Circular));
     copy_count_ = new QSpinBox(copies_group_);
     copy_count_->setObjectName("copyCountField");
     copy_count_->setRange(1, 1000);
@@ -414,11 +419,29 @@ MainWindow::MainWindow(QWidget* parent)
         control->setDecimals(3);
         control->setSuffix(" units");
     }
+    copy_circular_radius_ = new QDoubleSpinBox(copies_group_);
+    copy_circular_radius_->setObjectName("copyCircularRadiusField");
+    copy_circular_radius_->setRange(0.0, 100000.0);
+    copy_circular_radius_->setDecimals(3);
+    copy_circular_radius_->setSuffix(" units");
+    copy_circular_start_ = angle_control(copies_group_);
+    copy_circular_angle_ = angle_control(copies_group_);
+    copy_circular_angle_->setObjectName("copyCircularAngleField");
+    copy_rotate_with_orbit_ = new QCheckBox("Enabled", copies_group_);
+    copy_rotate_with_orbit_->setChecked(true);
+    distribute_copies_button_ = new QPushButton("Distribute over 360 deg", copies_group_);
+    distribute_copies_button_->setObjectName("distributeCopiesButton");
+    copies_form->addRow("Arrangement", copy_arrangement_);
     copies_form->addRow("Count", copy_count_);
     copies_form->addRow("Rotation per copy", copy_rotation_);
     copies_form->addRow("Scale per copy", copy_scale_);
     copies_form->addRow("Offset X per copy", copy_offset_x_);
     copies_form->addRow("Offset Y per copy", copy_offset_y_);
+    copies_form->addRow("Circular radius", copy_circular_radius_);
+    copies_form->addRow("Start angle", copy_circular_start_);
+    copies_form->addRow("Angle per copy", copy_circular_angle_);
+    copies_form->addRow("Rotate with orbit", copy_rotate_with_orbit_);
+    copies_form->addRow("", distribute_copies_button_);
     reset_copies_button_ = new QPushButton("Reset copies", copies_group_);
     reset_copies_button_->setObjectName("resetCopiesButton");
     copies_form->addRow("", reset_copies_button_);
@@ -631,10 +654,19 @@ MainWindow::MainWindow(QWidget* parent)
     connect(transform_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
     connect(reset_transform_button_, &QPushButton::clicked, this, [this] { reset_layer_transform(); });
     connect(copy_count_, &QSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(copy_arrangement_, &QComboBox::currentIndexChanged, this, [this] {
+        refresh_copy_controls();
+        update_layer_transform();
+    });
     connect(copy_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
     connect(copy_scale_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
     connect(copy_offset_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
     connect(copy_offset_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(copy_circular_radius_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(copy_circular_start_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(copy_circular_angle_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(copy_rotate_with_orbit_, &QCheckBox::toggled, this, [this] { update_layer_transform(); });
+    connect(distribute_copies_button_, &QPushButton::clicked, this, [this] { distribute_copies_over_circle(); });
     connect(reset_copies_button_, &QPushButton::clicked, this, [this] { reset_layer_copies(); });
     connect(stroke_color_button_, &QPushButton::clicked, this, [this] { choose_stroke_color(); });
     connect(fill_color_button_, &QPushButton::clicked, this, [this] { choose_fill_color(); });
@@ -1456,11 +1488,16 @@ void MainWindow::load_active_layer()
     const QSignalBlocker transform_scale_y_blocker(transform_scale_y_);
     const QSignalBlocker transform_link_blocker(transform_link_scales_);
     const QSignalBlocker transform_rotation_blocker(transform_rotation_);
+    const QSignalBlocker copy_arrangement_blocker(copy_arrangement_);
     const QSignalBlocker copy_count_blocker(copy_count_);
     const QSignalBlocker copy_rotation_blocker(copy_rotation_);
     const QSignalBlocker copy_scale_blocker(copy_scale_);
     const QSignalBlocker copy_offset_x_blocker(copy_offset_x_);
     const QSignalBlocker copy_offset_y_blocker(copy_offset_y_);
+    const QSignalBlocker copy_circular_radius_blocker(copy_circular_radius_);
+    const QSignalBlocker copy_circular_start_blocker(copy_circular_start_);
+    const QSignalBlocker copy_circular_angle_blocker(copy_circular_angle_);
+    const QSignalBlocker copy_orbit_blocker(copy_rotate_with_orbit_);
     const QSignalBlocker stroke_enabled_blocker(stroke_enabled_);
     const QSignalBlocker stroke_width_blocker(stroke_width_);
     const QSignalBlocker fill_enabled_blocker(fill_enabled_);
@@ -1514,11 +1551,17 @@ void MainWindow::load_active_layer()
     transform_scale_y_->setValue(layer->transform.scale_y * 100.0);
     transform_link_scales_->setChecked(layer->transform.link_scales);
     transform_rotation_->setValue(layer->transform.rotation_degrees);
+    copy_arrangement_->setCurrentIndex(copy_arrangement_->findData(
+        static_cast<int>(layer->copies.arrangement)));
     copy_count_->setValue(layer->copies.count);
     copy_rotation_->setValue(layer->copies.rotation_step_degrees);
     copy_scale_->setValue(layer->copies.scale_step * 100.0);
     copy_offset_x_->setValue(layer->copies.offset_x_step);
     copy_offset_y_->setValue(layer->copies.offset_y_step);
+    copy_circular_radius_->setValue(layer->copies.circular_radius);
+    copy_circular_start_->setValue(layer->copies.circular_start_degrees);
+    copy_circular_angle_->setValue(layer->copies.circular_angle_step_degrees);
+    copy_rotate_with_orbit_->setChecked(layer->copies.rotate_with_orbit);
     stroke_color_ = qcolor_from_rgba(layer->appearance.stroke);
     fill_color_ = qcolor_from_rgba(layer->appearance.fill);
     stroke_enabled_->setChecked(layer->appearance.stroke_enabled);
@@ -1532,6 +1575,7 @@ void MainWindow::load_active_layer()
     refresh_ellipse_radius_controls();
     refresh_trochoid_trace_controls();
     refresh_transform_controls();
+    refresh_copy_controls();
 }
 
 void MainWindow::refresh_k_mode_controls()
@@ -1561,6 +1605,21 @@ void MainWindow::refresh_transform_controls()
     transform_scale_y_->setEnabled(!transform_link_scales_->isChecked());
 }
 
+void MainWindow::refresh_copy_controls()
+{
+    const auto arrangement = static_cast<document::CopyArrangement>(
+        copy_arrangement_->currentData().toInt());
+    const bool linear = arrangement == document::CopyArrangement::Linear;
+    const bool circular = arrangement == document::CopyArrangement::Circular;
+    copy_offset_x_->setEnabled(linear);
+    copy_offset_y_->setEnabled(linear);
+    copy_circular_radius_->setEnabled(circular);
+    copy_circular_start_->setEnabled(circular);
+    copy_circular_angle_->setEnabled(circular);
+    copy_rotate_with_orbit_->setEnabled(circular);
+    distribute_copies_button_->setEnabled(circular && copy_count_->value() > 0);
+}
+
 void MainWindow::update_layer_transform()
 {
     auto* layer = document_.find_layer(active_layer_id_);
@@ -1575,11 +1634,17 @@ void MainWindow::update_layer_transform()
         ? layer->transform.scale_x
         : transform_scale_y_->value() / 100.0;
     layer->transform.rotation_degrees = transform_rotation_->value();
+    layer->copies.arrangement = static_cast<document::CopyArrangement>(
+        copy_arrangement_->currentData().toInt());
     layer->copies.count = copy_count_->value();
     layer->copies.rotation_step_degrees = copy_rotation_->value();
     layer->copies.scale_step = copy_scale_->value() / 100.0;
     layer->copies.offset_x_step = copy_offset_x_->value();
     layer->copies.offset_y_step = copy_offset_y_->value();
+    layer->copies.circular_radius = copy_circular_radius_->value();
+    layer->copies.circular_start_degrees = copy_circular_start_->value();
+    layer->copies.circular_angle_step_degrees = copy_circular_angle_->value();
+    layer->copies.rotate_with_orbit = copy_rotate_with_orbit_->isChecked();
     refresh_layer_preview(active_layer_id_);
     preview_->update();
     mark_document_modified();
@@ -1605,16 +1670,38 @@ void MainWindow::reset_layer_transform()
 
 void MainWindow::reset_layer_copies()
 {
+    const QSignalBlocker arrangement_blocker(copy_arrangement_);
     const QSignalBlocker count_blocker(copy_count_);
     const QSignalBlocker rotation_blocker(copy_rotation_);
     const QSignalBlocker scale_blocker(copy_scale_);
     const QSignalBlocker offset_x_blocker(copy_offset_x_);
     const QSignalBlocker offset_y_blocker(copy_offset_y_);
+    const QSignalBlocker radius_blocker(copy_circular_radius_);
+    const QSignalBlocker start_blocker(copy_circular_start_);
+    const QSignalBlocker angle_blocker(copy_circular_angle_);
+    const QSignalBlocker orbit_blocker(copy_rotate_with_orbit_);
+    copy_arrangement_->setCurrentIndex(copy_arrangement_->findData(
+        static_cast<int>(document::CopyArrangement::Superimposed)));
     copy_count_->setValue(1);
     copy_rotation_->setValue(0.0);
     copy_scale_->setValue(100.0);
     copy_offset_x_->setValue(0.0);
     copy_offset_y_->setValue(0.0);
+    copy_circular_radius_->setValue(0.0);
+    copy_circular_start_->setValue(0.0);
+    copy_circular_angle_->setValue(0.0);
+    copy_rotate_with_orbit_->setChecked(true);
+    refresh_copy_controls();
+    update_layer_transform();
+}
+
+void MainWindow::distribute_copies_over_circle()
+{
+    if (copy_count_->value() < 1) {
+        return;
+    }
+    const QSignalBlocker blocker(copy_circular_angle_);
+    copy_circular_angle_->setValue(360.0 / copy_count_->value());
     update_layer_transform();
 }
 
