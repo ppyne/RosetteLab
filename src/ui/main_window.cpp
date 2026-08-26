@@ -412,6 +412,8 @@ MainWindow::MainWindow(QWidget* parent)
     copies_form->addRow("Scale per copy", copy_scale_);
     copies_form->addRow("Offset X per copy", copy_offset_x_);
     copies_form->addRow("Offset Y per copy", copy_offset_y_);
+    reset_copies_button_ = new QPushButton("Reset copies", copies_group_);
+    copies_form->addRow("", reset_copies_button_);
 
     appearance_group_ = new QGroupBox("Appearance", parameters_panel);
     auto* appearance_form = new QFormLayout(appearance_group_);
@@ -625,6 +627,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(copy_scale_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
     connect(copy_offset_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
     connect(copy_offset_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(reset_copies_button_, &QPushButton::clicked, this, [this] { reset_layer_copies(); });
     connect(stroke_color_button_, &QPushButton::clicked, this, [this] { choose_stroke_color(); });
     connect(fill_color_button_, &QPushButton::clicked, this, [this] { choose_fill_color(); });
     connect(stroke_enabled_, &QCheckBox::toggled, this, [this] { update_appearance(); });
@@ -1584,6 +1587,21 @@ void MainWindow::reset_layer_transform()
     transform_link_scales_->setChecked(true);
     transform_rotation_->setValue(0.0);
     refresh_transform_controls();
+    update_layer_transform();
+}
+
+void MainWindow::reset_layer_copies()
+{
+    const QSignalBlocker count_blocker(copy_count_);
+    const QSignalBlocker rotation_blocker(copy_rotation_);
+    const QSignalBlocker scale_blocker(copy_scale_);
+    const QSignalBlocker offset_x_blocker(copy_offset_x_);
+    const QSignalBlocker offset_y_blocker(copy_offset_y_);
+    copy_count_->setValue(1);
+    copy_rotation_->setValue(0.0);
+    copy_scale_->setValue(100.0);
+    copy_offset_x_->setValue(0.0);
+    copy_offset_y_->setValue(0.0);
     update_layer_transform();
 }
 

@@ -436,6 +436,8 @@ Every curve layer can also render a copy composition from the same parametric pa
 - multiplicative scale progression, expressed as a percentage in the UI (for example, 95% yields factors 1, 0.95, 0.95², …);
 - horizontal and vertical offset added for each successive copy.
 
+The **Reset copies** command restores one copy, zero rotation and offsets, and 100% scale progression. It does not alter the layer transform, curve-family parameters, appearance, or preset state, and the reset is recorded as one Undo/Redo history operation.
+
 Transform and copy values are editable independently from curve-family parameters and presets. They are stored in RosetteLab SVG metadata, emitted as SVG path transforms, restored on open, duplicated with the layer, and applied identically in the live preview, layer thumbnail, PNG, JPEG, PDF, and SVG output. Each edit creates a normal document-history entry and is therefore supported by Undo/Redo.
 
 ### 10.4 Round-trip requirement

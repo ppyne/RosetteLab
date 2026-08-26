@@ -81,6 +81,7 @@ private:
     void update_appearance();
     void update_layer_transform();
     void reset_layer_transform();
+    void reset_layer_copies();
     void refresh_transform_controls();
     void update_document_settings();
     void load_document_settings();
@@ -185,6 +186,7 @@ private:
     QDoubleSpinBox* copy_scale_{};
     QDoubleSpinBox* copy_offset_x_{};
     QDoubleSpinBox* copy_offset_y_{};
+    QPushButton* reset_copies_button_{};
     QGroupBox* appearance_group_{};
     QCheckBox* stroke_enabled_{};
     ColorPreviewButton* stroke_color_button_{};
