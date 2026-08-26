@@ -41,7 +41,7 @@ struct LayerAppearance {
     double stroke_width{0.6};
     bool fill_enabled{false};
     RgbaColor fill{1.0, 1.0, 1.0, 1.0};
-    FillRule fill_rule{FillRule::NonZero};
+    FillRule fill_rule{FillRule::EvenOdd};
     double opacity{1.0};
     BlendMode blend_mode{BlendMode::Normal};
 

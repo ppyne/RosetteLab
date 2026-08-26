@@ -292,6 +292,7 @@ MainWindow::MainWindow(QWidget* parent)
     fill_rule_ = new QComboBox(appearance_group_);
     fill_rule_->addItem("Non-zero", static_cast<int>(document::FillRule::NonZero));
     fill_rule_->addItem("Even-odd", static_cast<int>(document::FillRule::EvenOdd));
+    fill_rule_->setCurrentIndex(fill_rule_->findData(static_cast<int>(document::FillRule::EvenOdd)));
 
     layer_opacity_ = new QSpinBox(appearance_group_);
     layer_opacity_->setRange(0, 100);

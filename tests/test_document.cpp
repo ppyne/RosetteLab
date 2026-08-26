@@ -51,6 +51,14 @@ void test_ellipse_names_and_parameters()
             "ellipse duplicate should use the next ellipse name");
 }
 
+void test_default_fill_rule_is_even_odd()
+{
+    rosettelab::document::Document document;
+    const auto& layer = document.add_polar_rose();
+    require(layer.appearance.fill_rule == rosettelab::document::FillRule::EvenOdd,
+            "new layers should default to the even-odd fill rule");
+}
+
 void test_trochoid_names_and_parameters()
 {
     rosettelab::document::Document document;
@@ -166,6 +174,7 @@ int main()
     try {
         test_default_names_and_stable_ids();
         test_ellipse_names_and_parameters();
+        test_default_fill_rule_is_even_odd();
         test_trochoid_names_and_parameters();
         test_custom_name_and_layer_state();
         test_layer_reordering();

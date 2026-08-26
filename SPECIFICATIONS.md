@@ -269,7 +269,7 @@ Disabling Stroke removes the contour from the canvas, thumbnails, SVG rendering,
 
 - none or color;
 - opacity from 0 to 100%;
-- fill rule: `nonzero` or `evenodd`.
+- fill rule: `nonzero` or `evenodd`, with `evenodd` selected by default for every new layer.
 
 ### 8.3 Color input
 
