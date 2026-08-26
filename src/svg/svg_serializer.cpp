@@ -207,6 +207,21 @@ void write_lissajous(std::ostringstream& output, const document::CurveLayer& lay
     write_rendered_path(output, path, layer.appearance);
 }
 
+void write_harmonograph(std::ostringstream& output, const document::CurveLayer& layer)
+{
+    const auto* p=std::get_if<curves::HarmonographParameters>(&layer.parameters);
+    if (p==nullptr) throw std::invalid_argument("Harmonograph layer has incompatible parameters");
+    const auto path=curves::generate_harmonograph_bezier(*p,p->bezier_tolerance);
+    output << "    <rosettelab:curve"
+           << " amplitude-x=\"" << number(p->amplitude_x) << "\" amplitude-y=\"" << number(p->amplitude_y) << "\""
+           << " frequency-x=\"" << number(p->frequency_x) << "\" frequency-y=\"" << number(p->frequency_y) << "\""
+           << " phase-x-degrees=\"" << number(p->phase_x_degrees) << "\" phase-y-degrees=\"" << number(p->phase_y_degrees) << "\""
+           << " damping-x=\"" << number(p->damping_x) << "\" damping-y=\"" << number(p->damping_y) << "\""
+           << " duration=\"" << number(p->duration) << "\" rotation-degrees=\"" << number(p->rotation_degrees) << "\""
+           << " bezier-tolerance=\"" << number(p->bezier_tolerance) << "\"/>\n";
+    write_rendered_path(output,path,layer.appearance);
+}
+
 const char* curve_type_id(const document::CurveType type)
 {
     switch (type) {
@@ -215,6 +230,7 @@ const char* curve_type_id(const document::CurveType type)
     case document::CurveType::Hypotrochoid: return "hypotrochoid";
     case document::CurveType::Epitrochoid: return "epitrochoid";
     case document::CurveType::Lissajous: return "lissajous";
+    case document::CurveType::Harmonograph: return "harmonograph";
     default: throw std::invalid_argument("Unsupported curve type for SVG export");
     }
 }
@@ -276,6 +292,8 @@ std::string serialize_rosettelab_svg(
             write_trochoid(output, layer);
         } else if (layer.type == document::CurveType::Lissajous) {
             write_lissajous(output, layer);
+        } else if (layer.type == document::CurveType::Harmonograph) {
+            write_harmonograph(output, layer);
         }
         output << "  </g>\n";
     }

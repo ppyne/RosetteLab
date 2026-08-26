@@ -4,13 +4,13 @@ RosetteLab is a desktop application for designing, layering, editing, and export
 
 It combines a live drawing canvas, an editable layer stack, and curve-specific controls. Unlike a one-shot SVG generator, RosetteLab preserves every layer's mathematical parameters inside the SVG so a composition can be reopened and edited later.
 
-## Planned curve families
+## Implemented curve families
 
 - Polar roses
 - Ellipses
 - Hypotrochoids and epitrochoids
 - Lissajous curves
-- Harmonographs
+- two-axis damped harmonographs
 
 The equations and the meaning of their parameters will be shown in the interface and documented.
 

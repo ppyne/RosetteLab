@@ -42,6 +42,7 @@ private:
     void add_ellipse();
     void add_trochoid(document::CurveType type);
     void add_lissajous();
+    void add_harmonograph();
     void new_document();
     void open_file();
     void open_document(const QString& path);
@@ -132,6 +133,18 @@ private:
     QDoubleSpinBox* lissajous_phase_y_{};
     QDoubleSpinBox* lissajous_rotation_{};
     QDoubleSpinBox* lissajous_tolerance_{};
+    QGroupBox* harmonograph_group_{};
+    QDoubleSpinBox* harmonograph_amplitude_x_{};
+    QDoubleSpinBox* harmonograph_amplitude_y_{};
+    QDoubleSpinBox* harmonograph_frequency_x_{};
+    QDoubleSpinBox* harmonograph_frequency_y_{};
+    QDoubleSpinBox* harmonograph_phase_x_{};
+    QDoubleSpinBox* harmonograph_phase_y_{};
+    QDoubleSpinBox* harmonograph_damping_x_{};
+    QDoubleSpinBox* harmonograph_damping_y_{};
+    QDoubleSpinBox* harmonograph_duration_{};
+    QDoubleSpinBox* harmonograph_rotation_{};
+    QDoubleSpinBox* harmonograph_tolerance_{};
     QGroupBox* appearance_group_{};
     QCheckBox* stroke_enabled_{};
     ColorPreviewButton* stroke_color_button_{};

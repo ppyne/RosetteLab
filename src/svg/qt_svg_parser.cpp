@@ -185,6 +185,21 @@ void parse_curve_metadata(
     p.bezier_tolerance = parse_double(required_attribute(attributes, "bezier-tolerance"), "bezier-tolerance");
 }
 
+void parse_curve_metadata(const QXmlStreamAttributes& a, curves::HarmonographParameters& p)
+{
+    p.amplitude_x=parse_double(required_attribute(a,"amplitude-x"),"amplitude-x");
+    p.amplitude_y=parse_double(required_attribute(a,"amplitude-y"),"amplitude-y");
+    p.frequency_x=parse_double(required_attribute(a,"frequency-x"),"frequency-x");
+    p.frequency_y=parse_double(required_attribute(a,"frequency-y"),"frequency-y");
+    p.phase_x_degrees=parse_double(required_attribute(a,"phase-x-degrees"),"phase-x-degrees");
+    p.phase_y_degrees=parse_double(required_attribute(a,"phase-y-degrees"),"phase-y-degrees");
+    p.damping_x=parse_double(required_attribute(a,"damping-x"),"damping-x");
+    p.damping_y=parse_double(required_attribute(a,"damping-y"),"damping-y");
+    p.duration=parse_double(required_attribute(a,"duration"),"duration");
+    p.rotation_degrees=parse_double(required_attribute(a,"rotation-degrees"),"rotation-degrees");
+    p.bezier_tolerance=parse_double(required_attribute(a,"bezier-tolerance"),"bezier-tolerance");
+}
+
 void parse_path_appearance(
     const QXmlStreamAttributes& attributes,
     const QString& metadata_ns,
@@ -229,6 +244,7 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
     else if (type == "hypotrochoid") layer.type = document::CurveType::Hypotrochoid;
     else if (type == "epitrochoid") layer.type = document::CurveType::Epitrochoid;
     else if (type == "lissajous") layer.type = document::CurveType::Lissajous;
+    else if (type == "harmonograph") layer.type = document::CurveType::Harmonograph;
     else throw parse_error("Unsupported RosetteLab curve type");
     layer.visible = parse_boolean(
         required_metadata_attribute(group_attributes, metadata_ns, "visible"), "visible");
@@ -242,6 +258,8 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
         parameters = curves::EllipseParameters{};
     } else if (layer.type == document::CurveType::Lissajous) {
         parameters = curves::LissajousParameters{};
+    } else if (layer.type == document::CurveType::Harmonograph) {
+        parameters = curves::HarmonographParameters{};
     } else {
         parameters = curves::TrochoidParameters{};
     }

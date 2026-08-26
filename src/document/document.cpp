@@ -91,6 +91,17 @@ CurveLayer& Document::add_lissajous(
     return layers_.back();
 }
 
+CurveLayer& Document::add_harmonograph(
+    const curves::HarmonographParameters& parameters,
+    std::optional<std::string> name)
+{
+    const auto default_name = next_default_name(CurveType::Harmonograph);
+    if (!name.has_value() || name->empty()) name = default_name;
+    layers_.push_back({next_id_++, std::move(*name), CurveType::Harmonograph,
+                       parameters, true, false, {}});
+    return layers_.back();
+}
+
 std::string Document::suggested_default_name(const CurveType type) const
 {
     const auto index = static_cast<std::size_t>(type);
@@ -142,6 +153,8 @@ bool Document::import_layer(CurveLayer layer)
          std::holds_alternative<curves::EllipseParameters>(layer.parameters)) ||
         (layer.type == CurveType::Lissajous &&
          std::holds_alternative<curves::LissajousParameters>(layer.parameters)) ||
+        (layer.type == CurveType::Harmonograph &&
+         std::holds_alternative<curves::HarmonographParameters>(layer.parameters)) ||
         ((layer.type == CurveType::Hypotrochoid || layer.type == CurveType::Epitrochoid) &&
          std::holds_alternative<curves::TrochoidParameters>(layer.parameters));
     if (!compatible) {

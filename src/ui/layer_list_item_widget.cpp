@@ -80,6 +80,9 @@ core::BezierPath layer_path(const document::CurveLayer& layer)
     if (const auto* parameters = std::get_if<curves::LissajousParameters>(&layer.parameters)) {
         return curves::generate_lissajous_bezier(*parameters, parameters->bezier_tolerance);
     }
+    if (const auto* parameters = std::get_if<curves::HarmonographParameters>(&layer.parameters)) {
+        return curves::generate_harmonograph_bezier(*parameters, parameters->bezier_tolerance);
+    }
     return {};
 }
 

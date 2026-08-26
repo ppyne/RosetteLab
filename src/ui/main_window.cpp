@@ -304,6 +304,32 @@ MainWindow::MainWindow(QWidget* parent)
     lissajous_group_->hide();
     parameters_layout->addWidget(lissajous_group_);
 
+    harmonograph_group_ = new QGroupBox("Harmonograph parameters", parameters_panel);
+    auto* harmonograph_form = new QFormLayout(harmonograph_group_);
+    harmonograph_amplitude_x_=new QDoubleSpinBox(harmonograph_group_);
+    harmonograph_amplitude_y_=new QDoubleSpinBox(harmonograph_group_);
+    for (auto* c : {harmonograph_amplitude_x_,harmonograph_amplitude_y_}) { c->setRange(0.01,100000.0); c->setValue(80.0); }
+    harmonograph_frequency_x_=new QDoubleSpinBox(harmonograph_group_);
+    harmonograph_frequency_y_=new QDoubleSpinBox(harmonograph_group_);
+    for (auto* c : {harmonograph_frequency_x_,harmonograph_frequency_y_}) { c->setRange(0.001,1000.0); c->setDecimals(4); }
+    harmonograph_frequency_x_->setValue(3.0); harmonograph_frequency_y_->setValue(2.0);
+    harmonograph_phase_x_=angle_control(harmonograph_group_); harmonograph_phase_x_->setValue(90.0);
+    harmonograph_phase_y_=angle_control(harmonograph_group_);
+    harmonograph_damping_x_=new QDoubleSpinBox(harmonograph_group_);
+    harmonograph_damping_y_=new QDoubleSpinBox(harmonograph_group_);
+    for (auto* c : {harmonograph_damping_x_,harmonograph_damping_y_}) { c->setRange(0.0,10.0); c->setDecimals(4); c->setSingleStep(0.001); }
+    harmonograph_damping_x_->setValue(0.015); harmonograph_damping_y_->setValue(0.010);
+    harmonograph_duration_=new QDoubleSpinBox(harmonograph_group_); harmonograph_duration_->setRange(0.01,10000.0); harmonograph_duration_->setValue(40.0);
+    harmonograph_rotation_=angle_control(harmonograph_group_);
+    harmonograph_tolerance_=new QDoubleSpinBox(harmonograph_group_); harmonograph_tolerance_->setRange(0.001,10.0); harmonograph_tolerance_->setDecimals(3); harmonograph_tolerance_->setValue(0.05); harmonograph_tolerance_->setSuffix(" units");
+    harmonograph_form->addRow("Amplitude X",harmonograph_amplitude_x_); harmonograph_form->addRow("Amplitude Y",harmonograph_amplitude_y_);
+    harmonograph_form->addRow("Frequency X",harmonograph_frequency_x_); harmonograph_form->addRow("Frequency Y",harmonograph_frequency_y_);
+    harmonograph_form->addRow("Phase X",harmonograph_phase_x_); harmonograph_form->addRow("Phase Y",harmonograph_phase_y_);
+    harmonograph_form->addRow("Damping X",harmonograph_damping_x_); harmonograph_form->addRow("Damping Y",harmonograph_damping_y_);
+    harmonograph_form->addRow("Duration",harmonograph_duration_); harmonograph_form->addRow("Rotation",harmonograph_rotation_);
+    harmonograph_form->addRow("Curve tolerance",harmonograph_tolerance_);
+    harmonograph_group_->hide(); parameters_layout->addWidget(harmonograph_group_);
+
     appearance_group_ = new QGroupBox("Appearance", parameters_panel);
     auto* appearance_form = new QFormLayout(appearance_group_);
     stroke_enabled_ = new QCheckBox("Enabled", appearance_group_);
@@ -392,9 +418,7 @@ MainWindow::MainWindow(QWidget* parent)
         add_trochoid(document::CurveType::Epitrochoid);
     });
     add_menu->addAction("Lissajous", this, [this] { add_lissajous(); });
-    for (const auto* unavailable : {"Harmonograph"}) {
-        add_menu->addAction(unavailable)->setEnabled(false);
-    }
+    add_menu->addAction("Harmonograph", this, [this] { add_harmonograph(); });
     add_button->setMenu(add_menu);
     layers_layout->addWidget(add_button);
 
@@ -463,6 +487,8 @@ MainWindow::MainWindow(QWidget* parent)
     connect(lissajous_phase_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(lissajous_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
     connect(lissajous_tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    for (auto* control : {harmonograph_amplitude_x_,harmonograph_amplitude_y_,harmonograph_frequency_x_,harmonograph_frequency_y_,harmonograph_phase_x_,harmonograph_phase_y_,harmonograph_damping_x_,harmonograph_damping_y_,harmonograph_duration_,harmonograph_rotation_,harmonograph_tolerance_})
+        connect(control,&QDoubleSpinBox::valueChanged,this,[this]{ update_preview(); });
     connect(stroke_color_button_, &QPushButton::clicked, this, [this] { choose_stroke_color(); });
     connect(fill_color_button_, &QPushButton::clicked, this, [this] { choose_fill_color(); });
     connect(stroke_enabled_, &QCheckBox::toggled, this, [this] { update_appearance(); });
@@ -1013,6 +1039,16 @@ void MainWindow::add_lissajous()
     mark_document_modified();
 }
 
+void MainWindow::add_harmonograph()
+{
+    const auto suggested=QString::fromStdString(document_.suggested_default_name(document::CurveType::Harmonograph));
+    bool accepted=false;
+    const auto name=QInputDialog::getText(this,"New Harmonograph curve","Layer name",QLineEdit::Normal,suggested,&accepted).trimmed();
+    if (!accepted||name.isEmpty()) return;
+    auto& layer=document_.add_harmonograph({},name.toStdString());
+    auto* item=add_layer_row(layer); layers_->setCurrentItem(item); preview_->update(); mark_document_modified();
+}
+
 QListWidgetItem* MainWindow::add_layer_row(const document::CurveLayer& layer, const int row)
 {
     auto* item = new QListWidgetItem;
@@ -1074,10 +1110,12 @@ void MainWindow::load_active_layer()
     const auto* ellipse_parameters = std::get_if<curves::EllipseParameters>(&layer->parameters);
     const auto* trochoid_parameters = std::get_if<curves::TrochoidParameters>(&layer->parameters);
     const auto* lissajous_parameters = std::get_if<curves::LissajousParameters>(&layer->parameters);
+    const auto* harmonograph_parameters = std::get_if<curves::HarmonographParameters>(&layer->parameters);
     curve_group_->setVisible(parameters != nullptr);
     ellipse_group_->setVisible(ellipse_parameters != nullptr);
     trochoid_group_->setVisible(trochoid_parameters != nullptr);
     lissajous_group_->setVisible(lissajous_parameters != nullptr);
+    harmonograph_group_->setVisible(harmonograph_parameters != nullptr);
 
     const QSignalBlocker radius_blocker(radius_);
     const QSignalBlocker k_mode_blocker(k_mode_);
@@ -1108,6 +1146,7 @@ void MainWindow::load_active_layer()
     const QSignalBlocker liss_py_blocker(lissajous_phase_y_);
     const QSignalBlocker liss_rotation_blocker(lissajous_rotation_);
     const QSignalBlocker liss_tolerance_blocker(lissajous_tolerance_);
+    const QSignalBlocker harm_ax(harmonograph_amplitude_x_),harm_ay(harmonograph_amplitude_y_),harm_fx(harmonograph_frequency_x_),harm_fy(harmonograph_frequency_y_),harm_px(harmonograph_phase_x_),harm_py(harmonograph_phase_y_),harm_dx(harmonograph_damping_x_),harm_dy(harmonograph_damping_y_),harm_duration(harmonograph_duration_),harm_rotation(harmonograph_rotation_),harm_tolerance(harmonograph_tolerance_);
     const QSignalBlocker stroke_enabled_blocker(stroke_enabled_);
     const QSignalBlocker stroke_width_blocker(stroke_width_);
     const QSignalBlocker fill_enabled_blocker(fill_enabled_);
@@ -1148,6 +1187,12 @@ void MainWindow::load_active_layer()
         lissajous_phase_y_->setValue(lissajous_parameters->phase_y_degrees);
         lissajous_rotation_->setValue(lissajous_parameters->rotation_degrees);
         lissajous_tolerance_->setValue(lissajous_parameters->bezier_tolerance);
+    } else if (harmonograph_parameters != nullptr) {
+        harmonograph_amplitude_x_->setValue(harmonograph_parameters->amplitude_x); harmonograph_amplitude_y_->setValue(harmonograph_parameters->amplitude_y);
+        harmonograph_frequency_x_->setValue(harmonograph_parameters->frequency_x); harmonograph_frequency_y_->setValue(harmonograph_parameters->frequency_y);
+        harmonograph_phase_x_->setValue(harmonograph_parameters->phase_x_degrees); harmonograph_phase_y_->setValue(harmonograph_parameters->phase_y_degrees);
+        harmonograph_damping_x_->setValue(harmonograph_parameters->damping_x); harmonograph_damping_y_->setValue(harmonograph_parameters->damping_y);
+        harmonograph_duration_->setValue(harmonograph_parameters->duration); harmonograph_rotation_->setValue(harmonograph_parameters->rotation_degrees); harmonograph_tolerance_->setValue(harmonograph_parameters->bezier_tolerance);
     }
     stroke_color_ = qcolor_from_rgba(layer->appearance.stroke);
     fill_color_ = qcolor_from_rgba(layer->appearance.fill);
@@ -1324,6 +1369,7 @@ void MainWindow::refresh_layer_actions()
     ellipse_group_->setEnabled(has_layer && !layer->locked);
     trochoid_group_->setEnabled(has_layer && !layer->locked);
     lissajous_group_->setEnabled(has_layer && !layer->locked);
+    harmonograph_group_->setEnabled(has_layer && !layer->locked);
     appearance_group_->setEnabled(has_layer && !layer->locked);
 }
 
@@ -1413,6 +1459,12 @@ void MainWindow::update_preview()
         parameters->phase_y_degrees = lissajous_phase_y_->value();
         parameters->rotation_degrees = lissajous_rotation_->value();
         parameters->bezier_tolerance = lissajous_tolerance_->value();
+    } else if (auto* parameters = std::get_if<curves::HarmonographParameters>(&layer->parameters)) {
+        parameters->amplitude_x=harmonograph_amplitude_x_->value(); parameters->amplitude_y=harmonograph_amplitude_y_->value();
+        parameters->frequency_x=harmonograph_frequency_x_->value(); parameters->frequency_y=harmonograph_frequency_y_->value();
+        parameters->phase_x_degrees=harmonograph_phase_x_->value(); parameters->phase_y_degrees=harmonograph_phase_y_->value();
+        parameters->damping_x=harmonograph_damping_x_->value(); parameters->damping_y=harmonograph_damping_y_->value();
+        parameters->duration=harmonograph_duration_->value(); parameters->rotation_degrees=harmonograph_rotation_->value(); parameters->bezier_tolerance=harmonograph_tolerance_->value();
     }
     refresh_layer_preview(active_layer_id_);
     preview_->update();

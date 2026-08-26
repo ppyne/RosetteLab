@@ -214,9 +214,14 @@ x(t)=A_x\sin(f_x t+\phi_x)e^{-d_x t}
 y(t)=A_y\sin(f_y t+\phi_y)e^{-d_y t}
 ]
 
-Parameters include amplitudes, frequencies, phases, damping factors, duration, and precision.
+Parameters include amplitudes, positive real-valued frequencies, phases, non-negative
+damping factors, trace duration, angular rotation, and adaptive Bézier tolerance in
+document units. The initial harmonograph trace is deliberately open: duration ends
+the physical drawing process and the serializer must not add an artificial closing
+segment. It is rendered as adaptive cubic Bézier segments and all parameters are
+stored in RosetteLab SVG metadata for lossless reopening and editing.
 
-More complete multi-pendulum models are explicitly deferred.
+More complete multi-pendulum models and harmonograph presets are explicitly deferred.
 
 ## 6. Presets
 
