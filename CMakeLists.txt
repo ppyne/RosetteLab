@@ -59,7 +59,10 @@ if(ROSETTELAB_BUILD_GUI)
         endif()
 
         if(APPLE)
-            list(APPEND ROSETTELAB_APP_SOURCES icons/macOS/RosetteLab.icns)
+            list(APPEND ROSETTELAB_APP_SOURCES
+                icons/macOS/RosetteLab.icns
+                LICENSE
+            )
         endif()
 
         add_executable(rosettelab WIN32 MACOSX_BUNDLE ${ROSETTELAB_APP_SOURCES})
@@ -86,7 +89,10 @@ if(ROSETTELAB_BUILD_GUI)
         endif()
 
         if(APPLE)
-            set_source_files_properties(icons/macOS/RosetteLab.icns PROPERTIES
+            set_source_files_properties(
+                icons/macOS/RosetteLab.icns
+                LICENSE
+                PROPERTIES
                 MACOSX_PACKAGE_LOCATION "Resources"
             )
         endif()
@@ -182,6 +188,7 @@ set(CPACK_PACKAGE_CONTACT "https://github.com/ppyne/RosetteLab")
 if(APPLE)
     set(CPACK_GENERATOR "DragNDrop")
     set(CPACK_DMG_VOLUME_NAME "RosetteLab ${PROJECT_VERSION}")
+    set(CPACK_DMG_SLA_USE_RESOURCE_FILE_LICENSE OFF)
 elseif(WIN32)
     set(CPACK_GENERATOR "NSIS;ZIP")
     set(CPACK_NSIS_DISPLAY_NAME "RosetteLab")
