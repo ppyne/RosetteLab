@@ -163,6 +163,14 @@ Initial parameters:
 
 The mathematical meaning of k, including the odd/even petal behavior, must be documented in the interface help. Decimal approximations such as 0.33 must never be silently interpreted as the exact fraction 1/3. RosetteLab must not forcibly close an incomplete decimal trace.
 
+The built-in Polar rose catalogue includes neutral mathematical starting points
+with radius 100, zero phase, and zero rotation: decimal `k = 2` and `k = 3`, plus
+the exact fractions `1/2`, `3/2`, `5/2`, `7/2`, `1/3`, `2/3`, `4/3`, `5/3`,
+`7/3`, `1/4`, `2/4`, `3/4`, `5/4`, `6/4`, and `7/4`. Fractions are retained
+exactly as selected, including reducible forms such as `2/4` and `6/4`, so the
+interface can present the requested numerator and denominator rather than only
+their reduced mathematical value.
+
 Closed roses are generated over their smallest exact closing period. An odd integer
 `k` uses \(\pi\), while an even integer `k` uses \(2\pi\). More generally, a reduced
 fraction `n/d` uses \(d\pi\) when both integers are odd and \(2d\pi\) otherwise.

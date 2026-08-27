@@ -38,11 +38,15 @@ int main(int argc, char** argv)
     auto* circular_angle=window.findChild<QDoubleSpinBox*>("copyCircularAngleField");
     auto* distribute_copies=window.findChild<QPushButton*>("distributeCopiesButton");
     auto* polar_k=window.findChild<QDoubleSpinBox*>("polarKField");
+    auto* polar_k_mode=window.findChild<QComboBox*>("polarKModeSelector");
+    auto* polar_numerator=window.findChild<QSpinBox*>("polarNumeratorField");
+    auto* polar_denominator=window.findChild<QSpinBox*>("polarDenominatorField");
     auto* restore_preset=window.findChild<QPushButton*>("restorePresetButton");
     if (undo==nullptr || redo==nullptr || transform_x==nullptr || transform_y==nullptr ||
         reset_transform==nullptr ||
         copy_count==nullptr || reset_copies==nullptr || copy_arrangement==nullptr ||
         circular_angle==nullptr || distribute_copies==nullptr || polar_k==nullptr ||
+        polar_k_mode==nullptr || polar_numerator==nullptr || polar_denominator==nullptr ||
         restore_preset==nullptr) {
         std::cerr << "Undo/Redo test controls were not initialized\n";
         return 1;
@@ -115,6 +119,28 @@ int main(int argc, char** argv)
     redo->trigger();
     if (polar_k->value()!=7.0 || selector->currentData().toString()!="rose-seven") {
         std::cerr << "Restore preset was not redone as one operation\n";
+        return 1;
+    }
+
+    constexpr const char* requested_polar_presets[] = {
+        "rose-decimal-2", "rose-decimal-3",
+        "rose-fraction-1-2", "rose-fraction-3-2", "rose-fraction-5-2", "rose-fraction-7-2",
+        "rose-fraction-1-3", "rose-fraction-2-3", "rose-fraction-4-3", "rose-fraction-5-3", "rose-fraction-7-3",
+        "rose-fraction-1-4", "rose-fraction-2-4", "rose-fraction-3-4", "rose-fraction-5-4", "rose-fraction-6-4", "rose-fraction-7-4",
+    };
+    for (const auto* preset_id : requested_polar_presets) {
+        if (selector->findData(preset_id)<0) {
+            std::cerr << "Requested Polar rose preset was not registered: " << preset_id << '\n';
+            return 1;
+        }
+    }
+    const int fraction_preset=selector->findData("rose-fraction-7-4");
+    selector->setCurrentIndex(fraction_preset);
+    if (polar_k_mode->currentData().toInt()!=
+            static_cast<int>(rosettelab::curves::PolarKMode::Fraction) ||
+        polar_numerator->value()!=7 || polar_denominator->value()!=4 ||
+        polar_k->value()!=1.75) {
+        std::cerr << "Fraction k = 7/4 preset did not populate its fields\n";
         return 1;
     }
     return 0;

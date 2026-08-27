@@ -204,6 +204,7 @@ MainWindow::MainWindow(QWidget* parent)
     radius_->setDecimals(2);
 
     k_mode_ = new QComboBox(curve_group_);
+    k_mode_->setObjectName("polarKModeSelector");
     k_mode_->addItem("Decimal", static_cast<int>(curves::PolarKMode::Decimal));
     k_mode_->addItem("Fraction", static_cast<int>(curves::PolarKMode::Fraction));
 
@@ -214,9 +215,11 @@ MainWindow::MainWindow(QWidget* parent)
     k_->setDecimals(3);
 
     numerator_ = new QSpinBox(curve_group_);
+    numerator_->setObjectName("polarNumeratorField");
     numerator_->setRange(1, 10000);
     numerator_->setValue(7);
     denominator_ = new QSpinBox(curve_group_);
+    denominator_->setObjectName("polarDenominatorField");
     denominator_->setRange(1, 10000);
     denominator_->setValue(1);
 
@@ -2039,7 +2042,25 @@ void MainWindow::refresh_preset_choices()
     switch (layer->type) {
     case document::CurveType::PolarRose:
         add("Sevenfold garden","rose-seven"); add("Prime lace 11","rose-eleven");
-        add("Compass bloom","rose-compass"); add("Solar flower 32","rose-solar"); break;
+        add("Compass bloom","rose-compass"); add("Solar flower 32","rose-solar");
+        add("Decimal k = 2","rose-decimal-2");
+        add("Decimal k = 3","rose-decimal-3");
+        add("Fraction k = 1/2","rose-fraction-1-2");
+        add("Fraction k = 3/2","rose-fraction-3-2");
+        add("Fraction k = 5/2","rose-fraction-5-2");
+        add("Fraction k = 7/2","rose-fraction-7-2");
+        add("Fraction k = 1/3","rose-fraction-1-3");
+        add("Fraction k = 2/3","rose-fraction-2-3");
+        add("Fraction k = 4/3","rose-fraction-4-3");
+        add("Fraction k = 5/3","rose-fraction-5-3");
+        add("Fraction k = 7/3","rose-fraction-7-3");
+        add("Fraction k = 1/4","rose-fraction-1-4");
+        add("Fraction k = 2/4","rose-fraction-2-4");
+        add("Fraction k = 3/4","rose-fraction-3-4");
+        add("Fraction k = 5/4","rose-fraction-5-4");
+        add("Fraction k = 6/4","rose-fraction-6-4");
+        add("Fraction k = 7/4","rose-fraction-7-4");
+        break;
     case document::CurveType::Ellipse:
         add("Perfect circle","ellipse-circle"); add("Golden ellipse","ellipse-golden");
         add("Tilted medallion","ellipse-tilted"); add("Needle orbit","ellipse-needle"); break;
@@ -2077,7 +2098,24 @@ void MainWindow::apply_selected_preset()
     applying_preset_=true;
     const bool was_tracking_document_changes = track_document_changes_;
     track_document_changes_ = false;
-    if (id=="rose-seven") { k_mode_->setCurrentIndex(0); radius_->setValue(100); k_->setValue(7); phase_->setValue(0); rotation_->setValue(0); }
+    if (id.startsWith("rose-decimal-")) {
+        const auto value = id.mid(QString("rose-decimal-").size()).toDouble();
+        k_mode_->setCurrentIndex(k_mode_->findData(static_cast<int>(curves::PolarKMode::Decimal)));
+        radius_->setValue(100); k_->setValue(value);
+        numerator_->setValue(static_cast<int>(value)); denominator_->setValue(1);
+        phase_->setValue(0); rotation_->setValue(0);
+    } else if (id.startsWith("rose-fraction-")) {
+        const auto parts = id.mid(QString("rose-fraction-").size()).split('-');
+        if (parts.size()==2) {
+            const int numerator = parts[0].toInt();
+            const int denominator = parts[1].toInt();
+            k_mode_->setCurrentIndex(k_mode_->findData(static_cast<int>(curves::PolarKMode::Fraction)));
+            radius_->setValue(100);
+            k_->setValue(static_cast<double>(numerator)/static_cast<double>(denominator));
+            numerator_->setValue(numerator); denominator_->setValue(denominator);
+            phase_->setValue(0); rotation_->setValue(0);
+        }
+    } else if (id=="rose-seven") { k_mode_->setCurrentIndex(0); radius_->setValue(100); k_->setValue(7); phase_->setValue(0); rotation_->setValue(0); }
     else if (id=="rose-eleven") { k_mode_->setCurrentIndex(0); radius_->setValue(100); k_->setValue(11); phase_->setValue(8); rotation_->setValue(0); }
     else if (id=="rose-compass") { k_mode_->setCurrentIndex(0); radius_->setValue(95); k_->setValue(4); phase_->setValue(0); rotation_->setValue(22.5); }
     else if (id=="rose-solar") { k_mode_->setCurrentIndex(0); radius_->setValue(100); k_->setValue(16); phase_->setValue(5.625); rotation_->setValue(0); }
