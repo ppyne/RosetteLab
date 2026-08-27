@@ -1,5 +1,6 @@
 #include "rosettelab/curves/polar_rose.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <functional>
 #include <numeric>

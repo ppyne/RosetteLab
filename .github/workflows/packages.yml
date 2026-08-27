@@ -12,6 +12,8 @@ on:
       - ".github/workflows/packages.yml"
       - "icons/**"
       - "packaging/**"
+      - "include/**"
+      - "src/**"
 
 permissions:
   contents: read
