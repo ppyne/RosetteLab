@@ -14,6 +14,7 @@ on:
       - "packaging/**"
       - "include/**"
       - "src/**"
+      - "tests/**"
 
 permissions:
   contents: read
