@@ -99,6 +99,11 @@ manually from GitHub Actions. Pushing a tag such as `v0.1.0` creates a GitHub
 release and attaches every generated package. The packages include the required
 Qt runtime libraries and platform plugins.
 
+CI macOS bundles are ad hoc signed for internal consistency but are not notarized.
+A public macOS release without Gatekeeper warnings requires an Apple Developer ID
+certificate and notarization. Windows Authenticode signing is likewise deferred
+until the project has its own signing certificate.
+
 ## Status
 
 The project is under active development. The Qt application shell, editable layer model, polar-rose, ellipse, hypotrochoid, and epitrochoid Bézier rendering, appearance controls, and native SVG metadata round-tripping are implemented.

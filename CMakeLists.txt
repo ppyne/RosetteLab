@@ -89,10 +89,21 @@ if(ROSETTELAB_BUILD_GUI)
             RUNTIME DESTINATION bin
         )
 
+        set(rosettelab_deploy_arguments)
+        if(APPLE AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7)
+            # Keep test bundles internally consistent after macdeployqt copies
+            # the Qt frameworks and plugins. Public releases still require a
+            # Developer ID signature and Apple notarization.
+            list(APPEND rosettelab_deploy_arguments
+                DEPLOY_TOOL_OPTIONS "-codesign=-"
+            )
+        endif()
+
         qt_generate_deploy_app_script(
             TARGET rosettelab
             OUTPUT_SCRIPT rosettelab_deploy_script
             NO_UNSUPPORTED_PLATFORM_ERROR
+            ${rosettelab_deploy_arguments}
         )
         install(SCRIPT ${rosettelab_deploy_script})
 

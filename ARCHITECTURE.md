@@ -258,9 +258,10 @@ Packaging accounts for:
 - library relocation;
 - code signing and notarization when distribution begins.
 
-Unsigned CI packages are suitable for testing. Apple notarization and Windows
-Authenticode signing require project-owned certificates and remain a release
-infrastructure milestone.
+CI macOS bundles receive an ad hoc signature after Qt deployment so their bundle
+contents remain internally consistent. They are not notarized. Apple Developer ID
+signing/notarization and Windows Authenticode signing require project-owned
+certificates and remain a release-infrastructure milestone.
 
 ## 13. Open technical decisions
 

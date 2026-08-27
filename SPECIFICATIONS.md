@@ -478,9 +478,10 @@ Preview and all export formats use the same fitted curve geometry. Raster export
 - Supported desktop targets: macOS, Windows, and Linux.
 - Native package builds are automated by a GitHub Actions matrix and use the
   platform-specific icon supplied in the repository.
-- Test distributions are unsigned. Apple notarization and Windows Authenticode
-  signing remain release-infrastructure work because they require project-owned
-  certificates.
+- Test distributions are not notarized. macOS test bundles receive an ad hoc
+  signature after Qt deployment to preserve bundle integrity. Apple Developer ID
+  signing/notarization and Windows Authenticode signing remain release-
+  infrastructure work because they require project-owned certificates.
 
 Platform-specific native widgets should be avoided unless isolated behind an abstraction.
 
