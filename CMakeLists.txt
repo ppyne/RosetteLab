@@ -79,6 +79,13 @@ if(ROSETTELAB_BUILD_GUI)
         )
 
         if(APPLE)
+            set_target_properties(rosettelab PROPERTIES
+                BUILD_RPATH "@executable_path/../Frameworks"
+                INSTALL_RPATH "@executable_path/../Frameworks"
+            )
+        endif()
+
+        if(APPLE)
             set_source_files_properties(icons/macOS/RosetteLab.icns PROPERTIES
                 MACOSX_PACKAGE_LOCATION "Resources"
             )
