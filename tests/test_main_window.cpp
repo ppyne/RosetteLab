@@ -30,6 +30,7 @@ int main(int argc, char** argv)
     auto* undo=window.findChild<QAction*>("undoAction");
     auto* redo=window.findChild<QAction*>("redoAction");
     auto* transform_x=window.findChild<QDoubleSpinBox*>("transformXField");
+    auto* transform_y=window.findChild<QDoubleSpinBox*>("transformYField");
     auto* reset_transform=window.findChild<QPushButton*>("resetTransformButton");
     auto* copy_count=window.findChild<QSpinBox*>("copyCountField");
     auto* reset_copies=window.findChild<QPushButton*>("resetCopiesButton");
@@ -38,7 +39,8 @@ int main(int argc, char** argv)
     auto* distribute_copies=window.findChild<QPushButton*>("distributeCopiesButton");
     auto* polar_k=window.findChild<QDoubleSpinBox*>("polarKField");
     auto* restore_preset=window.findChild<QPushButton*>("restorePresetButton");
-    if (undo==nullptr || redo==nullptr || transform_x==nullptr || reset_transform==nullptr ||
+    if (undo==nullptr || redo==nullptr || transform_x==nullptr || transform_y==nullptr ||
+        reset_transform==nullptr ||
         copy_count==nullptr || reset_copies==nullptr || copy_arrangement==nullptr ||
         circular_angle==nullptr || distribute_copies==nullptr || polar_k==nullptr ||
         restore_preset==nullptr) {
@@ -46,6 +48,8 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    transform_x->setValue(10.0);
+    transform_x->setValue(20.0);
     transform_x->setValue(25.0);
     undo->trigger();
     if (transform_x->value()!=0.0) {
@@ -55,6 +59,18 @@ int main(int argc, char** argv)
     redo->trigger();
     if (transform_x->value()!=25.0) {
         std::cerr << "Layer transform edit was not redone\n";
+        return 1;
+    }
+    transform_x->setValue(30.0);
+    transform_y->setValue(15.0);
+    undo->trigger();
+    if (transform_x->value()!=30.0 || transform_y->value()!=0.0) {
+        std::cerr << "Changes to distinct transform properties were incorrectly coalesced\n";
+        return 1;
+    }
+    undo->trigger();
+    if (transform_x->value()!=25.0) {
+        std::cerr << "Continuous transform series did not retain its preceding history state\n";
         return 1;
     }
     reset_transform->click();

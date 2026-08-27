@@ -371,6 +371,7 @@ MainWindow::MainWindow(QWidget* parent)
     transform_x_ = new QDoubleSpinBox(transform_group_);
     transform_x_->setObjectName("transformXField");
     transform_y_ = new QDoubleSpinBox(transform_group_);
+    transform_y_->setObjectName("transformYField");
     for (auto* control : {transform_x_, transform_y_}) {
         control->setRange(-100000.0, 100000.0);
         control->setDecimals(3);
@@ -576,9 +577,9 @@ MainWindow::MainWindow(QWidget* parent)
     main_splitter_->setStretchFactor(2, 0);
     main_splitter_->setSizes({280, 640, 280});
 
-    connect(radius_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(page_width_, &QDoubleSpinBox::valueChanged, this, [this] { update_document_settings(); });
-    connect(page_height_, &QDoubleSpinBox::valueChanged, this, [this] { update_document_settings(); });
+    connect(radius_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.polar.radius"); });
+    connect(page_width_, &QDoubleSpinBox::valueChanged, this, [this] { update_document_settings("document.width"); });
+    connect(page_height_, &QDoubleSpinBox::valueChanged, this, [this] { update_document_settings("document.height"); });
     connect(page_background_button_, &QPushButton::clicked, this, [this] { choose_page_background(); });
     connect(reset_document_defaults_button_, &QPushButton::clicked, this, [this] { reset_document_defaults(); });
     connect(preset_, &QComboBox::currentIndexChanged, this, [this](const int index) {
@@ -589,20 +590,20 @@ MainWindow::MainWindow(QWidget* parent)
         refresh_k_mode_controls();
         update_preview();
     });
-    connect(k_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(numerator_, &QSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(denominator_, &QSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(phase_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(k_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.polar.k"); });
+    connect(numerator_, &QSpinBox::valueChanged, this, [this] { update_preview("curve.polar.numerator"); });
+    connect(denominator_, &QSpinBox::valueChanged, this, [this] { update_preview("curve.polar.denominator"); });
+    connect(phase_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.polar.phase"); });
+    connect(rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.polar.rotation"); });
+    connect(tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.polar.tolerance"); });
     connect(ellipse_radius_x_, &QDoubleSpinBox::valueChanged, this, [this] {
         if (ellipse_link_radii_->isChecked()) {
             const QSignalBlocker blocker(ellipse_radius_y_);
             ellipse_radius_y_->setValue(ellipse_radius_x_->value());
         }
-        update_preview();
+        update_preview("curve.ellipse.radius-x");
     });
-    connect(ellipse_radius_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(ellipse_radius_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.ellipse.radius-y"); });
     connect(ellipse_link_radii_, &QCheckBox::toggled, this, [this](const bool linked) {
         if (linked) {
             const QSignalBlocker blocker(ellipse_radius_y_);
@@ -611,39 +612,41 @@ MainWindow::MainWindow(QWidget* parent)
         refresh_ellipse_radius_controls();
         update_preview();
     });
-    connect(ellipse_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(ellipse_tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(trochoid_fixed_radius_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(trochoid_rolling_radius_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(trochoid_pen_offset_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(trochoid_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(ellipse_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.ellipse.rotation"); });
+    connect(ellipse_tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.ellipse.tolerance"); });
+    connect(trochoid_fixed_radius_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.trochoid.fixed-radius"); });
+    connect(trochoid_rolling_radius_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.trochoid.rolling-radius"); });
+    connect(trochoid_pen_offset_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.trochoid.pen-offset"); });
+    connect(trochoid_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.trochoid.rotation"); });
     connect(trochoid_trace_mode_, &QComboBox::currentIndexChanged, this, [this] {
         refresh_trochoid_trace_controls();
         update_preview();
     });
-    connect(trochoid_turns_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(trochoid_turns_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.trochoid.turns"); });
     connect(trochoid_close_limited_, &QCheckBox::toggled, this, [this] { update_preview(); });
-    connect(trochoid_tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(lissajous_amplitude_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(lissajous_amplitude_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(lissajous_frequency_x_, &QSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(lissajous_frequency_y_, &QSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(lissajous_phase_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(lissajous_phase_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(lissajous_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
-    connect(lissajous_tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview(); });
+    connect(trochoid_tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.trochoid.tolerance"); });
+    connect(lissajous_amplitude_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.lissajous.amplitude-x"); });
+    connect(lissajous_amplitude_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.lissajous.amplitude-y"); });
+    connect(lissajous_frequency_x_, &QSpinBox::valueChanged, this, [this] { update_preview("curve.lissajous.frequency-x"); });
+    connect(lissajous_frequency_y_, &QSpinBox::valueChanged, this, [this] { update_preview("curve.lissajous.frequency-y"); });
+    connect(lissajous_phase_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.lissajous.phase-x"); });
+    connect(lissajous_phase_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.lissajous.phase-y"); });
+    connect(lissajous_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.lissajous.rotation"); });
+    connect(lissajous_tolerance_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("curve.lissajous.tolerance"); });
     for (auto* control : {harmonograph_amplitude_x_,harmonograph_amplitude_y_,harmonograph_frequency_x_,harmonograph_frequency_y_,harmonograph_phase_x_,harmonograph_phase_y_,harmonograph_damping_x_,harmonograph_damping_y_,harmonograph_duration_,harmonograph_rotation_,harmonograph_tolerance_})
-        connect(control,&QDoubleSpinBox::valueChanged,this,[this]{ update_preview(); });
-    connect(transform_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
-    connect(transform_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+        connect(control,&QDoubleSpinBox::valueChanged,this,[this,control]{
+            update_preview(QStringLiteral("curve.harmonograph.%1").arg(reinterpret_cast<quintptr>(control)));
+        });
+    connect(transform_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("transform.x"); });
+    connect(transform_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("transform.y"); });
     connect(transform_scale_x_, &QDoubleSpinBox::valueChanged, this, [this] {
         if (transform_link_scales_->isChecked()) {
             const QSignalBlocker blocker(transform_scale_y_);
             transform_scale_y_->setValue(transform_scale_x_->value());
         }
-        update_layer_transform();
+        update_layer_transform("transform.scale-x");
     });
-    connect(transform_scale_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(transform_scale_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("transform.scale-y"); });
     connect(transform_link_scales_, &QCheckBox::toggled, this, [this](const bool linked) {
         if (linked) {
             const QSignalBlocker blocker(transform_scale_y_);
@@ -652,30 +655,30 @@ MainWindow::MainWindow(QWidget* parent)
         refresh_transform_controls();
         update_layer_transform();
     });
-    connect(transform_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(transform_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("transform.rotation"); });
     connect(reset_transform_button_, &QPushButton::clicked, this, [this] { reset_layer_transform(); });
-    connect(copy_count_, &QSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(copy_count_, &QSpinBox::valueChanged, this, [this] { update_layer_transform("copies.count"); });
     connect(copy_arrangement_, &QComboBox::currentIndexChanged, this, [this] {
         refresh_copy_controls();
         update_layer_transform();
     });
-    connect(copy_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
-    connect(copy_scale_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
-    connect(copy_offset_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
-    connect(copy_offset_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
-    connect(copy_circular_radius_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
-    connect(copy_circular_start_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
-    connect(copy_circular_angle_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform(); });
+    connect(copy_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("copies.rotation"); });
+    connect(copy_scale_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("copies.scale"); });
+    connect(copy_offset_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("copies.offset-x"); });
+    connect(copy_offset_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("copies.offset-y"); });
+    connect(copy_circular_radius_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("copies.circular-radius"); });
+    connect(copy_circular_start_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("copies.circular-start"); });
+    connect(copy_circular_angle_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("copies.circular-angle"); });
     connect(copy_rotate_with_orbit_, &QCheckBox::toggled, this, [this] { update_layer_transform(); });
     connect(distribute_copies_button_, &QPushButton::clicked, this, [this] { distribute_copies_over_circle(); });
     connect(reset_copies_button_, &QPushButton::clicked, this, [this] { reset_layer_copies(); });
     connect(stroke_color_button_, &QPushButton::clicked, this, [this] { choose_stroke_color(); });
     connect(fill_color_button_, &QPushButton::clicked, this, [this] { choose_fill_color(); });
     connect(stroke_enabled_, &QCheckBox::toggled, this, [this] { update_appearance(); });
-    connect(stroke_width_, &QDoubleSpinBox::valueChanged, this, [this] { update_appearance(); });
+    connect(stroke_width_, &QDoubleSpinBox::valueChanged, this, [this] { update_appearance("appearance.stroke-width"); });
     connect(fill_enabled_, &QCheckBox::toggled, this, [this] { update_appearance(); });
     connect(fill_rule_, &QComboBox::currentIndexChanged, this, [this] { update_appearance(); });
-    connect(layer_opacity_, &QSpinBox::valueChanged, this, [this] { update_appearance(); });
+    connect(layer_opacity_, &QSpinBox::valueChanged, this, [this] { update_appearance("appearance.opacity"); });
     connect(blend_mode_, &QComboBox::currentIndexChanged, this, [this] { update_appearance(); });
     connect(zoom_, &QDoubleSpinBox::valueChanged, this, [this](const double value) {
         preview_->set_zoom_percent(value);
@@ -860,14 +863,35 @@ bool MainWindow::confirm_discard_changes()
     return true;
 }
 
-void MainWindow::mark_document_modified()
+void MainWindow::mark_document_modified(const QString& coalescing_key)
 {
     if (!track_document_changes_) {
         return;
     }
+    const auto effective_key = coalescing_key.isEmpty()
+        ? QString{}
+        : QStringLiteral("%1:%2").arg(active_layer_id_).arg(coalescing_key);
     if (!history_.empty() && history_index_ < history_.size() &&
         history_[history_index_].document == document_ &&
         history_[history_index_].active_layer_id == active_layer_id_) {
+        if (effective_key.isEmpty()) {
+            history_coalescing_key_.clear();
+            history_coalescing_timer_.invalidate();
+        }
+        return;
+    }
+    constexpr qint64 coalescing_interval_ms = 500;
+    const bool replace_current_entry = !effective_key.isEmpty() &&
+        history_coalescing_timer_.isValid() &&
+        history_coalescing_timer_.elapsed() <= coalescing_interval_ms &&
+        history_coalescing_key_ == effective_key &&
+        history_index_ + 1 == history_.size() &&
+        history_index_ != saved_history_index_;
+    if (replace_current_entry) {
+        history_[history_index_] = {document_, active_layer_id_};
+        history_coalescing_timer_.restart();
+        set_document_modified(history_index_ != saved_history_index_);
+        update_history_actions();
         return;
     }
     if (history_index_ + 1 < history_.size()) {
@@ -891,6 +915,12 @@ void MainWindow::mark_document_modified()
     }
     set_document_modified(history_index_ != saved_history_index_);
     update_history_actions();
+    history_coalescing_key_ = effective_key;
+    if (effective_key.isEmpty()) {
+        history_coalescing_timer_.invalidate();
+    } else {
+        history_coalescing_timer_.restart();
+    }
 }
 
 void MainWindow::set_document_modified(const bool modified)
@@ -912,6 +942,8 @@ void MainWindow::update_window_title()
 
 void MainWindow::reset_history()
 {
+    history_coalescing_key_.clear();
+    history_coalescing_timer_.invalidate();
     history_.clear();
     history_.push_back({document_, active_layer_id_});
     history_index_ = 0;
@@ -938,6 +970,8 @@ void MainWindow::redo()
 
 void MainWindow::restore_history_entry(const std::size_t index)
 {
+    history_coalescing_key_.clear();
+    history_coalescing_timer_.invalidate();
     track_document_changes_ = false;
     document_ = history_[index].document;
     const auto selected_id = history_[index].active_layer_id;
@@ -969,7 +1003,7 @@ void MainWindow::choose_page_background()
     }
 }
 
-void MainWindow::update_document_settings()
+void MainWindow::update_document_settings(const QString& coalescing_key)
 {
     document_.settings().page_width = page_width_->value();
     document_.settings().page_height = page_height_->value();
@@ -979,7 +1013,7 @@ void MainWindow::update_document_settings()
     save_document_defaults();
     if (zoom_levels_->currentData().toDouble()<0.0) fit_to_workspace();
     refresh_all_layer_previews();
-    mark_document_modified();
+    mark_document_modified(coalescing_key);
 }
 
 void MainWindow::load_saved_document_defaults()
@@ -1468,6 +1502,8 @@ void MainWindow::select_layer_row(const document::LayerId id)
 
 void MainWindow::select_layer(const document::LayerId id)
 {
+    history_coalescing_key_.clear();
+    history_coalescing_timer_.invalidate();
     active_layer_id_ = id;
     load_active_layer();
     refresh_layer_actions();
@@ -1660,7 +1696,7 @@ void MainWindow::refresh_copy_controls()
     distribute_copies_button_->setEnabled(circular && copy_count_->value() > 0);
 }
 
-void MainWindow::update_layer_transform()
+void MainWindow::update_layer_transform(const QString& coalescing_key)
 {
     auto* layer = document_.find_layer(active_layer_id_);
     if (layer == nullptr || layer->locked) {
@@ -1687,7 +1723,7 @@ void MainWindow::update_layer_transform()
     layer->copies.rotate_with_orbit = copy_rotate_with_orbit_->isChecked();
     refresh_layer_preview(active_layer_id_);
     preview_->update();
-    mark_document_modified();
+    mark_document_modified(coalescing_key);
 }
 
 void MainWindow::reset_layer_transform()
@@ -1765,7 +1801,7 @@ void MainWindow::choose_fill_color()
     }
 }
 
-void MainWindow::update_appearance()
+void MainWindow::update_appearance(const QString& coalescing_key)
 {
     auto* layer = document_.find_layer(active_layer_id_);
     if (layer == nullptr || layer->locked) {
@@ -1782,7 +1818,7 @@ void MainWindow::update_appearance()
     refresh_color_buttons();
     refresh_layer_preview(active_layer_id_);
     preview_->update();
-    if (!applying_preset_) mark_document_modified();
+    if (!applying_preset_) mark_document_modified(coalescing_key);
 }
 
 void MainWindow::refresh_color_buttons()
@@ -1934,7 +1970,7 @@ void MainWindow::sync_layer_order()
     mark_document_modified();
 }
 
-void MainWindow::update_preview()
+void MainWindow::update_preview(const QString& coalescing_key)
 {
     auto* layer = document_.find_layer(active_layer_id_);
     if (layer == nullptr || layer->locked) {
@@ -1990,7 +2026,7 @@ void MainWindow::update_preview()
     }
     refresh_layer_preview(active_layer_id_);
     preview_->update();
-    mark_document_modified();
+    mark_document_modified(coalescing_key);
 }
 
 void MainWindow::refresh_preset_choices()

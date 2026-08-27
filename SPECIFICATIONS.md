@@ -441,6 +441,8 @@ Transform and copy values are editable independently from curve-family parameter
 
 Undo/Redo history must never contain consecutive duplicate document states. Composite actions—including applying or restoring a preset, Reset transform, and Reset copies—produce exactly one history entry, so one Undo always restores the complete state immediately preceding the action and one Redo reapplies it.
 
+Rapid successive changes to the same continuous numeric property are coalesced into one history entry while consecutive changes remain no more than 500 ms apart. Coalescing applies independently to curve parameters, document dimensions, layer position/scale/rotation, copy counts and numeric copy settings, stroke width, and layer opacity. A different property, a different layer, a discrete control, a reset or preset action, Undo/Redo, or a pause longer than 500 ms starts a new history entry. Coalescing must never replace the currently saved document state.
+
 ### 10.4 Round-trip requirement
 
 Saving, reopening, and saving without edits must preserve the visible composition and all supported RosetteLab parameters. Unknown metadata from a newer schema must not be discarded silently.

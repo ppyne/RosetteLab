@@ -4,6 +4,7 @@
 #include "rosettelab/document/document.hpp"
 
 #include <QColor>
+#include <QElapsedTimer>
 #include <QMainWindow>
 #include <QString>
 
@@ -56,7 +57,7 @@ private:
     void refresh_recent_files_menu();
     void clean_recent_files();
     bool confirm_discard_changes();
-    void mark_document_modified();
+    void mark_document_modified(const QString& coalescing_key = {});
     void set_document_modified(bool modified);
     void update_window_title();
     void reset_history();
@@ -79,14 +80,14 @@ private:
     void choose_stroke_color();
     void choose_fill_color();
     void choose_page_background();
-    void update_appearance();
-    void update_layer_transform();
+    void update_appearance(const QString& coalescing_key = {});
+    void update_layer_transform(const QString& coalescing_key = {});
     void reset_layer_transform();
     void reset_layer_copies();
     void refresh_transform_controls();
     void refresh_copy_controls();
     void distribute_copies_over_circle();
-    void update_document_settings();
+    void update_document_settings(const QString& coalescing_key = {});
     void load_document_settings();
     void load_saved_document_defaults();
     void save_document_defaults();
@@ -108,7 +109,7 @@ private:
     void refresh_layer_preview(document::LayerId id);
     void refresh_all_layer_previews();
     void sync_layer_order();
-    void update_preview();
+    void update_preview(const QString& coalescing_key = {});
 
     PreviewWidget* preview_{};
     QSplitter* main_splitter_{};
@@ -225,6 +226,8 @@ private:
     std::vector<HistoryEntry> history_;
     std::size_t history_index_{0};
     std::size_t saved_history_index_{0};
+    QString history_coalescing_key_;
+    QElapsedTimer history_coalescing_timer_;
     static constexpr std::size_t no_history_index = std::numeric_limits<std::size_t>::max();
 };
 
