@@ -95,7 +95,7 @@ jobs:
           test -n "$dmg_path"
           mount_path="$RUNNER_TEMP/rosettelab-dmg"
           mkdir -p "$mount_path"
-          hdiutil attach "$dmg_path" -nobrowse -readonly -mountpoint "$mount_path"
+          hdiutil attach "$dmg_path" -acceptlicense -nobrowse -readonly -mountpoint "$mount_path"
           app_path="$mount_path/RosetteLab.app"
           executable="$app_path/Contents/MacOS/RosetteLab"
           trap 'hdiutil detach "$mount_path"' EXIT
