@@ -13,7 +13,7 @@ int main(int argc, char** argv)
 {
     QApplication application(argc, argv);
     rosettelab::ui::MainWindow window;
-    const auto* selector=window.findChild<QComboBox*>("presetSelector");
+    auto* selector=window.findChild<QComboBox*>("presetSelector");
     if (selector==nullptr || selector->count()<2 ||
         selector->currentData().toString()!="rose-seven" ||
         selector->currentText()!="Sevenfold garden") {
