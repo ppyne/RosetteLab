@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=RosetteLab
+Comment=Design layered mathematical curves
+Exec=RosetteLab %F
+Icon=org.rosettelab.RosetteLab
+Terminal=false
+Categories=Graphics;VectorGraphics;
+MimeType=image/svg+xml;
+StartupWMClass=RosetteLab

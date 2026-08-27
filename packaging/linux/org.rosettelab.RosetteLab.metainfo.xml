@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.rosettelab.RosetteLab</id>
+  <name>RosetteLab</name>
+  <summary>Design layered mathematical curves</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>BSD-3-Clause</project_license>
+  <description>
+    <p>RosetteLab designs, layers, edits, and exports mathematical curves as structured SVG documents.</p>
+  </description>
+  <launchable type="desktop-id">org.rosettelab.RosetteLab.desktop</launchable>
+  <provides>
+    <binary>RosetteLab</binary>
+  </provides>
+</component>

@@ -16,13 +16,23 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.8.*"
+          cache: true
+
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes cmake ninja-build qt6-base-dev
+          sudo apt-get install --yes cmake ninja-build
 
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DROSETTELAB_BUILD_GUI=ON -DROSETTELAB_BUILD_TESTS=ON
+        run: >-
+          cmake -S . -B build -G Ninja
+          -DROSETTELAB_BUILD_GUI=ON
+          -DROSETTELAB_REQUIRE_GUI=ON
+          -DROSETTELAB_BUILD_TESTS=ON
 
       - name: Build
         run: cmake --build build --parallel

@@ -26,7 +26,8 @@ The equations and the meaning of their parameters will be shown in the interface
 4. Hide or show layers with an eye control.
 5. Lock layers to prevent accidental parameter changes.
 6. Combine stroke, fill, opacity, fill rule, and blend modes.
-7. Save the complete editable composition as a RosetteLab SVG.\n8. Export the composition to PNG, JPEG, or vector PDF from **File → Export**.
+7. Save the complete editable composition as a RosetteLab SVG.
+8. Export the composition to PNG, JPEG, PDF, or clean SVG from **File → Export**.
 
 RosetteLab will only open SVG files containing the RosetteLab metadata required to reconstruct the document. Ordinary SVG files remain import/export candidates rather than editable RosetteLab project files.
 
@@ -70,8 +71,11 @@ Requirements:
 cmake -S . -B build
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
-./build/rosettelab
 ```
+
+Launch the development build with `open build/RosetteLab.app` on macOS,
+`./build/RosetteLab` on Linux, or `build\\Release\\RosetteLab.exe` for a default
+multi-configuration Windows build.
 
 The mathematical core and its tests can be built without Qt:
 
@@ -80,6 +84,20 @@ cmake -S . -B build -DROSETTELAB_BUILD_GUI=OFF
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
+
+## Native packages
+
+The **Packages** GitHub Actions workflow builds and tests RosetteLab on all target
+platforms, then produces:
+
+- macOS: a self-contained `.app` in a `.dmg`;
+- Windows: an NSIS `.exe` installer and a portable `.zip`;
+- Linux: a `.deb` package and a `.tar.gz` archive.
+
+The workflow runs when packaging-related files change and can also be started
+manually from GitHub Actions. Pushing a tag such as `v0.1.0` creates a GitHub
+release and attaches every generated package. The packages include the required
+Qt runtime libraries and platform plugins.
 
 ## Status
 

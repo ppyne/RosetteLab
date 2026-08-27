@@ -1,0 +1,114 @@
+name: Packages
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+    paths:
+      - "CMakeLists.txt"
+      - ".github/workflows/packages.yml"
+      - "icons/**"
+      - "packaging/**"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos-14
+            generator: Ninja
+            cpack_generators: DragNDrop
+          - name: Windows
+            os: windows-2022
+            generator: Visual Studio 17 2022
+            cpack_generators: NSIS;ZIP
+          - name: Linux
+            os: ubuntu-22.04
+            generator: Ninja
+            cpack_generators: DEB;TGZ
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.8.*"
+          cache: true
+
+      - name: Install build tools (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes ninja-build dpkg-dev
+
+      - name: Install build tools (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: Install build tools (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: choco install nsis --yes --no-progress
+
+      - name: Configure
+        run: >-
+          cmake -S . -B build -G "${{ matrix.generator }}"
+          -DCMAKE_BUILD_TYPE=Release
+          -DROSETTELAB_BUILD_GUI=ON
+          -DROSETTELAB_REQUIRE_GUI=ON
+          -DROSETTELAB_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --build-config Release --output-on-failure
+        env:
+          QT_QPA_PLATFORM: offscreen
+
+      - name: Package
+        working-directory: build
+        run: cpack -C Release -G "${{ matrix.cpack_generators }}"
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: RosetteLab-${{ matrix.name }}
+          path: |
+            build/*.dmg
+            build/*.exe
+            build/*.zip
+            build/*.deb
+            build/*.tar.gz
+          if-no-files-found: error
+
+  release:
+    name: Publish tagged release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: RosetteLab-*
+          path: packages
+          merge-multiple: true
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: packages/*
+          generate_release_notes: true

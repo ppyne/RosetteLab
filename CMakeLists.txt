@@ -4,6 +4,8 @@ project(RosetteLab VERSION 0.1.0 LANGUAGES CXX)
 
 option(ROSETTELAB_BUILD_GUI "Build the Qt 6 desktop application" ON)
 option(ROSETTELAB_BUILD_TESTS "Build RosetteLab tests" ON)
+option(ROSETTELAB_REQUIRE_GUI
+    "Fail configuration when the requested Qt GUI cannot be built" OFF)
 
 if(ROSETTELAB_BUILD_TESTS)
     enable_testing()
@@ -40,7 +42,7 @@ if(ROSETTELAB_BUILD_GUI)
     find_package(Qt6 6.5 QUIET COMPONENTS Widgets)
 
     if(Qt6_FOUND)
-        add_executable(rosettelab
+        set(ROSETTELAB_APP_SOURCES
             src/app/main.cpp
             src/render/document_renderer.cpp
             src/ui/color_editor_dialog.cpp
@@ -49,10 +51,65 @@ if(ROSETTELAB_BUILD_GUI)
             src/ui/layer_list_item_widget.cpp
             src/ui/preview_widget.cpp
             src/svg/qt_svg_parser.cpp
+            icons/rosettelab.qrc
         )
+
+        if(WIN32)
+            list(APPEND ROSETTELAB_APP_SOURCES icons/Windows/RosetteLab.rc)
+        endif()
+
+        if(APPLE)
+            list(APPEND ROSETTELAB_APP_SOURCES icons/macOS/RosetteLab.icns)
+        endif()
+
+        add_executable(rosettelab WIN32 MACOSX_BUNDLE ${ROSETTELAB_APP_SOURCES})
         target_include_directories(rosettelab PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
         target_link_libraries(rosettelab PRIVATE rosettelab_core Qt6::Widgets)
-        install(TARGETS rosettelab RUNTIME DESTINATION bin)
+        target_compile_definitions(rosettelab PRIVATE
+            ROSETTELAB_VERSION="${PROJECT_VERSION}"
+        )
+
+        set_target_properties(rosettelab PROPERTIES
+            OUTPUT_NAME "RosetteLab"
+            MACOSX_BUNDLE_BUNDLE_NAME "RosetteLab"
+            MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+            MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+            MACOSX_BUNDLE_GUI_IDENTIFIER "org.rosettelab.RosetteLab"
+            MACOSX_BUNDLE_ICON_FILE "RosetteLab.icns"
+        )
+
+        if(APPLE)
+            set_source_files_properties(icons/macOS/RosetteLab.icns PROPERTIES
+                MACOSX_PACKAGE_LOCATION "Resources"
+            )
+        endif()
+
+        install(TARGETS rosettelab
+            BUNDLE DESTINATION .
+            RUNTIME DESTINATION bin
+        )
+
+        qt_generate_deploy_app_script(
+            TARGET rosettelab
+            OUTPUT_SCRIPT rosettelab_deploy_script
+            NO_UNSUPPORTED_PLATFORM_ERROR
+        )
+        install(SCRIPT ${rosettelab_deploy_script})
+
+        if(UNIX AND NOT APPLE)
+            install(FILES packaging/linux/org.rosettelab.RosetteLab.desktop
+                DESTINATION share/applications
+            )
+            install(FILES packaging/linux/org.rosettelab.RosetteLab.metainfo.xml
+                DESTINATION share/metainfo
+            )
+            foreach(size 16 24 32 48 64 128 256 512 1024)
+                install(FILES icons/Linux/rosettelab_${size}.png
+                    DESTINATION share/icons/hicolor/${size}x${size}/apps
+                    RENAME org.rosettelab.RosetteLab.png
+                )
+            endforeach()
+        endif()
 
         if(ROSETTELAB_BUILD_TESTS)
             add_executable(rosettelab_renderer_tests
@@ -87,9 +144,43 @@ if(ROSETTELAB_BUILD_GUI)
             set_tests_properties(rosettelab_main_window_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
         endif()
     else()
-        message(WARNING "Qt 6 Widgets was not found; building the core without the GUI")
+        if(ROSETTELAB_REQUIRE_GUI)
+            message(FATAL_ERROR "Qt 6.5 Widgets was not found")
+        else()
+            message(WARNING "Qt 6 Widgets was not found; building the core without the GUI")
+        endif()
     endif()
 endif()
+
+set(CPACK_PACKAGE_NAME "RosetteLab")
+set(CPACK_PACKAGE_VENDOR "RosetteLab contributors")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+    "Design, layer, and export editable mathematical curves")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "RosetteLab")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_PACKAGE_CONTACT "https://github.com/ppyne/RosetteLab")
+
+if(APPLE)
+    set(CPACK_GENERATOR "DragNDrop")
+    set(CPACK_DMG_VOLUME_NAME "RosetteLab ${PROJECT_VERSION}")
+elseif(WIN32)
+    set(CPACK_GENERATOR "NSIS;ZIP")
+    set(CPACK_NSIS_DISPLAY_NAME "RosetteLab")
+    set(CPACK_NSIS_PACKAGE_NAME "RosetteLab")
+    set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/icons/Windows/RosetteLab.ico")
+    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\\\RosetteLab.exe")
+    set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+    set(CPACK_NSIS_MODIFY_PATH OFF)
+    set(CPACK_NSIS_MENU_LINKS "bin/RosetteLab.exe" "RosetteLab")
+else()
+    set(CPACK_GENERATOR "DEB;TGZ")
+    set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+    set(CPACK_DEBIAN_PACKAGE_SECTION "graphics")
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+endif()
+
+include(CPack)
 
 if(ROSETTELAB_BUILD_TESTS)
     add_executable(rosettelab_ellipse_tests tests/test_ellipse.cpp)

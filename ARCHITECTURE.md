@@ -243,9 +243,14 @@ Keep UI automation focused on critical workflows:
 
 ## 12. Packaging
 
-The first supported package is a macOS application bundle.
+Packaging is driven by CMake install rules and CPack, with one GitHub Actions
+matrix building all supported targets. The expected artifacts are:
 
-Packaging work must account for:
+- macOS: self-contained application bundle distributed in a DMG;
+- Windows: NSIS installer and portable ZIP archive;
+- Linux: DEB package and portable tarball.
+
+Packaging accounts for:
 
 - Qt 6 runtime libraries and plugins;
 - platform theme integration and dark-mode behavior;
@@ -253,7 +258,9 @@ Packaging work must account for:
 - library relocation;
 - code signing and notarization when distribution begins.
 
-Linux packaging is expected to follow after the application architecture stabilizes. Windows packaging is a separate validation milestone.
+Unsigned CI packages are suitable for testing. Apple notarization and Windows
+Authenticode signing require project-owned certificates and remain a release
+infrastructure milestone.
 
 ## 13. Open technical decisions
 

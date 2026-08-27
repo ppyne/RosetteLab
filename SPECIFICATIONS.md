@@ -475,8 +475,12 @@ Preview and all export formats use the same fitted curve geometry. Raster export
 - Accessible labels for eye, lock, layer, and color controls.
 - Host theme integration, including dark mode through Qt's platform integration.
 - The main window should open in front when launched normally, without forcing permanent always-on-top behavior.
-- Primary target: macOS.
-- Secondary targets: Linux and Windows, subject to Qt packaging validation.
+- Supported desktop targets: macOS, Windows, and Linux.
+- Native package builds are automated by a GitHub Actions matrix and use the
+  platform-specific icon supplied in the repository.
+- Test distributions are unsigned. Apple notarization and Windows Authenticode
+  signing remain release-infrastructure work because they require project-owned
+  certificates.
 
 Platform-specific native widgets should be avoided unless isolated behind an abstraction.
 
@@ -523,7 +527,9 @@ Platform-specific native widgets should be avoided unless isolated behind an abs
 - fully vector PDF export with native PDF blend modes, with rasterization retained only as an explicit compatibility fallback;
 - undo/redo for document edits;
 - user documentation;
-- macOS application package;
+- macOS application bundle in a DMG;
+- Windows NSIS installer and portable ZIP;
+- Linux DEB package and portable tarball;
 - tested project migration policy for the 1.x schema.
 
 ## 14. Deferred features
