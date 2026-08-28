@@ -79,6 +79,18 @@ void remember_selected_directory(const char* setting, const QString& path)
     QSettings{}.setValue(setting, QFileInfo(path).absolutePath());
 }
 
+QString suggested_output_path(
+    const char* directory_setting,
+    const QString& current_file_path,
+    const QString& extension)
+{
+    const QString base_name = current_file_path.isEmpty()
+        ? QStringLiteral("Untitled")
+        : QFileInfo(current_file_path).completeBaseName();
+    return QDir(remembered_directory(directory_setting))
+        .filePath(base_name + QLatin1Char('.') + extension);
+}
+
 QDoubleSpinBox* angle_control(QWidget* parent)
 {
     auto* control = new QDoubleSpinBox(parent);
@@ -1177,7 +1189,8 @@ void MainWindow::rebuild_layer_list()
 void MainWindow::save_as()
 {
     auto path = QFileDialog::getSaveFileName(
-        this, "Save RosetteLab SVG", remembered_directory(save_as_directory_setting),
+        this, "Save RosetteLab SVG",
+        suggested_output_path(save_as_directory_setting, current_file_path_, "svg"),
         "RosetteLab SVG (*.svg)");
     if (path.isEmpty()) {
         return;
@@ -1232,7 +1245,8 @@ bool MainWindow::save_document(const QString& path)
 void MainWindow::export_svg()
 {
     auto path = QFileDialog::getSaveFileName(
-        this, "Export clean SVG", remembered_directory(export_directory_setting),
+        this, "Export clean SVG",
+        suggested_output_path(export_directory_setting, current_file_path_, "svg"),
         "SVG image (*.svg)");
     if (path.isEmpty()) {
         return;
@@ -1295,7 +1309,8 @@ void MainWindow::export_raster(const bool jpeg)
     auto path = QFileDialog::getSaveFileName(
         this,
         jpeg ? "Export JPEG" : "Export PNG",
-        remembered_directory(export_directory_setting),
+        suggested_output_path(
+            export_directory_setting, current_file_path_, jpeg ? "jpg" : "png"),
         jpeg ? "JPEG image (*.jpg)" : "PNG image (*.png)");
     if (path.isEmpty()) {
         return;
@@ -1351,7 +1366,8 @@ void MainWindow::export_pdf()
     const bool use_cmyk = color_model_control->currentIndex() == 1;
 
     auto path = QFileDialog::getSaveFileName(
-        this, "Export PDF", remembered_directory(export_directory_setting),
+        this, "Export PDF",
+        suggested_output_path(export_directory_setting, current_file_path_, "pdf"),
         "PDF document (*.pdf)");
     if (path.isEmpty()) {
         return;
