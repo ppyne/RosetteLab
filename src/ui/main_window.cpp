@@ -49,6 +49,7 @@
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QSpinBox>
+#include <QStandardItemModel>
 #include <QSplitter>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -479,6 +480,7 @@ MainWindow::MainWindow(QWidget* parent)
     layer_opacity_->setSuffix(" %");
 
     blend_mode_ = new QComboBox(appearance_group_);
+    blend_mode_->setObjectName("blendModeSelector");
     const std::initializer_list<std::pair<const char*, document::BlendMode>> blend_modes{
         {"Normal", document::BlendMode::Normal}, {"Multiply", document::BlendMode::Multiply},
         {"Screen", document::BlendMode::Screen}, {"Overlay", document::BlendMode::Overlay},
@@ -486,9 +488,20 @@ MainWindow::MainWindow(QWidget* parent)
         {"Color dodge", document::BlendMode::ColorDodge}, {"Color burn", document::BlendMode::ColorBurn},
         {"Hard light", document::BlendMode::HardLight}, {"Soft light", document::BlendMode::SoftLight},
         {"Difference", document::BlendMode::Difference}, {"Exclusion", document::BlendMode::Exclusion},
+        {"Hue", document::BlendMode::Hue}, {"Saturation", document::BlendMode::Saturation},
+        {"Color", document::BlendMode::Color}, {"Luminosity", document::BlendMode::Luminosity},
     };
     for (const auto& [name, mode] : blend_modes) {
         blend_mode_->addItem(name, static_cast<int>(mode));
+        if (mode == document::BlendMode::Hue || mode == document::BlendMode::Saturation
+            || mode == document::BlendMode::Color || mode == document::BlendMode::Luminosity) {
+            const int index = blend_mode_->count() - 1;
+            if (auto* model = qobject_cast<QStandardItemModel*>(blend_mode_->model())) {
+                model->item(index)->setEnabled(false);
+                model->item(index)->setToolTip(
+                    "Unavailable: the Qt preview backend cannot render this blend mode accurately.");
+            }
+        }
     }
 
     appearance_form->addRow("Stroke", stroke_enabled_);
@@ -1322,7 +1335,7 @@ void MainWindow::export_pdf()
     auto* color_model_control = new QComboBox(&options_dialog);
     color_model_control->addItem("RGB");
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
-    color_model_control->addItem("CMYK");
+    color_model_control->addItem("CMYK (generic, no ICC profile)");
 #endif
     options_form->addRow("Color model", color_model_control);
     options_layout->addLayout(options_form);
@@ -1335,7 +1348,7 @@ void MainWindow::export_pdf()
         return;
     }
     const bool preserve_vector_blends = rendering_control->currentIndex() == 0;
-    const bool use_cmyk = color_model_control->currentText() == "CMYK";
+    const bool use_cmyk = color_model_control->currentIndex() == 1;
 
     auto path = QFileDialog::getSaveFileName(
         this, "Export PDF", remembered_directory(export_directory_setting),

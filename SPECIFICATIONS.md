@@ -376,6 +376,14 @@ Each layer has an opacity percentage and a blend mode. The first supported set s
 
 Unsupported backend modes must fail gracefully or be disabled rather than silently rendered incorrectly.
 
+`Hue`, `Saturation`, `Color`, and `Luminosity` are present but disabled in the
+blend-mode selector because Qt's current raster preview backend cannot render
+them accurately. The native PDF writer understands their PDF equivalents, but
+they must not be user-selectable until the live preview, thumbnails, and raster
+exports can produce the same result. A project created by a future version may
+retain such a value when opened; the current UI must show it as unavailable and
+must not silently substitute another stored value.
+
 ## 9. Superposition and copies
 
 A layer may represent one curve or a generated group of related copies. The supported arrangements are:
@@ -464,7 +472,11 @@ The **File → Export** submenu provides:
 - **To JPEG…**: raster export at a user-selected resolution from 72 to 1200 DPI and high quality; transparent document areas are composited onto opaque white because JPEG has no alpha channel; the filename extension is always normalized to `.jpg`, including when `.jpeg` was entered;
 - **To PDF…**: export at the exact document dimensions. The default **Preserve vector blend modes** renderer emits PDF 1.7 directly and retains cubic Bézier paths, transformations, copies, fills, strokes, both fill rules, stroke/fill alpha, layer opacity, stacking order, and every supported blend mode. Each visible RosetteLab layer is represented by an isolated PDF transparency-group Form XObject in the selected blending colour space. The blend mode is applied while each copy is painted inside that group, so overlapping copies of a single layer interact exactly as they do in the preview. The completed group is then composited with the same blend mode against lower layers, while layer opacity is applied once to that completed group. The page declares a transparency group in the selected RGB or CMYK device colour space. No image XObject may be introduced by this mode. A second explicit **Rasterize for compatibility** renderer precomposes the page at 300 DPI through Qt for readers or workflows that do not reproduce native PDF transparency correctly. Rasterization is never selected automatically because of a layer's blend mode. On Qt 6.8 and later, the modal export choices offer RGB or CMYK; earlier Qt versions export RGB.
 
-The native renderer maps RosetteLab modes to the standard PDF blend names `/Normal`, `/Multiply`, `/Screen`, `/Overlay`, `/Darken`, `/Lighten`, `/ColorDodge`, `/ColorBurn`, `/HardLight`, `/SoftLight`, `/Difference`, `/Exclusion`, `/Hue`, `/Saturation`, `/Color`, and `/Luminosity`. Vector PDF tests must verify the use of transparency groups and `ExtGState`, the requested `/BM`, distinct stroke/fill alpha, group opacity, Bézier operators, fill-rule operators, RGB/CMYK selection, valid cross-reference data, and the absence of `/Subtype /Image`. Release validation additionally covers Adobe Reader, Apple Preview, Affinity, Poppler, and MuPDF. The existing colour-management policy remains unchanged; this work changes compositing and geometry preservation only.
+The native renderer maps RosetteLab modes to the standard PDF blend names `/Normal`, `/Multiply`, `/Screen`, `/Overlay`, `/Darken`, `/Lighten`, `/ColorDodge`, `/ColorBurn`, `/HardLight`, `/SoftLight`, `/Difference`, `/Exclusion`, `/Hue`, `/Saturation`, `/Color`, and `/Luminosity`. The last four remain disabled in the application as described in section 8.4. Vector PDF tests must verify the use of transparency groups and `ExtGState`, the requested `/BM`, distinct stroke/fill alpha, group opacity, Bézier operators, fill-rule operators, RGB/CMYK selection, valid cross-reference data, and the absence of `/Subtype /Image`. Release validation additionally covers Adobe Reader, Apple Preview, Affinity, Poppler, and MuPDF.
+
+**Layer-opacity preview limitation:** native PDF correctly applies layer opacity once to the completed transparency group. The current Qt preview and raster renderer applies it to every copy while drawing; consequently, overlaps can differ when a copied layer has opacity below 100%. Until the preview is changed to precompose each layer, users requiring identical output should either keep layer opacity at 100% and use stroke/fill alpha for transparency, or choose **Rasterize for compatibility** to preserve the current preview appearance. The native PDF semantics must not be weakened to reproduce the preview defect.
+
+**CMYK limitation:** the native CMYK option emits generic `DeviceCMYK` values and does not embed an ICC profile or PDF OutputIntent. The export dialog therefore labels it **CMYK (generic, no ICC profile)**. It is suitable for exploratory output but not for a calibrated prepress contract. For colour-critical printing, export RGB vector PDF and perform the final conversion in a colour-managed prepress application using the printer's requested ICC profile. A future calibrated workflow will allow selecting an ICC profile, convert colours through a colour-management engine, embed the profile as an ICCBased colour space, and add the matching OutputIntent.
 
 Preview and all export formats use the same fitted curve geometry. Raster export rejects dimensions above 32,767 pixels per side or 100 million pixels in total.
 

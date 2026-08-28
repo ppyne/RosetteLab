@@ -26,6 +26,25 @@ int main(int argc, char** argv)
         std::cerr << "Zoom levels or default fit mode were not initialized\n";
         return 1;
     }
+    const auto* blend_modes=window.findChild<QComboBox*>("blendModeSelector");
+    if (blend_modes==nullptr) {
+        std::cerr << "Blend mode selector was not initialized\n";
+        return 1;
+    }
+    constexpr rosettelab::document::BlendMode disabled_blend_modes[] = {
+        rosettelab::document::BlendMode::Hue,
+        rosettelab::document::BlendMode::Saturation,
+        rosettelab::document::BlendMode::Color,
+        rosettelab::document::BlendMode::Luminosity,
+    };
+    for (const auto mode : disabled_blend_modes) {
+        const int index=blend_modes->findData(static_cast<int>(mode));
+        if (index<0 || (blend_modes->model()->flags(blend_modes->model()->index(index, 0))
+                        & Qt::ItemIsEnabled)) {
+            std::cerr << "Unsupported preview blend mode was not disabled\n";
+            return 1;
+        }
+    }
 
     auto* undo=window.findChild<QAction*>("undoAction");
     auto* redo=window.findChild<QAction*>("redoAction");

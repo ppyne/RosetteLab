@@ -29,6 +29,10 @@ The equations and the meaning of their parameters will be shown in the interface
 7. Save the complete editable composition as a RosetteLab SVG.
 8. Export the composition to PNG, JPEG, PDF, or clean SVG from **File → Export**.
 
+PDF output preserves vector blend modes by default and provides an explicit
+raster compatibility mode. Its colour-management and preview limitations, with
+recommended workarounds, are documented in [PDF export](docs/PDF_EXPORT.md).
+
 RosetteLab will only open SVG files containing the RosetteLab metadata required to reconstruct the document. Ordinary SVG files remain import/export candidates rather than editable RosetteLab project files.
 
 ## Interface
