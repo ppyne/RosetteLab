@@ -144,7 +144,6 @@ std::string serialize_vector_pdf(const document::Document& document, const Expor
 
     struct LayerResources { int form{}; int group_state{}; };
     std::vector<LayerResources> layers;
-    int layer_index = 0;
     for (const auto& layer : document.layers()) {
         if (!layer.visible) continue;
         core::BezierPath curve;
@@ -194,7 +193,6 @@ std::string serialize_vector_pdf(const document::Document& document, const Expor
             std::to_string(path_state_id) + " 0 R >> >>";
         const int form_id = objects.add(stream_object(dictionary, content.str()));
         layers.push_back({form_id, group_state_id});
-        ++layer_index;
     }
 
     const double width = document.settings().page_width * points_per_mm;
