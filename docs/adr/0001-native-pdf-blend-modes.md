@@ -19,10 +19,11 @@ XObjects, transparency groups, and `ExtGState` dictionaries.
 RosetteLab owns a small PDF 1.7 serializer tailored to its document model.
 Every visible layer is emitted as an isolated transparency-group Form XObject:
 
-- the curve and all its transformed copies are painted inside the form;
+- the curve and all its transformed copies are painted inside the form, with
+  the blend mode active so copies interact with earlier copies in that form;
 - stroke and fill alpha are applied while painting the paths;
-- layer opacity and the PDF `/BM` blend mode are applied once when the finished
-  form is composited onto the page;
+- layer opacity is applied once when the finished form is composited onto the
+  page, and the same `/BM` mode makes that form interact with lower layers;
 - the page itself declares a transparency group in DeviceRGB or DeviceCMYK;
 - the native path never emits image XObjects.
 

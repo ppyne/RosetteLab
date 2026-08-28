@@ -21,6 +21,17 @@ bool contains(const std::string& value, const std::string& expected)
     return value.find(expected) != std::string::npos;
 }
 
+std::size_t count_occurrences(const std::string& value, const std::string& expected)
+{
+    std::size_t count = 0;
+    std::size_t position = 0;
+    while ((position = value.find(expected, position)) != std::string::npos) {
+        ++count;
+        position += expected.size();
+    }
+    return count;
+}
+
 void require_valid_xref(const std::string& pdf)
 {
     const auto marker = pdf.rfind("startxref\n");
@@ -56,20 +67,30 @@ int main(const int argc, char** argv)
 {
     rosettelab::document::Document document;
     document.settings().background.alpha = 0.5;
-    auto& layer = document.add_polar_rose();
+    rosettelab::curves::EllipseParameters ellipse;
+    ellipse.radius_x = 46.0;
+    ellipse.radius_y = 46.0;
+    auto& layer = document.add_ellipse(ellipse);
     layer.appearance.fill_enabled = true;
+    layer.appearance.fill.red = 1.0;
+    layer.appearance.fill.green = 0.35;
+    layer.appearance.fill.blue = 0.1;
     layer.appearance.fill.alpha = 0.4;
     layer.appearance.stroke.alpha = 0.7;
     layer.appearance.opacity = 0.6;
     layer.appearance.blend_mode = rosettelab::document::BlendMode::Multiply;
     layer.copies.count = 3;
-    layer.copies.rotation_step_degrees = 30.0;
+    layer.copies.arrangement = rosettelab::document::CopyArrangement::Circular;
+    layer.copies.circular_radius = 46.0;
+    layer.copies.circular_angle_step_degrees = 45.0;
 
     const auto rgb = rosettelab::pdf::serialize_vector_pdf(document);
     require(rgb.starts_with("%PDF-1.7"), "PDF 1.7 header should be emitted");
     require(contains(rgb, "/Subtype /Form"), "a layer should be a Form XObject");
     require(contains(rgb, "/S /Transparency /I true"), "a layer should be an isolated transparency group");
     require(contains(rgb, "/BM /Multiply"), "native blend mode should be emitted");
+    require(count_occurrences(rgb, "/BM /Multiply") == 2,
+            "blend mode should apply inside the copy group and to the completed layer");
     require(contains(rgb, "/CA 0.6 /ca 0.6"), "layer opacity should apply to the group");
     require(contains(rgb, "/CA 0.7 /ca 0.4"), "stroke and fill alpha should remain distinct");
     require(contains(rgb, " c\n"), "curve geometry should use cubic Bezier operators");

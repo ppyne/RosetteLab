@@ -153,7 +153,8 @@ std::string serialize_vector_pdf(const document::Document& document, const Expor
         const auto& appearance = layer.appearance;
         const int path_state_id = objects.add(
             "<< /Type /ExtGState /CA " + number(appearance.stroke.alpha) +
-            " /ca " + number(appearance.fill.alpha) + " >>");
+            " /ca " + number(appearance.fill.alpha) + " /BM /" +
+            std::string(blend_name(appearance.blend_mode)) + " >>");
         const int group_state_id = objects.add(
             "<< /Type /ExtGState /BM /" + std::string(blend_name(appearance.blend_mode)) +
             " /CA " + number(std::clamp(appearance.opacity, 0.0, 1.0)) +
@@ -189,7 +190,9 @@ std::string serialize_vector_pdf(const document::Document& document, const Expor
         const std::string dictionary =
             "/Type /XObject /Subtype /Form /FormType 1 /BBox [" + number(-half_width) + " " +
             number(-half_height) + " " + number(half_width) + " " + number(half_height) +
-            "] /Group << /S /Transparency /I true /K false >> /Resources << /ExtGState << /PathGS " +
+            "] /Group << /S /Transparency /I true /K false /CS /" +
+            std::string(options.color_model == ColorModel::Rgb ? "DeviceRGB" : "DeviceCMYK") +
+            " >> /Resources << /ExtGState << /PathGS " +
             std::to_string(path_state_id) + " 0 R >> >>";
         const int form_id = objects.add(stream_object(dictionary, content.str()));
         layers.push_back({form_id, group_state_id});
