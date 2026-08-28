@@ -20,16 +20,16 @@ int main()
     rosettelab::document::Document document;
     auto& layer = document.add_polar_rose();
 
-    require(!rosettelab::render::requires_flattened_output(document),
-            "normal layers should retain vector PDF output");
+    require(!rosettelab::render::has_visible_blend_modes(document),
+            "normal layers should not report blend modes");
 
     layer.appearance.blend_mode = rosettelab::document::BlendMode::Multiply;
-    require(rosettelab::render::requires_flattened_output(document),
-            "a visible blended layer should flatten PDF output");
+    require(rosettelab::render::has_visible_blend_modes(document),
+            "a visible blended layer should report blend modes");
 
     layer.visible = false;
-    require(!rosettelab::render::requires_flattened_output(document),
-            "a hidden blended layer should not flatten PDF output");
+    require(!rosettelab::render::has_visible_blend_modes(document),
+            "a hidden blended layer should not report blend modes");
 
     return EXIT_SUCCESS;
 }

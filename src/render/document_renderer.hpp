@@ -8,7 +8,7 @@ class QPainter;
 
 namespace rosettelab::render {
 
-[[nodiscard]] bool requires_flattened_output(const document::Document& document);
+[[nodiscard]] bool has_visible_blend_modes(const document::Document& document);
 
 void render_document(
     QPainter& painter,

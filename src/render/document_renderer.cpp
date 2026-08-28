@@ -65,7 +65,7 @@ core::BezierPath layer_path(const document::CurveLayer& layer)
 
 } // namespace
 
-bool requires_flattened_output(const document::Document& document)
+bool has_visible_blend_modes(const document::Document& document)
 {
     return std::any_of(
         document.layers().begin(), document.layers().end(),

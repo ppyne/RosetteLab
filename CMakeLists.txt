@@ -22,6 +22,7 @@ add_library(rosettelab_core
     src/curves/polar_rose.cpp
     src/curves/trochoid.cpp
     src/document/document.cpp
+    src/pdf/pdf_serializer.cpp
     src/svg/svg_serializer.cpp
 )
 
@@ -235,4 +236,8 @@ if(ROSETTELAB_BUILD_TESTS)
     add_executable(rosettelab_svg_tests tests/test_svg_serializer.cpp)
     target_link_libraries(rosettelab_svg_tests PRIVATE rosettelab_core)
     add_test(NAME rosettelab_svg_tests COMMAND rosettelab_svg_tests)
+
+    add_executable(rosettelab_pdf_tests tests/test_pdf_serializer.cpp)
+    target_link_libraries(rosettelab_pdf_tests PRIVATE rosettelab_core)
+    add_test(NAME rosettelab_pdf_tests COMMAND rosettelab_pdf_tests)
 endif()

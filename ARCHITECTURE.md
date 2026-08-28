@@ -269,7 +269,9 @@ Before committing to the first implementation, short prototypes will decide:
 
 - Qt 6 version available through the selected macOS toolchain;
 - SVG/XML library and metadata preservation behavior;
-- QPainter composition-mode coverage for the required blend modes;
+- QPainter composition-mode coverage for live and raster rendering. Vector PDF
+  export deliberately bypasses the Qt PDF paint engine and follows
+  `docs/adr/0001-native-pdf-blend-modes.md`;
 - best Qt color-control integration with RGBA/HSLA synchronization;
 - dependency packaging strategy for a self-contained macOS bundle.
 
