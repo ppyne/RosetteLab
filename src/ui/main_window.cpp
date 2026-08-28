@@ -17,6 +17,8 @@
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QDir>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -1310,33 +1312,30 @@ void MainWindow::export_raster(const bool jpeg)
 
 void MainWindow::export_pdf()
 {
-    const auto rendering = QInputDialog::getItem(
-        this,
-        "Export PDF",
-        "Rendering",
-        {"Preserve vector blend modes", "Rasterize for compatibility"},
-        0,
-        false);
-    if (rendering.isNull()) {
-        return;
-    }
-
-    bool use_cmyk = false;
+    QDialog options_dialog(this);
+    options_dialog.setWindowTitle("Export PDF");
+    auto* options_layout = new QVBoxLayout(&options_dialog);
+    auto* options_form = new QFormLayout;
+    auto* rendering_control = new QComboBox(&options_dialog);
+    rendering_control->addItems({"Preserve vector blend modes", "Rasterize for compatibility"});
+    options_form->addRow("Rendering", rendering_control);
+    auto* color_model_control = new QComboBox(&options_dialog);
+    color_model_control->addItem("RGB");
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
-    bool model_accepted = false;
-    const auto color_model = QInputDialog::getItem(
-        this,
-        "Export PDF",
-        "Color model",
-        {"RGB", "CMYK"},
-        0,
-        false,
-        &model_accepted);
-    if (!model_accepted) {
+    color_model_control->addItem("CMYK");
+#endif
+    options_form->addRow("Color model", color_model_control);
+    options_layout->addLayout(options_form);
+    auto* options_buttons = new QDialogButtonBox(
+        QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &options_dialog);
+    options_layout->addWidget(options_buttons);
+    connect(options_buttons, &QDialogButtonBox::accepted, &options_dialog, &QDialog::accept);
+    connect(options_buttons, &QDialogButtonBox::rejected, &options_dialog, &QDialog::reject);
+    if (options_dialog.exec() != QDialog::Accepted) {
         return;
     }
-    use_cmyk = color_model == "CMYK";
-#endif
+    const bool preserve_vector_blends = rendering_control->currentIndex() == 0;
+    const bool use_cmyk = color_model_control->currentText() == "CMYK";
 
     auto path = QFileDialog::getSaveFileName(
         this, "Export PDF", remembered_directory(export_directory_setting),
@@ -1349,7 +1348,7 @@ void MainWindow::export_pdf()
     }
     remember_selected_directory(export_directory_setting, path);
 
-    if (rendering == "Preserve vector blend modes") {
+    if (preserve_vector_blends) {
         pdf::ExportOptions options;
         options.color_model = use_cmyk ? pdf::ColorModel::Cmyk : pdf::ColorModel::Rgb;
         std::string bytes;
@@ -1372,7 +1371,7 @@ void MainWindow::export_pdf()
     writer.setCreator("RosetteLab");
     writer.setResolution(300);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
-    if (color_model == "CMYK") {
+    if (use_cmyk) {
         writer.setColorModel(QPdfWriter::ColorModel::CMYK);
     } else {
         writer.setColorModel(QPdfWriter::ColorModel::RGB);
