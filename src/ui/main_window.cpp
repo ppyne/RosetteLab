@@ -390,25 +390,13 @@ MainWindow::MainWindow(QWidget* parent)
     droplet_count_ = new QSpinBox(droplet_group_);
     droplet_count_->setRange(2, 128); droplet_count_->setValue(3);
     droplet_outer_radius_ = new QDoubleSpinBox(droplet_group_);
-    droplet_core_radius_ = new QDoubleSpinBox(droplet_group_);
-    for (auto* control : {droplet_outer_radius_, droplet_core_radius_}) {
-        control->setRange(0.0, 100000.0); control->setDecimals(2); control->setSuffix(" units");
-    }
+    droplet_outer_radius_->setRange(0.01, 100000.0);
+    droplet_outer_radius_->setDecimals(2);
+    droplet_outer_radius_->setSuffix(" units");
     droplet_outer_radius_->setMinimum(0.01); droplet_outer_radius_->setValue(80.0);
-    droplet_core_radius_->setValue(10.0);
-    droplet_swirl_ = angle_control(droplet_group_); droplet_swirl_->setValue(28.0);
-    droplet_width_ = new QDoubleSpinBox(droplet_group_);
-    droplet_width_->setRange(1.0, 100.0); droplet_width_->setValue(88.0); droplet_width_->setSuffix(" %");
-    droplet_roundness_ = new QDoubleSpinBox(droplet_group_);
-    droplet_roundness_->setRange(0.05, 1.0); droplet_roundness_->setValue(0.55);
-    droplet_roundness_->setDecimals(2); droplet_roundness_->setSingleStep(0.05);
     droplet_rotation_ = angle_control(droplet_group_); droplet_rotation_->setValue(-90.0);
     droplet_form->addRow("Droplets", droplet_count_);
     droplet_form->addRow("Outer radius", droplet_outer_radius_);
-    droplet_form->addRow("Core radius", droplet_core_radius_);
-    droplet_form->addRow("Swirl", droplet_swirl_);
-    droplet_form->addRow("Angular width", droplet_width_);
-    droplet_form->addRow("Roundness", droplet_roundness_);
     droplet_form->addRow("Rotation", droplet_rotation_);
     droplet_group_->hide(); parameters_layout->addWidget(droplet_group_);
 
@@ -697,11 +685,9 @@ MainWindow::MainWindow(QWidget* parent)
             update_preview(QStringLiteral("curve.harmonograph.%1").arg(reinterpret_cast<quintptr>(control)));
         });
     connect(droplet_count_, &QSpinBox::valueChanged, this, [this] {
-        refresh_droplet_controls();
         update_preview("curve.droplet.count");
     });
-    for (auto* control : {droplet_outer_radius_, droplet_core_radius_, droplet_swirl_,
-                          droplet_width_, droplet_roundness_, droplet_rotation_}) {
+    for (auto* control : {droplet_outer_radius_, droplet_rotation_}) {
         connect(control, &QDoubleSpinBox::valueChanged, this, [this, control] {
             update_preview(QStringLiteral("curve.droplet.%1").arg(reinterpret_cast<quintptr>(control)));
         });
@@ -1672,8 +1658,7 @@ void MainWindow::load_active_layer()
     const QSignalBlocker liss_tolerance_blocker(lissajous_tolerance_);
     const QSignalBlocker harm_ax(harmonograph_amplitude_x_),harm_ay(harmonograph_amplitude_y_),harm_fx(harmonograph_frequency_x_),harm_fy(harmonograph_frequency_y_),harm_px(harmonograph_phase_x_),harm_py(harmonograph_phase_y_),harm_dx(harmonograph_damping_x_),harm_dy(harmonograph_damping_y_),harm_duration(harmonograph_duration_),harm_rotation(harmonograph_rotation_),harm_tolerance(harmonograph_tolerance_);
     const QSignalBlocker drop_count(droplet_count_), drop_outer(droplet_outer_radius_),
-        drop_core(droplet_core_radius_), drop_swirl(droplet_swirl_), drop_width(droplet_width_),
-        drop_roundness(droplet_roundness_), drop_rotation(droplet_rotation_);
+        drop_rotation(droplet_rotation_);
     const QSignalBlocker transform_x_blocker(transform_x_);
     const QSignalBlocker transform_y_blocker(transform_y_);
     const QSignalBlocker transform_scale_x_blocker(transform_scale_x_);
@@ -1739,10 +1724,6 @@ void MainWindow::load_active_layer()
     } else if (droplet_parameters != nullptr) {
         droplet_count_->setValue(droplet_parameters->droplets);
         droplet_outer_radius_->setValue(droplet_parameters->outer_radius);
-        droplet_core_radius_->setValue(droplet_parameters->core_radius);
-        droplet_swirl_->setValue(droplet_parameters->swirl_degrees);
-        droplet_width_->setValue(droplet_parameters->width_percent);
-        droplet_roundness_->setValue(droplet_parameters->roundness);
         droplet_rotation_->setValue(droplet_parameters->rotation_degrees);
     }
     transform_x_->setValue(layer->transform.position_x);
@@ -1774,7 +1755,6 @@ void MainWindow::load_active_layer()
     refresh_k_mode_controls();
     refresh_ellipse_radius_controls();
     refresh_trochoid_trace_controls();
-    refresh_droplet_controls();
     refresh_transform_controls();
     refresh_copy_controls();
 }
@@ -1799,20 +1779,6 @@ void MainWindow::refresh_trochoid_trace_controls()
         trochoid_trace_mode_->currentData().toInt()) == curves::TraceMode::Limited;
     trochoid_turns_->setEnabled(limited);
     trochoid_close_limited_->setEnabled(limited);
-}
-
-void MainWindow::refresh_droplet_controls()
-{
-    for (auto* control : {droplet_core_radius_, droplet_swirl_,
-                          droplet_width_, droplet_roundness_}) {
-        control->setEnabled(false);
-    }
-    const QString explanation = QStringLiteral(
-        "The canonical construction is fixed by the number of droplets and the tangency of its circles; this legacy parameter does not apply.");
-    droplet_core_radius_->setToolTip(explanation);
-    droplet_swirl_->setToolTip(explanation);
-    droplet_width_->setToolTip(explanation);
-    droplet_roundness_->setToolTip(explanation);
 }
 
 void MainWindow::refresh_transform_controls()
@@ -2165,10 +2131,6 @@ void MainWindow::update_preview(const QString& coalescing_key)
     } else if (auto* parameters = std::get_if<curves::DropletRosetteParameters>(&layer->parameters)) {
         parameters->droplets = droplet_count_->value();
         parameters->outer_radius = droplet_outer_radius_->value();
-        parameters->core_radius = std::min(droplet_core_radius_->value(), parameters->outer_radius * 0.999);
-        parameters->swirl_degrees = droplet_swirl_->value();
-        parameters->width_percent = droplet_width_->value();
-        parameters->roundness = droplet_roundness_->value();
         parameters->rotation_degrees = droplet_rotation_->value();
     }
     refresh_layer_preview(active_layer_id_);
@@ -2301,10 +2263,6 @@ void MainWindow::apply_selected_preset()
     } else if (id.startsWith("droplet-")) {
         droplet_count_->setValue(id.mid(QString("droplet-").size()).toInt());
         droplet_outer_radius_->setValue(80);
-        droplet_core_radius_->setValue(id == "droplet-2" ? 0 : 10);
-        droplet_swirl_->setValue(id == "droplet-2" ? 42 : 28);
-        droplet_width_->setValue(id == "droplet-8" ? 82 : 88);
-        droplet_roundness_->setValue(0.55);
         droplet_rotation_->setValue(-90);
     }
     restore_preset_button_->setEnabled(true);
