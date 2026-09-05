@@ -72,6 +72,20 @@ void test_lissajous_names_and_parameters()
             "Lissajous parameters should be retained");
 }
 
+void test_droplet_rosette_names_and_parameters()
+{
+    rosettelab::document::Document document;
+    rosettelab::curves::DropletRosetteParameters parameters;
+    parameters.droplets = 7;
+    const auto& layer = document.add_droplet_rosette(parameters);
+    require(layer.name == "Droplet Rosette 1",
+            "Droplet Rosette should have its own name sequence");
+    require(layer.type == rosettelab::document::CurveType::DropletRosette,
+            "Droplet Rosette should retain its curve type");
+    require(std::get<rosettelab::curves::DropletRosetteParameters>(layer.parameters).droplets == 7,
+            "Droplet Rosette parameters should be retained");
+}
+
 void test_trochoid_names_and_parameters()
 {
     rosettelab::document::Document document;
@@ -224,6 +238,7 @@ int main()
         test_ellipse_names_and_parameters();
         test_default_fill_rule_is_even_odd();
         test_lissajous_names_and_parameters();
+        test_droplet_rosette_names_and_parameters();
         test_trochoid_names_and_parameters();
         test_custom_name_and_layer_state();
         test_layer_reordering();

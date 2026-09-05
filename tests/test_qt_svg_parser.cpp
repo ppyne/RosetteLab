@@ -80,10 +80,19 @@ void test_save_open_round_trip()
     lissajous_parameters.frequency_y = 4;
     lissajous_parameters.phase_y_degrees = 117.0;
     static_cast<void>(source.add_lissajous(lissajous_parameters, "Paper example"));
+    rosettelab::curves::DropletRosetteParameters droplet_parameters;
+    droplet_parameters.droplets = 5;
+    droplet_parameters.outer_radius = 92.0;
+    droplet_parameters.core_radius = 17.0;
+    droplet_parameters.swirl_degrees = -24.0;
+    droplet_parameters.width_percent = 84.0;
+    droplet_parameters.roundness = 0.7;
+    droplet_parameters.rotation_degrees = 12.0;
+    static_cast<void>(source.add_droplet_rosette(droplet_parameters, "Fivefold wheel"));
 
     const auto text = rosettelab::svg::serialize_rosettelab_svg(source);
     const auto loaded = rosettelab::svg::parse_rosettelab_svg(QByteArray::fromStdString(text));
-    require(loaded.layers().size() == 4, "all implemented curve families should round-trip");
+    require(loaded.layers().size() == 5, "all implemented curve families should round-trip");
     require(loaded.settings().page_width == 297.0 && loaded.settings().page_height == 210.0,
             "page dimensions should round-trip");
     require(color_close(loaded.settings().background, source.settings().background),
@@ -128,6 +137,10 @@ void test_save_open_round_trip()
     require(lissajous.frequency_x == 5 && lissajous.frequency_y == 4 &&
             lissajous.phase_y_degrees == 117.0,
             "Lissajous parameters should round-trip");
+    const auto& droplet = std::get<rosettelab::curves::DropletRosetteParameters>(
+        loaded.layers()[4].parameters);
+    require(droplet == droplet_parameters,
+            "Droplet Rosette parameters should round-trip");
 }
 
 void test_rejects_ordinary_or_unsafe_svg()

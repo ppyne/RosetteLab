@@ -385,6 +385,33 @@ MainWindow::MainWindow(QWidget* parent)
     harmonograph_form->addRow("Curve tolerance",harmonograph_tolerance_);
     harmonograph_group_->hide(); parameters_layout->addWidget(harmonograph_group_);
 
+    droplet_group_ = new QGroupBox("Droplet Rosette parameters", parameters_panel);
+    auto* droplet_form = new QFormLayout(droplet_group_);
+    droplet_count_ = new QSpinBox(droplet_group_);
+    droplet_count_->setRange(2, 128); droplet_count_->setValue(3);
+    droplet_outer_radius_ = new QDoubleSpinBox(droplet_group_);
+    droplet_core_radius_ = new QDoubleSpinBox(droplet_group_);
+    for (auto* control : {droplet_outer_radius_, droplet_core_radius_}) {
+        control->setRange(0.0, 100000.0); control->setDecimals(2); control->setSuffix(" units");
+    }
+    droplet_outer_radius_->setMinimum(0.01); droplet_outer_radius_->setValue(80.0);
+    droplet_core_radius_->setValue(16.0);
+    droplet_swirl_ = angle_control(droplet_group_); droplet_swirl_->setValue(28.0);
+    droplet_width_ = new QDoubleSpinBox(droplet_group_);
+    droplet_width_->setRange(1.0, 100.0); droplet_width_->setValue(88.0); droplet_width_->setSuffix(" %");
+    droplet_roundness_ = new QDoubleSpinBox(droplet_group_);
+    droplet_roundness_->setRange(0.05, 1.0); droplet_roundness_->setValue(0.55);
+    droplet_roundness_->setDecimals(2); droplet_roundness_->setSingleStep(0.05);
+    droplet_rotation_ = angle_control(droplet_group_); droplet_rotation_->setValue(-90.0);
+    droplet_form->addRow("Droplets", droplet_count_);
+    droplet_form->addRow("Outer radius", droplet_outer_radius_);
+    droplet_form->addRow("Core radius", droplet_core_radius_);
+    droplet_form->addRow("Swirl", droplet_swirl_);
+    droplet_form->addRow("Angular width", droplet_width_);
+    droplet_form->addRow("Roundness", droplet_roundness_);
+    droplet_form->addRow("Rotation", droplet_rotation_);
+    droplet_group_->hide(); parameters_layout->addWidget(droplet_group_);
+
     transform_group_ = new QGroupBox("Layer transform", parameters_panel);
     auto* transform_form = new QFormLayout(transform_group_);
     transform_x_ = new QDoubleSpinBox(transform_group_);
@@ -591,6 +618,7 @@ MainWindow::MainWindow(QWidget* parent)
     });
     add_menu->addAction("Lissajous", this, [this] { add_lissajous(); });
     add_menu->addAction("Harmonograph", this, [this] { add_harmonograph(); });
+    add_menu->addAction("Droplet Rosette", this, [this] { add_droplet_rosette(); });
     add_button->setMenu(add_menu);
     layers_layout->addWidget(add_button);
 
@@ -668,6 +696,13 @@ MainWindow::MainWindow(QWidget* parent)
         connect(control,&QDoubleSpinBox::valueChanged,this,[this,control]{
             update_preview(QStringLiteral("curve.harmonograph.%1").arg(reinterpret_cast<quintptr>(control)));
         });
+    connect(droplet_count_, &QSpinBox::valueChanged, this, [this] { update_preview("curve.droplet.count"); });
+    for (auto* control : {droplet_outer_radius_, droplet_core_radius_, droplet_swirl_,
+                          droplet_width_, droplet_roundness_, droplet_rotation_}) {
+        connect(control, &QDoubleSpinBox::valueChanged, this, [this, control] {
+            update_preview(QStringLiteral("curve.droplet.%1").arg(reinterpret_cast<quintptr>(control)));
+        });
+    }
     connect(transform_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("transform.x"); });
     connect(transform_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("transform.y"); });
     connect(transform_scale_x_, &QDoubleSpinBox::valueChanged, this, [this] {
@@ -1514,6 +1549,22 @@ void MainWindow::add_harmonograph()
     auto* item=add_layer_row(layer); layers_->setCurrentItem(item); preview_->update(); mark_document_modified();
 }
 
+void MainWindow::add_droplet_rosette()
+{
+    const auto suggested = QString::fromStdString(
+        document_.suggested_default_name(document::CurveType::DropletRosette));
+    bool accepted = false;
+    const auto name = QInputDialog::getText(
+        this, "New Droplet Rosette", "Layer name", QLineEdit::Normal,
+        suggested, &accepted).trimmed();
+    if (!accepted || name.isEmpty()) return;
+    auto& layer = document_.add_droplet_rosette({}, name.toStdString());
+    auto* item = add_layer_row(layer);
+    layers_->setCurrentItem(item);
+    preview_->update();
+    mark_document_modified();
+}
+
 QListWidgetItem* MainWindow::add_layer_row(const document::CurveLayer& layer, const int row)
 {
     auto* item = new QListWidgetItem;
@@ -1579,11 +1630,13 @@ void MainWindow::load_active_layer()
     const auto* trochoid_parameters = std::get_if<curves::TrochoidParameters>(&layer->parameters);
     const auto* lissajous_parameters = std::get_if<curves::LissajousParameters>(&layer->parameters);
     const auto* harmonograph_parameters = std::get_if<curves::HarmonographParameters>(&layer->parameters);
+    const auto* droplet_parameters = std::get_if<curves::DropletRosetteParameters>(&layer->parameters);
     curve_group_->setVisible(parameters != nullptr);
     ellipse_group_->setVisible(ellipse_parameters != nullptr);
     trochoid_group_->setVisible(trochoid_parameters != nullptr);
     lissajous_group_->setVisible(lissajous_parameters != nullptr);
     harmonograph_group_->setVisible(harmonograph_parameters != nullptr);
+    droplet_group_->setVisible(droplet_parameters != nullptr);
 
     const QSignalBlocker radius_blocker(radius_);
     const QSignalBlocker k_mode_blocker(k_mode_);
@@ -1615,6 +1668,9 @@ void MainWindow::load_active_layer()
     const QSignalBlocker liss_rotation_blocker(lissajous_rotation_);
     const QSignalBlocker liss_tolerance_blocker(lissajous_tolerance_);
     const QSignalBlocker harm_ax(harmonograph_amplitude_x_),harm_ay(harmonograph_amplitude_y_),harm_fx(harmonograph_frequency_x_),harm_fy(harmonograph_frequency_y_),harm_px(harmonograph_phase_x_),harm_py(harmonograph_phase_y_),harm_dx(harmonograph_damping_x_),harm_dy(harmonograph_damping_y_),harm_duration(harmonograph_duration_),harm_rotation(harmonograph_rotation_),harm_tolerance(harmonograph_tolerance_);
+    const QSignalBlocker drop_count(droplet_count_), drop_outer(droplet_outer_radius_),
+        drop_core(droplet_core_radius_), drop_swirl(droplet_swirl_), drop_width(droplet_width_),
+        drop_roundness(droplet_roundness_), drop_rotation(droplet_rotation_);
     const QSignalBlocker transform_x_blocker(transform_x_);
     const QSignalBlocker transform_y_blocker(transform_y_);
     const QSignalBlocker transform_scale_x_blocker(transform_scale_x_);
@@ -1677,6 +1733,14 @@ void MainWindow::load_active_layer()
         harmonograph_phase_x_->setValue(harmonograph_parameters->phase_x_degrees); harmonograph_phase_y_->setValue(harmonograph_parameters->phase_y_degrees);
         harmonograph_damping_x_->setValue(harmonograph_parameters->damping_x); harmonograph_damping_y_->setValue(harmonograph_parameters->damping_y);
         harmonograph_duration_->setValue(harmonograph_parameters->duration); harmonograph_rotation_->setValue(harmonograph_parameters->rotation_degrees); harmonograph_tolerance_->setValue(harmonograph_parameters->bezier_tolerance);
+    } else if (droplet_parameters != nullptr) {
+        droplet_count_->setValue(droplet_parameters->droplets);
+        droplet_outer_radius_->setValue(droplet_parameters->outer_radius);
+        droplet_core_radius_->setValue(droplet_parameters->core_radius);
+        droplet_swirl_->setValue(droplet_parameters->swirl_degrees);
+        droplet_width_->setValue(droplet_parameters->width_percent);
+        droplet_roundness_->setValue(droplet_parameters->roundness);
+        droplet_rotation_->setValue(droplet_parameters->rotation_degrees);
     }
     transform_x_->setValue(layer->transform.position_x);
     transform_y_->setValue(layer->transform.position_y);
@@ -2080,6 +2144,14 @@ void MainWindow::update_preview(const QString& coalescing_key)
         parameters->phase_x_degrees=harmonograph_phase_x_->value(); parameters->phase_y_degrees=harmonograph_phase_y_->value();
         parameters->damping_x=harmonograph_damping_x_->value(); parameters->damping_y=harmonograph_damping_y_->value();
         parameters->duration=harmonograph_duration_->value(); parameters->rotation_degrees=harmonograph_rotation_->value(); parameters->bezier_tolerance=harmonograph_tolerance_->value();
+    } else if (auto* parameters = std::get_if<curves::DropletRosetteParameters>(&layer->parameters)) {
+        parameters->droplets = droplet_count_->value();
+        parameters->outer_radius = droplet_outer_radius_->value();
+        parameters->core_radius = std::min(droplet_core_radius_->value(), parameters->outer_radius * 0.999);
+        parameters->swirl_degrees = droplet_swirl_->value();
+        parameters->width_percent = droplet_width_->value();
+        parameters->roundness = droplet_roundness_->value();
+        parameters->rotation_degrees = droplet_rotation_->value();
     }
     refresh_layer_preview(active_layer_id_);
     preview_->update();
@@ -2131,6 +2203,12 @@ void MainWindow::refresh_preset_choices()
         add("Whispering ellipse","harm-whisper"); add("Decaying flower 5:4","harm-flower");
         add("Dense weave 7:5","harm-weave"); add("Damped butterfly","harm-butterfly");
         add("Long-decay meditation","harm-meditation"); break;
+    case document::CurveType::DropletRosette:
+        add("Taijitu pair", "droplet-2");
+        add("Triple tomoe", "droplet-3");
+        add("Fivefold wheel", "droplet-5");
+        add("Eightfold vortex", "droplet-8");
+        break;
     case document::CurveType::Count: break;
     }
     active_preset_id_=QString::fromStdString(layer->preset_id);
@@ -2202,6 +2280,14 @@ void MainWindow::apply_selected_preset()
         else if (id=="harm-weave") { harmonograph_frequency_x_->setValue(7); harmonograph_frequency_y_->setValue(5.02); harmonograph_phase_x_->setValue(90); harmonograph_phase_y_->setValue(12); harmonograph_damping_x_->setValue(.012); harmonograph_damping_y_->setValue(.009); harmonograph_duration_->setValue(55); }
         else if (id=="harm-butterfly") { harmonograph_frequency_x_->setValue(2); harmonograph_frequency_y_->setValue(1.01); harmonograph_phase_x_->setValue(0); harmonograph_phase_y_->setValue(90); harmonograph_damping_x_->setValue(.025); harmonograph_damping_y_->setValue(.01); harmonograph_duration_->setValue(90); }
         else { harmonograph_frequency_x_->setValue(1); harmonograph_frequency_y_->setValue(1.003); harmonograph_phase_x_->setValue(90); harmonograph_phase_y_->setValue(0); harmonograph_damping_x_->setValue(.003); harmonograph_damping_y_->setValue(.004); harmonograph_duration_->setValue(300); }
+    } else if (id.startsWith("droplet-")) {
+        droplet_count_->setValue(id.mid(QString("droplet-").size()).toInt());
+        droplet_outer_radius_->setValue(80);
+        droplet_core_radius_->setValue(id == "droplet-2" ? 0 : 16);
+        droplet_swirl_->setValue(id == "droplet-2" ? 42 : 28);
+        droplet_width_->setValue(id == "droplet-8" ? 82 : 88);
+        droplet_roundness_->setValue(0.55);
+        droplet_rotation_->setValue(-90);
     }
     restore_preset_button_->setEnabled(true);
     update_preview();

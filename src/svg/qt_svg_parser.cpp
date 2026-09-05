@@ -224,6 +224,17 @@ void parse_curve_metadata(const QXmlStreamAttributes& a, curves::HarmonographPar
     p.bezier_tolerance=parse_double(required_attribute(a,"bezier-tolerance"),"bezier-tolerance");
 }
 
+void parse_curve_metadata(const QXmlStreamAttributes& a, curves::DropletRosetteParameters& p)
+{
+    p.droplets = parse_integer(required_attribute(a, "droplets"), "droplets");
+    p.outer_radius = parse_double(required_attribute(a, "outer-radius"), "outer-radius");
+    p.core_radius = parse_double(required_attribute(a, "core-radius"), "core-radius");
+    p.swirl_degrees = parse_double(required_attribute(a, "swirl-degrees"), "swirl-degrees");
+    p.width_percent = parse_double(required_attribute(a, "width-percent"), "width-percent");
+    p.roundness = parse_double(required_attribute(a, "roundness"), "roundness");
+    p.rotation_degrees = parse_double(required_attribute(a, "rotation-degrees"), "rotation-degrees");
+}
+
 void parse_path_appearance(
     const QXmlStreamAttributes& attributes,
     const QString& metadata_ns,
@@ -269,6 +280,7 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
     else if (type == "epitrochoid") layer.type = document::CurveType::Epitrochoid;
     else if (type == "lissajous") layer.type = document::CurveType::Lissajous;
     else if (type == "harmonograph") layer.type = document::CurveType::Harmonograph;
+    else if (type == "droplet-rosette") layer.type = document::CurveType::DropletRosette;
     else throw parse_error("Unsupported RosetteLab curve type");
     layer.visible = parse_boolean(
         required_metadata_attribute(group_attributes, metadata_ns, "visible"), "visible");
@@ -344,6 +356,8 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
         parameters = curves::LissajousParameters{};
     } else if (layer.type == document::CurveType::Harmonograph) {
         parameters = curves::HarmonographParameters{};
+    } else if (layer.type == document::CurveType::DropletRosette) {
+        parameters = curves::DropletRosetteParameters{};
     } else {
         parameters = curves::TrochoidParameters{};
     }

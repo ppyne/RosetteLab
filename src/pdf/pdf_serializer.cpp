@@ -1,6 +1,7 @@
 #include "rosettelab/pdf/pdf_serializer.hpp"
 
 #include "rosettelab/curves/ellipse.hpp"
+#include "rosettelab/curves/droplet_rosette.hpp"
 #include "rosettelab/curves/harmonograph.hpp"
 #include "rosettelab/curves/lissajous.hpp"
 #include "rosettelab/curves/polar_rose.hpp"
@@ -45,6 +46,8 @@ core::BezierPath layer_path(const document::CurveLayer& layer)
         return curves::generate_lissajous_bezier(*p, p->bezier_tolerance);
     if (const auto* p = std::get_if<curves::HarmonographParameters>(&layer.parameters))
         return curves::generate_harmonograph_bezier(*p, p->bezier_tolerance);
+    if (const auto* p = std::get_if<curves::DropletRosetteParameters>(&layer.parameters))
+        return curves::generate_droplet_rosette_bezier(*p);
     return {};
 }
 
@@ -98,9 +101,16 @@ std::string path_commands(const core::BezierPath& path)
 {
     if (path.segments.empty()) return {};
     std::ostringstream out;
-    out << number(path.segments.front().start.x) << ' '
-        << number(path.segments.front().start.y) << " m\n";
-    for (const auto& segment : path.segments) {
+    const auto starts_new_subpath = [&path](const std::size_t index) {
+        return index == 0 || std::find(
+            path.subpath_starts.begin(), path.subpath_starts.end(), index) != path.subpath_starts.end();
+    };
+    for (std::size_t index = 0; index < path.segments.size(); ++index) {
+        const auto& segment = path.segments[index];
+        if (starts_new_subpath(index)) {
+            if (index != 0 && path.closed) out << "h\n";
+            out << number(segment.start.x) << ' ' << number(segment.start.y) << " m\n";
+        }
         out << number(segment.control1.x) << ' ' << number(segment.control1.y) << ' '
             << number(segment.control2.x) << ' ' << number(segment.control2.y) << ' '
             << number(segment.end.x) << ' ' << number(segment.end.y) << " c\n";

@@ -47,6 +47,7 @@ private:
     void add_trochoid(document::CurveType type);
     void add_lissajous();
     void add_harmonograph();
+    void add_droplet_rosette();
     void new_document();
     void open_file();
     void open_document(const QString& path);
@@ -176,6 +177,14 @@ private:
     QDoubleSpinBox* harmonograph_duration_{};
     QDoubleSpinBox* harmonograph_rotation_{};
     QDoubleSpinBox* harmonograph_tolerance_{};
+    QGroupBox* droplet_group_{};
+    QSpinBox* droplet_count_{};
+    QDoubleSpinBox* droplet_outer_radius_{};
+    QDoubleSpinBox* droplet_core_radius_{};
+    QDoubleSpinBox* droplet_swirl_{};
+    QDoubleSpinBox* droplet_width_{};
+    QDoubleSpinBox* droplet_roundness_{};
+    QDoubleSpinBox* droplet_rotation_{};
     QGroupBox* transform_group_{};
     QDoubleSpinBox* transform_x_{};
     QDoubleSpinBox* transform_y_{};

@@ -163,6 +163,23 @@ void test_lissajous_contains_editable_metadata()
     require(contains(svg, "phase-y-degrees=\"117\""), "Lissajous Y phase should be stored");
 }
 
+void test_droplet_rosette_contains_compound_geometry_and_metadata()
+{
+    rosettelab::document::Document document;
+    rosettelab::curves::DropletRosetteParameters parameters;
+    parameters.droplets = 5;
+    parameters.core_radius = 14.0;
+    parameters.swirl_degrees = -32.0;
+    static_cast<void>(document.add_droplet_rosette(parameters));
+    const auto svg = rosettelab::svg::serialize_rosettelab_svg(document);
+    require(contains(svg, "rosettelab:type=\"droplet-rosette\""), "Droplet Rosette type should be stored");
+    require(contains(svg, "droplets=\"5\""), "droplet count should be stored");
+    require(contains(svg, "core-radius=\"14\""), "core radius should be stored");
+    require(contains(svg, "swirl-degrees=\"-32\""), "swirl should be stored");
+    require(occurrence_count(svg, " Z M ") == 4,
+            "five droplets should serialize as five closed SVG subpaths");
+}
+
 void test_preset_state_is_metadata()
 {
     rosettelab::document::Document document;
@@ -214,6 +231,7 @@ int main()
         test_ellipse_contains_editable_metadata_and_beziers();
         test_trochoid_contains_trace_metadata();
         test_lissajous_contains_editable_metadata();
+        test_droplet_rosette_contains_compound_geometry_and_metadata();
         test_preset_state_is_metadata();
         test_clean_svg_contains_only_visible_rendered_content();
         std::cout << "All RosetteLab SVG serializer tests passed\n";

@@ -16,6 +16,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(rosettelab_core
+    src/curves/droplet_rosette.cpp
     src/curves/ellipse.cpp
     src/curves/harmonograph.cpp
     src/curves/lissajous.cpp
@@ -209,6 +210,10 @@ endif()
 include(CPack)
 
 if(ROSETTELAB_BUILD_TESTS)
+    add_executable(rosettelab_droplet_rosette_tests tests/test_droplet_rosette.cpp)
+    target_link_libraries(rosettelab_droplet_rosette_tests PRIVATE rosettelab_core)
+    add_test(NAME rosettelab_droplet_rosette_tests COMMAND rosettelab_droplet_rosette_tests)
+
     add_executable(rosettelab_ellipse_tests tests/test_ellipse.cpp)
     target_link_libraries(rosettelab_ellipse_tests PRIVATE rosettelab_core)
     add_test(NAME rosettelab_ellipse_tests COMMAND rosettelab_ellipse_tests)

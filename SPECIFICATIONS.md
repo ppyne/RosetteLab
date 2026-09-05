@@ -45,7 +45,7 @@ The main window contains three primary regions:
    - Both glyph controls have stable dimensions, tooltips, keyboard access, and accessible names; changing state must never resize the layer panel.
    - Supports add, duplicate, rename, and delete operations.
    - The primary **Add new layer…** command opens a curve-type selector rather than creating a predetermined family directly.
-   - The selector lists Polar rose, Ellipse, Hypotrochoid, Epitrochoid, Lissajous, and Harmonograph; only implemented families are enabled.
+   - The selector lists Polar rose, Ellipse, Hypotrochoid, Epitrochoid, Lissajous, Harmonograph, and Droplet Rosette; only implemented families are enabled.
    - Creating a layer prompts for its name, prefilled as `Curve type N`, where the type is the English curve-family name and (N) is the next number for that family (for example, `Polar rose 1`, `Polar rose 2`, or `Lissajous 1`).
    - Default names do not change when mathematical parameters change.
    - A user-defined name remains unchanged until explicitly renamed.
@@ -273,12 +273,41 @@ stored in RosetteLab SVG metadata for lossless reopening and editing.
 
 More complete multi-pendulum models are explicitly deferred.
 
+### 5.6 Droplet Rosette
+
+Droplet Rosette is a radial geometric composition inspired by two-part taijitu and
+multi-part tomoe constructions. It is an original parametric implementation rather
+than a transcription of any published construction plate. A layer contains `n`
+congruent drop-shaped closed contours and has rotational symmetry of order `n`:
+
+\[
+\theta_k=\alpha+\frac{2\pi k}{n},\qquad k=0,\ldots,n-1
+\]
+
+Parameters:
+
+- droplet count `n`, from 2 to 128;
+- outer radius, which bounds every droplet;
+- core radius, strictly smaller than the outer radius, which controls the central
+  curvilinear opening (`0` is allowed for a common central point);
+- signed swirl angle, with positive and negative values selecting opposite handedness;
+- angular width as a percentage of one radial sector;
+- roundness, controlling the inner Bézier handles;
+- angular rotation of the complete rosette.
+
+Each droplet consists of an outer circular arc approximated by a cubic Bézier and
+two cubic inner boundaries meeting at the core. All droplets are stored as closed
+subpaths of one compound path, so stroke, fill, fill rule, opacity, blending,
+layer transforms, copies, and vector exports apply uniformly. Native SVG metadata
+uses the stable type identifier `droplet-rosette` and preserves every parameter.
+The initial preset catalogue includes 2-, 3-, 5-, and 8-droplet examples.
+
 ## 6. Presets
 
 Each curve family offers a curated set of mathematically notable and visually distinctive presets.
 
-The initial catalog contains 25 editable starting points: four each for polar roses,
-ellipses, hypotrochoids, epitrochoids, and Lissajous curves, plus five harmonographs.
+The initial catalog contains editable starting points for every curve family,
+including 2-, 3-, 5-, and 8-part Droplet Rosettes.
 The catalog includes both canonical mathematical cases and deliberately surprising
 near-resonant or asymmetric configurations.
 
@@ -538,6 +567,7 @@ Platform-specific native widgets should be avoided unless isolated behind an abs
 - hypotrochoid and epitrochoid;
 - Lissajous;
 - simple harmonograph;
+- parametric Droplet Rosette with compound closed subpaths;
 - limited/complete trochoid tracing;
 - per-family curated presets.
 

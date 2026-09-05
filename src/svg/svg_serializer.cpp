@@ -1,6 +1,7 @@
 #include "rosettelab/svg/svg_serializer.hpp"
 
 #include "rosettelab/curves/ellipse.hpp"
+#include "rosettelab/curves/droplet_rosette.hpp"
 #include "rosettelab/curves/polar_rose.hpp"
 #include "rosettelab/curves/trochoid.hpp"
 
@@ -105,9 +106,16 @@ std::string path_data(const core::BezierPath& path)
     std::ostringstream output;
     output.imbue(std::locale::classic());
     output << std::setprecision(12);
-    const auto& start = path.segments.front().start;
-    output << "M " << start.x << ' ' << start.y;
-    for (const auto& segment : path.segments) {
+    const auto starts_new_subpath = [&path](const std::size_t index) {
+        return index == 0 || std::find(
+            path.subpath_starts.begin(), path.subpath_starts.end(), index) != path.subpath_starts.end();
+    };
+    for (std::size_t index = 0; index < path.segments.size(); ++index) {
+        const auto& segment = path.segments[index];
+        if (starts_new_subpath(index)) {
+            if (index != 0 && path.closed) output << " Z ";
+            output << "M " << segment.start.x << ' ' << segment.start.y;
+        }
         output << " C "
                << segment.control1.x << ' ' << segment.control1.y << ' '
                << segment.control2.x << ' ' << segment.control2.y << ' '
@@ -171,6 +179,9 @@ core::BezierPath generated_layer_path(const document::CurveLayer& layer)
     }
     if (const auto* p = std::get_if<curves::HarmonographParameters>(&layer.parameters)) {
         return curves::generate_harmonograph_bezier(*p, p->bezier_tolerance);
+    }
+    if (const auto* p = std::get_if<curves::DropletRosetteParameters>(&layer.parameters)) {
+        return curves::generate_droplet_rosette_bezier(*p);
     }
     throw std::invalid_argument("Layer has incompatible curve parameters");
 }
@@ -270,6 +281,22 @@ void write_harmonograph(std::ostringstream& output, const document::CurveLayer& 
     write_rendered_path(output,path,layer.appearance,layer);
 }
 
+void write_droplet_rosette(std::ostringstream& output, const document::CurveLayer& layer)
+{
+    const auto* p = std::get_if<curves::DropletRosetteParameters>(&layer.parameters);
+    if (p == nullptr) throw std::invalid_argument("Droplet Rosette layer has incompatible parameters");
+    const auto path = curves::generate_droplet_rosette_bezier(*p);
+    output << "    <rosettelab:curve"
+           << " droplets=\"" << p->droplets << "\""
+           << " outer-radius=\"" << number(p->outer_radius) << "\""
+           << " core-radius=\"" << number(p->core_radius) << "\""
+           << " swirl-degrees=\"" << number(p->swirl_degrees) << "\""
+           << " width-percent=\"" << number(p->width_percent) << "\""
+           << " roundness=\"" << number(p->roundness) << "\""
+           << " rotation-degrees=\"" << number(p->rotation_degrees) << "\"/>\n";
+    write_rendered_path(output, path, layer.appearance, layer);
+}
+
 const char* curve_type_id(const document::CurveType type)
 {
     switch (type) {
@@ -279,6 +306,7 @@ const char* curve_type_id(const document::CurveType type)
     case document::CurveType::Epitrochoid: return "epitrochoid";
     case document::CurveType::Lissajous: return "lissajous";
     case document::CurveType::Harmonograph: return "harmonograph";
+    case document::CurveType::DropletRosette: return "droplet-rosette";
     default: throw std::invalid_argument("Unsupported curve type for SVG export");
     }
 }
@@ -363,6 +391,8 @@ std::string serialize_rosettelab_svg(
             write_lissajous(output, layer);
         } else if (layer.type == document::CurveType::Harmonograph) {
             write_harmonograph(output, layer);
+        } else if (layer.type == document::CurveType::DropletRosette) {
+            write_droplet_rosette(output, layer);
         }
         output << "  </g>\n";
     }

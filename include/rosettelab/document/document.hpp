@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rosettelab/curves/ellipse.hpp"
+#include "rosettelab/curves/droplet_rosette.hpp"
 #include "rosettelab/curves/harmonograph.hpp"
 #include "rosettelab/curves/lissajous.hpp"
 #include "rosettelab/curves/polar_rose.hpp"
@@ -25,6 +26,7 @@ enum class CurveType : std::size_t {
     Epitrochoid,
     Lissajous,
     Harmonograph,
+    DropletRosette,
     Count,
 };
 
@@ -36,7 +38,8 @@ using CurveParameters = std::variant<
     curves::EllipseParameters,
     curves::TrochoidParameters,
     curves::LissajousParameters,
-    curves::HarmonographParameters>;
+    curves::HarmonographParameters,
+    curves::DropletRosetteParameters>;
 
 struct LayerTransform {
     double position_x{0.0};
@@ -144,6 +147,9 @@ public:
         std::optional<std::string> name = std::nullopt);
     [[nodiscard]] CurveLayer& add_harmonograph(
         const curves::HarmonographParameters& parameters = {},
+        std::optional<std::string> name = std::nullopt);
+    [[nodiscard]] CurveLayer& add_droplet_rosette(
+        const curves::DropletRosetteParameters& parameters = {},
         std::optional<std::string> name = std::nullopt);
     [[nodiscard]] CurveLayer& add_trochoid(
         CurveType type,

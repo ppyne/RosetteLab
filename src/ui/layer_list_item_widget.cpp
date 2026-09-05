@@ -83,6 +83,9 @@ core::BezierPath layer_path(const document::CurveLayer& layer)
     if (const auto* parameters = std::get_if<curves::HarmonographParameters>(&layer.parameters)) {
         return curves::generate_harmonograph_bezier(*parameters, parameters->bezier_tolerance);
     }
+    if (const auto* parameters = std::get_if<curves::DropletRosetteParameters>(&layer.parameters)) {
+        return curves::generate_droplet_rosette_bezier(*parameters);
+    }
     return {};
 }
 
@@ -120,8 +123,13 @@ QPixmap layer_preview(
     }
 
     QPainterPath path;
-    path.moveTo(curve.segments.front().start.x, curve.segments.front().start.y);
-    for (const auto& segment : curve.segments) {
+    for (std::size_t index = 0; index < curve.segments.size(); ++index) {
+        const auto& segment = curve.segments[index];
+        if (index == 0 || std::find(
+                curve.subpath_starts.begin(), curve.subpath_starts.end(), index) != curve.subpath_starts.end()) {
+            if (index != 0 && curve.closed) path.closeSubpath();
+            path.moveTo(segment.start.x, segment.start.y);
+        }
         path.cubicTo(
             segment.control1.x, segment.control1.y,
             segment.control2.x, segment.control2.y,
