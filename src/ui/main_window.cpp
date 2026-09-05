@@ -696,7 +696,10 @@ MainWindow::MainWindow(QWidget* parent)
         connect(control,&QDoubleSpinBox::valueChanged,this,[this,control]{
             update_preview(QStringLiteral("curve.harmonograph.%1").arg(reinterpret_cast<quintptr>(control)));
         });
-    connect(droplet_count_, &QSpinBox::valueChanged, this, [this] { update_preview("curve.droplet.count"); });
+    connect(droplet_count_, &QSpinBox::valueChanged, this, [this] {
+        refresh_droplet_controls();
+        update_preview("curve.droplet.count");
+    });
     for (auto* control : {droplet_outer_radius_, droplet_core_radius_, droplet_swirl_,
                           droplet_width_, droplet_roundness_, droplet_rotation_}) {
         connect(control, &QDoubleSpinBox::valueChanged, this, [this, control] {
@@ -1771,6 +1774,7 @@ void MainWindow::load_active_layer()
     refresh_k_mode_controls();
     refresh_ellipse_radius_controls();
     refresh_trochoid_trace_controls();
+    refresh_droplet_controls();
     refresh_transform_controls();
     refresh_copy_controls();
 }
@@ -1795,6 +1799,22 @@ void MainWindow::refresh_trochoid_trace_controls()
         trochoid_trace_mode_->currentData().toInt()) == curves::TraceMode::Limited;
     trochoid_turns_->setEnabled(limited);
     trochoid_close_limited_->setEnabled(limited);
+}
+
+void MainWindow::refresh_droplet_controls()
+{
+    const bool canonical_taijitu = droplet_count_->value() == 2;
+    for (auto* control : {droplet_core_radius_, droplet_swirl_,
+                          droplet_width_, droplet_roundness_}) {
+        control->setEnabled(!canonical_taijitu);
+    }
+    const QString explanation = canonical_taijitu
+        ? QStringLiteral("The canonical Taijitu pair is constructed from three tangent semicircles; this parameter does not apply.")
+        : QString{};
+    droplet_core_radius_->setToolTip(explanation);
+    droplet_swirl_->setToolTip(explanation);
+    droplet_width_->setToolTip(explanation);
+    droplet_roundness_->setToolTip(explanation);
 }
 
 void MainWindow::refresh_transform_controls()

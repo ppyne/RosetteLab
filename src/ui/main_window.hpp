@@ -102,6 +102,7 @@ private:
     void refresh_k_mode_controls();
     void refresh_ellipse_radius_controls();
     void refresh_trochoid_trace_controls();
+    void refresh_droplet_controls();
     void refresh_preset_choices();
     void apply_selected_preset();
     void restore_active_preset();

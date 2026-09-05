@@ -18,6 +18,11 @@ core::Point tangent(const double angle)
     return {-std::sin(angle), std::cos(angle)};
 }
 
+core::Point add(const core::Point point, const core::Point vector, const double scale)
+{
+    return {point.x + vector.x * scale, point.y + vector.y * scale};
+}
+
 core::Point rotate(const core::Point point, const double angle)
 {
     const double cosine = std::cos(angle);
@@ -28,9 +33,64 @@ core::Point rotate(const core::Point point, const double angle)
     };
 }
 
-core::Point add(const core::Point point, const core::Point vector, const double scale)
+void append_circular_arc(
+    core::BezierPath& path,
+    const core::Point centre,
+    const double radius,
+    const double start_angle,
+    const double end_angle)
 {
-    return {point.x + vector.x * scale, point.y + vector.y * scale};
+    const double sweep = end_angle - start_angle;
+    const int pieces = std::max(1, static_cast<int>(
+        std::ceil(std::abs(sweep) / (std::numbers::pi / 2.0))));
+    for (int piece = 0; piece < pieces; ++piece) {
+        const double start = start_angle + sweep * static_cast<double>(piece) / pieces;
+        const double end = start_angle + sweep * static_cast<double>(piece + 1) / pieces;
+        const core::Point p0{
+            centre.x + radius * std::cos(start),
+            centre.y + radius * std::sin(start),
+        };
+        const core::Point p3{
+            centre.x + radius * std::cos(end),
+            centre.y + radius * std::sin(end),
+        };
+        const double handle = 4.0 / 3.0 * std::tan((end - start) / 4.0) * radius;
+        path.segments.push_back({
+            p0,
+            add(p0, tangent(start), handle),
+            add(p3, tangent(end), -handle),
+            p3,
+        });
+    }
+}
+
+core::BezierPath generate_taijitu_pair(const DropletRosetteParameters& p)
+{
+    core::BezierPath half;
+    half.closed = true;
+    const double radius = p.outer_radius;
+    const double inner = radius / 2.0;
+    append_circular_arc(half, {inner, 0.0}, inner, 0.0, std::numbers::pi);
+    append_circular_arc(half, {-inner, 0.0}, inner, 0.0, -std::numbers::pi);
+    append_circular_arc(half, {0.0, 0.0}, radius, std::numbers::pi, 0.0);
+
+    core::BezierPath result;
+    result.closed = true;
+    result.segments.reserve(half.segments.size() * 2);
+    result.subpath_starts = {0, half.segments.size()};
+    const double rotation = p.rotation_degrees * std::numbers::pi / 180.0;
+    for (int copy = 0; copy < 2; ++copy) {
+        const double angle = rotation + copy * std::numbers::pi;
+        for (const auto& segment : half.segments) {
+            result.segments.push_back({
+                rotate(segment.start, angle),
+                rotate(segment.control1, angle),
+                rotate(segment.control2, angle),
+                rotate(segment.end, angle),
+            });
+        }
+    }
+    return result;
 }
 
 void validate(const DropletRosetteParameters& p)
@@ -57,6 +117,9 @@ core::BezierPath generate_droplet_rosette_bezier(
     const DropletRosetteParameters& p)
 {
     validate(p);
+    if (p.droplets == 2) {
+        return generate_taijitu_pair(p);
+    }
     core::BezierPath result;
     result.closed = true;
     result.segments.reserve(static_cast<std::size_t>(p.droplets) * 5);

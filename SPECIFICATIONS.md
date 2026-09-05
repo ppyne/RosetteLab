@@ -302,6 +302,15 @@ layer transforms, copies, and vector exports apply uniformly. Native SVG metadat
 uses the stable type identifier `droplet-rosette` and preserves every parameter.
 The initial preset catalogue includes 2-, 3-, 5-, and 8-droplet examples.
 
+The two-droplet case is deliberately canonical rather than an approximation of
+the multi-droplet model. **Taijitu pair** consists of two congruent compound
+contours. Each contour uses two tangent semicircles of radius `outer radius / 2`
+for the S-shaped division and one semicircle of `outer radius` for the exterior;
+the second contour is obtained by a 180-degree rotation. Consequently core radius,
+swirl, angular width, and roundness do not alter the two-droplet case. Rotation and
+outer radius remain editable. This construction must match the geometry of the
+standard two-part yin-yang outline supplied as the visual reference.
+
 ## 6. Presets
 
 Each curve family offers a curated set of mathematically notable and visually distinctive presets.
