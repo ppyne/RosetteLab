@@ -84,7 +84,13 @@ void test_save_open_round_trip()
     droplet_parameters.droplets = 5;
     droplet_parameters.outer_radius = 92.0;
     droplet_parameters.rotation_degrees = 12.0;
-    static_cast<void>(source.add_droplet_rosette(droplet_parameters, "Fivefold wheel"));
+    auto& droplet_layer = source.add_droplet_rosette(droplet_parameters, "Fivefold wheel");
+    droplet_layer.appearance.cyclic_palette.enabled = true;
+    droplet_layer.appearance.cyclic_palette.scope = rosettelab::document::PaletteScope::Subpaths;
+    droplet_layer.appearance.cyclic_palette.target = rosettelab::document::PaletteTarget::FillAndStroke;
+    droplet_layer.appearance.cyclic_palette.offset = -1;
+    droplet_layer.appearance.cyclic_palette.colors = {
+        {1, 0, 0, 1}, {1, 128.0 / 255.0, 0, 204.0 / 255.0}};
 
     const auto text = rosettelab::svg::serialize_rosettelab_svg(source);
     auto legacy_text = text;
@@ -148,6 +154,8 @@ void test_save_open_round_trip()
         loaded.layers()[4].parameters);
     require(droplet == droplet_parameters,
             "Droplet Rosette parameters should round-trip");
+    require(loaded.layers()[4].appearance.cyclic_palette == droplet_layer.appearance.cyclic_palette,
+            "Cyclic palette should round-trip");
 }
 
 void test_rejects_ordinary_or_unsafe_svg()

@@ -110,6 +110,22 @@ document::RgbaColor parse_rgb(const QString& text, const double alpha)
     };
 }
 
+document::RgbaColor parse_rgba(const QString& text)
+{
+    if (text.size() != 9 || !text.startsWith('#')) {
+        throw parse_error("Palette colors must use #RRGGBBAA");
+    }
+    bool ok = false;
+    const auto packed = text.mid(1).toULongLong(&ok, 16);
+    if (!ok) throw parse_error("Invalid palette color");
+    return {
+        static_cast<double>((packed >> 24) & 0xff) / 255.0,
+        static_cast<double>((packed >> 16) & 0xff) / 255.0,
+        static_cast<double>((packed >> 8) & 0xff) / 255.0,
+        static_cast<double>(packed & 0xff) / 255.0,
+    };
+}
+
 document::BlendMode parse_blend_mode(QString name)
 {
     if (name.startsWith("mix-blend-mode:")) {
@@ -239,19 +255,21 @@ void parse_path_appearance(
     const double stroke_alpha = parse_double(required_attribute(attributes, "stroke-opacity"), "stroke-opacity");
     const auto stroke = required_attribute(attributes, "stroke");
     appearance.stroke_enabled = stroke != "none";
+    const auto stored_stroke = attributes.value(metadata_ns, "stroke-color");
     appearance.stroke = parse_rgb(
-        appearance.stroke_enabled
-            ? stroke
-            : required_metadata_attribute(attributes, metadata_ns, "stroke-color"),
-        stroke_alpha);
+        !stored_stroke.isNull() ? stored_stroke.toString() : stroke,
+        optional_metadata_double(attributes, metadata_ns, "stroke-alpha", stroke_alpha));
     appearance.stroke_width = parse_double(required_attribute(attributes, "stroke-width"), "stroke-width");
 
     const auto fill = required_attribute(attributes, "fill");
     appearance.fill_enabled = fill != "none";
-    if (appearance.fill_enabled) {
-        const double fill_alpha = parse_double(required_attribute(attributes, "fill-opacity"), "fill-opacity");
-        appearance.fill = parse_rgb(fill, fill_alpha);
-    }
+    const double fill_alpha = appearance.fill_enabled
+        ? parse_double(required_attribute(attributes, "fill-opacity"), "fill-opacity") : 1.0;
+    const auto stored_fill = attributes.value(metadata_ns, "fill-color");
+    if (appearance.fill_enabled || !stored_fill.isNull())
+        appearance.fill = parse_rgb(
+            !stored_fill.isNull() ? stored_fill.toString() : fill,
+            optional_metadata_double(attributes, metadata_ns, "fill-alpha", fill_alpha));
     const auto rule = required_attribute(attributes, "fill-rule");
     if (rule == "nonzero") appearance.fill_rule = document::FillRule::NonZero;
     else if (rule == "evenodd") appearance.fill_rule = document::FillRule::EvenOdd;
@@ -330,6 +348,30 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
         group_attributes, metadata_ns, "copy-circular-angle-degrees", 0.0);
     layer.copies.rotate_with_orbit = optional_metadata_boolean(
         group_attributes, metadata_ns, "copy-rotate-with-orbit", true);
+    auto& palette = layer.appearance.cyclic_palette;
+    palette.enabled = optional_metadata_boolean(
+        group_attributes, metadata_ns, "cyclic-palette-enabled", false);
+    const auto palette_scope = group_attributes.value(metadata_ns, "cyclic-palette-scope");
+    if (!palette_scope.isNull()) {
+        if (palette_scope == "subpaths") palette.scope = document::PaletteScope::Subpaths;
+        else if (palette_scope == "copies") palette.scope = document::PaletteScope::Copies;
+        else throw parse_error("Unsupported cyclic palette scope");
+    }
+    const auto palette_target = group_attributes.value(metadata_ns, "cyclic-palette-target");
+    if (!palette_target.isNull()) {
+        if (palette_target == "fill") palette.target = document::PaletteTarget::Fill;
+        else if (palette_target == "stroke") palette.target = document::PaletteTarget::Stroke;
+        else if (palette_target == "fill-and-stroke") palette.target = document::PaletteTarget::FillAndStroke;
+        else throw parse_error("Unsupported cyclic palette target");
+    }
+    palette.offset = optional_metadata_integer(
+        group_attributes, metadata_ns, "cyclic-palette-offset", 0);
+    const auto palette_colors = group_attributes.value(metadata_ns, "cyclic-palette-colors");
+    if (!palette_colors.isNull() && !palette_colors.isEmpty()) {
+        for (const auto& color : palette_colors.toString().split(',')) {
+            palette.colors.push_back(parse_rgba(color));
+        }
+    }
     if (layer.transform.scale_x <= 0.0 || layer.transform.scale_y <= 0.0 ||
         layer.copies.count < 1 || layer.copies.count > 1000 || layer.copies.scale_step <= 0.0 ||
         layer.copies.circular_radius < 0.0) {
@@ -367,8 +409,10 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
             found_curve = true;
             reader.skipCurrentElement();
         } else if (reader.namespaceUri() == "http://www.w3.org/2000/svg" && reader.name() == "path") {
-            parse_path_appearance(reader.attributes(), metadata_ns, layer.appearance);
-            found_path = true;
+            if (!found_path) {
+                parse_path_appearance(reader.attributes(), metadata_ns, layer.appearance);
+                found_path = true;
+            }
             reader.skipCurrentElement();
         } else {
             reader.skipCurrentElement();

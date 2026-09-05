@@ -395,7 +395,23 @@ The hexadecimal field supports typing and clipboard copy/paste. A missing leadin
 
 A graphical picker may be added where the platform toolkit supports it consistently. Numeric entry must remain available. The persistent Background, Stroke color, and Fill color controls in the settings panel, as well as the color-preview strip at the bottom of every corresponding selector, display transparent or translucent colors over a checkerboard made of alternating white and 50% grey (`RGB 127, 127, 127`) squares. Its `#RRGGBBAA - Choose visually...` label uses white text on a dark composited preview and black text on a light composited preview, taking alpha into account.
 
-### 8.4 Layer rendering
+### 8.4 Cyclic palette
+
+Every layer may optionally own an ordered, editable palette. It can be applied to
+successive copies of any curve or to the independent subpaths of a Droplet Rosette.
+The target is fill, stroke, or both. Colors repeat modulo the palette size, with a
+signed cyclic offset. A Hue generator materializes `n` colors from a selected start
+color while preserving its saturation, lightness, and alpha. The editable hue step
+is expressed in degrees; **Distribute hues over 360 deg** sets it to `360 / n`, where
+`n` is the current copy or droplet count. Generated colors become ordinary palette
+entries and may subsequently be edited, reordered, added, or removed independently.
+
+Disabled or empty palettes retain the ordinary single fill and stroke colors.
+Native SVG stores the palette, scope, target, and offset; files without these fields
+load with cyclic coloring disabled. Preview, thumbnails, SVG, raster, and vector PDF
+exports must use the same modular color selection.
+
+### 8.5 Layer rendering
 
 Each layer has an opacity percentage and a blend mode. The first supported set should map directly to SVG/CSS compositing:
 
@@ -436,7 +452,7 @@ A layer may represent one curve or a generated group of related copies. The supp
 
 Circular arrangement provides orbit radius, start angle, angle per copy, and **Rotate with orbit**. Orbital position is computed from the exact cosine and sine of each copy angle. When orbital rotation is enabled, that angle is added to the layer rotation and the independent progressive copy rotation. **Distribute over 360 deg** sets the angular step to `360 / count` as one Undo/Redo operation. Count and angle remain independent so partial arcs, gaps, and multiple turns are possible.
 
-General mathematical-parameter and color sequences are deferred.
+General mathematical-parameter sequences are deferred.
 
 ## 10. SVG project format
 

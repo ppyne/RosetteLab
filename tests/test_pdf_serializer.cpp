@@ -100,6 +100,16 @@ int main(const int argc, char** argv)
     require(contains(rgb, "startxref\n"), "the cross-reference offset should be emitted");
     require_valid_xref(rgb);
 
+    layer.appearance.cyclic_palette.enabled = true;
+    layer.appearance.cyclic_palette.scope = rosettelab::document::PaletteScope::Copies;
+    layer.appearance.cyclic_palette.target = rosettelab::document::PaletteTarget::Fill;
+    layer.appearance.cyclic_palette.colors = {{1, 0, 0, 1}, {0, 1, 0, 0.8}, {0, 0, 1, 0.6}};
+    const auto palette_pdf = rosettelab::pdf::serialize_vector_pdf(document);
+    require(contains(palette_pdf, "1 0 0 rg\n"), "first copy should use red fill");
+    require(contains(palette_pdf, "0 1 0 rg\n"), "second copy should use green fill");
+    require(contains(palette_pdf, "0 0 1 rg\n"), "third copy should use blue fill");
+    require(contains(palette_pdf, "/ca 0.8"), "palette color alpha should be retained");
+
     rosettelab::pdf::ExportOptions options;
     options.color_model = rosettelab::pdf::ColorModel::Cmyk;
     const auto cmyk = rosettelab::pdf::serialize_vector_pdf(document, options);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <utility>
 #include <vector>
 
 namespace rosettelab::core {
@@ -32,5 +33,24 @@ struct BezierPath {
     std::vector<std::size_t> subpath_starts;
     bool closed{false};
 };
+
+[[nodiscard]] inline std::vector<BezierPath> split_subpaths(const BezierPath& path)
+{
+    if (path.segments.empty()) return {};
+    std::vector<std::size_t> starts = path.subpath_starts;
+    if (starts.empty() || starts.front() != 0) starts.insert(starts.begin(), 0);
+    starts.push_back(path.segments.size());
+    std::vector<BezierPath> result;
+    result.reserve(starts.size() - 1);
+    for (std::size_t index = 0; index + 1 < starts.size(); ++index) {
+        BezierPath part;
+        part.closed = path.closed;
+        part.segments.assign(
+            path.segments.begin() + static_cast<std::ptrdiff_t>(starts[index]),
+            path.segments.begin() + static_cast<std::ptrdiff_t>(starts[index + 1]));
+        result.push_back(std::move(part));
+    }
+    return result;
+}
 
 } // namespace rosettelab::core

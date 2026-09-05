@@ -58,6 +58,26 @@ std::string rgb_hex(const document::RgbaColor& color)
     return stream.str();
 }
 
+std::string rgba_hex(const document::RgbaColor& color)
+{
+    std::ostringstream stream;
+    stream << rgb_hex(color) << std::uppercase << std::hex << std::setfill('0')
+           << std::setw(2) << color_component(color.alpha);
+    return stream.str();
+}
+
+const char* palette_scope_name(const document::PaletteScope scope)
+{
+    return scope == document::PaletteScope::Subpaths ? "subpaths" : "copies";
+}
+
+const char* palette_target_name(const document::PaletteTarget target)
+{
+    if (target == document::PaletteTarget::Stroke) return "stroke";
+    if (target == document::PaletteTarget::FillAndStroke) return "fill-and-stroke";
+    return "fill";
+}
+
 const char* fill_rule_name(const document::FillRule rule)
 {
     return rule == document::FillRule::EvenOdd ? "evenodd" : "nonzero";
@@ -134,29 +154,40 @@ void write_rendered_path(
     const document::CurveLayer& layer,
     const bool include_editing_metadata = true)
 {
+    const bool color_subpaths = appearance.cyclic_palette.enabled &&
+        appearance.cyclic_palette.scope == document::PaletteScope::Subpaths &&
+        !appearance.cyclic_palette.colors.empty();
+    const auto parts = color_subpaths ? core::split_subpaths(path) : std::vector<core::BezierPath>{path};
     const int copy_count = std::clamp(layer.copies.count, 1, 1000);
     for (int copy = 0; copy < copy_count; ++copy) {
         const auto placement = document::copy_placement(layer, copy);
-        output << "    <path d=\"" << path_data(path) << "\""
+        for (std::size_t part = 0; part < parts.size(); ++part) {
+        const auto resolved = document::appearance_for_palette_index(
+            appearance, color_subpaths ? part : static_cast<std::size_t>(copy));
+        output << "    <path d=\"" << path_data(parts[part]) << "\""
            << " transform=\"translate("
            << number(placement.position_x) << ' ' << number(placement.position_y) << ") rotate("
            << number(placement.rotation_degrees)
            << ") scale(" << number(layer.transform.scale_x * placement.scale) << ' '
            << number(layer.transform.scale_y * placement.scale) << ")\""
-           << " stroke=\"" << (appearance.stroke_enabled ? rgb_hex(appearance.stroke) : "none") << "\"";
+           << " stroke=\"" << (resolved.stroke_enabled ? rgb_hex(resolved.stroke) : "none") << "\"";
         if (include_editing_metadata) {
-            output << " rosettelab:stroke-color=\"" << rgb_hex(appearance.stroke) << "\"";
+            output << " rosettelab:stroke-color=\"" << rgb_hex(appearance.stroke) << "\""
+                   << " rosettelab:stroke-alpha=\"" << number(appearance.stroke.alpha) << "\""
+                   << " rosettelab:fill-color=\"" << rgb_hex(appearance.fill) << "\""
+                   << " rosettelab:fill-alpha=\"" << number(appearance.fill.alpha) << "\"";
         }
         output
-           << " stroke-opacity=\"" << number(std::clamp(appearance.stroke.alpha, 0.0, 1.0)) << "\""
+           << " stroke-opacity=\"" << number(std::clamp(resolved.stroke.alpha, 0.0, 1.0)) << "\""
            << " stroke-width=\"" << number(std::max(0.0, appearance.stroke_width)) << "\""
-           << " fill=\"" << (appearance.fill_enabled ? rgb_hex(appearance.fill) : "none") << "\"";
-    if (appearance.fill_enabled) {
-        output << " fill-opacity=\"" << number(std::clamp(appearance.fill.alpha, 0.0, 1.0)) << "\"";
+           << " fill=\"" << (resolved.fill_enabled ? rgb_hex(resolved.fill) : "none") << "\"";
+    if (resolved.fill_enabled) {
+        output << " fill-opacity=\"" << number(std::clamp(resolved.fill.alpha, 0.0, 1.0)) << "\"";
     }
     output << " fill-rule=\"" << fill_rule_name(appearance.fill_rule) << "\""
            << " opacity=\"" << number(std::clamp(appearance.opacity, 0.0, 1.0)) << "\""
            << " style=\"mix-blend-mode:" << blend_mode_name(appearance.blend_mode) << "\"/>\n";
+        }
     }
 }
 
@@ -367,6 +398,17 @@ std::string serialize_rosettelab_svg(
                << " rosettelab:copy-circular-start-degrees=\"" << number(layer.copies.circular_start_degrees) << "\""
                << " rosettelab:copy-circular-angle-degrees=\"" << number(layer.copies.circular_angle_step_degrees) << "\""
                << " rosettelab:copy-rotate-with-orbit=\"" << (layer.copies.rotate_with_orbit ? "true" : "false") << "\"";
+        const auto& palette = layer.appearance.cyclic_palette;
+        output << " rosettelab:cyclic-palette-enabled=\"" << (palette.enabled ? "true" : "false") << "\""
+               << " rosettelab:cyclic-palette-scope=\"" << palette_scope_name(palette.scope) << "\""
+               << " rosettelab:cyclic-palette-target=\"" << palette_target_name(palette.target) << "\""
+               << " rosettelab:cyclic-palette-offset=\"" << palette.offset << "\""
+               << " rosettelab:cyclic-palette-colors=\"";
+        for (std::size_t index = 0; index < palette.colors.size(); ++index) {
+            if (index != 0) output << ',';
+            output << rgba_hex(palette.colors[index]);
+        }
+        output << "\"";
         if (!layer.preset_id.empty()) {
             output << " rosettelab:preset-id=\"" << xml_escape(layer.preset_id) << "\""
                    << " rosettelab:preset-customized=\""

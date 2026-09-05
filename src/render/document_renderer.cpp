@@ -66,6 +66,40 @@ core::BezierPath layer_path(const document::CurveLayer& layer)
     return {};
 }
 
+QPainterPath painter_path(const core::BezierPath& curve, const document::FillRule fill_rule)
+{
+    QPainterPath path;
+    for (std::size_t index = 0; index < curve.segments.size(); ++index) {
+        const auto& segment = curve.segments[index];
+        if (index == 0 || std::find(
+                curve.subpath_starts.begin(), curve.subpath_starts.end(), index) != curve.subpath_starts.end()) {
+            if (index != 0 && curve.closed) path.closeSubpath();
+            path.moveTo(segment.start.x, segment.start.y);
+        }
+        path.cubicTo(
+            segment.control1.x, segment.control1.y,
+            segment.control2.x, segment.control2.y,
+            segment.end.x, segment.end.y);
+    }
+    if (curve.closed) path.closeSubpath();
+    path.setFillRule(fill_rule == document::FillRule::EvenOdd ? Qt::OddEvenFill : Qt::WindingFill);
+    return path;
+}
+
+void set_appearance(QPainter& painter, const document::LayerAppearance& appearance)
+{
+    if (appearance.stroke_enabled) {
+        QPen pen(to_qcolor(appearance.stroke));
+        pen.setWidthF(std::max(0.0, appearance.stroke_width));
+        painter.setPen(pen);
+    } else {
+        painter.setPen(Qt::NoPen);
+    }
+    painter.setBrush(appearance.fill_enabled
+        ? QBrush(to_qcolor(appearance.fill))
+        : QBrush(Qt::NoBrush));
+}
+
 } // namespace
 
 bool has_visible_blend_modes(const document::Document& document)
@@ -108,39 +142,17 @@ void render_document(
             continue;
         }
 
-        QPainterPath path;
-        for (std::size_t index = 0; index < curve.segments.size(); ++index) {
-            const auto& segment = curve.segments[index];
-            if (index == 0 || std::find(
-                    curve.subpath_starts.begin(), curve.subpath_starts.end(), index) != curve.subpath_starts.end()) {
-                if (index != 0 && curve.closed) path.closeSubpath();
-                path.moveTo(segment.start.x, segment.start.y);
-            }
-            path.cubicTo(
-                segment.control1.x, segment.control1.y,
-                segment.control2.x, segment.control2.y,
-                segment.end.x, segment.end.y);
-        }
-        if (curve.closed) {
-            path.closeSubpath();
-        }
-        path.setFillRule(layer.appearance.fill_rule == document::FillRule::EvenOdd
-            ? Qt::OddEvenFill
-            : Qt::WindingFill);
-
         painter.save();
         painter.setOpacity(std::clamp(layer.appearance.opacity, 0.0, 1.0));
         painter.setCompositionMode(composition_mode(layer.appearance.blend_mode));
-        if (layer.appearance.stroke_enabled) {
-            QPen pen(to_qcolor(layer.appearance.stroke));
-            pen.setWidthF(std::max(0.0, layer.appearance.stroke_width));
-            painter.setPen(pen);
-        } else {
-            painter.setPen(Qt::NoPen);
+        const auto whole_path = painter_path(curve, layer.appearance.fill_rule);
+        std::vector<QPainterPath> subpaths;
+        if (layer.appearance.cyclic_palette.enabled &&
+            layer.appearance.cyclic_palette.scope == document::PaletteScope::Subpaths) {
+            for (const auto& part : core::split_subpaths(curve)) {
+                subpaths.push_back(painter_path(part, layer.appearance.fill_rule));
+            }
         }
-        painter.setBrush(layer.appearance.fill_enabled
-            ? QBrush(to_qcolor(layer.appearance.fill))
-            : QBrush(Qt::NoBrush));
         const int copy_count = std::clamp(layer.copies.count, 1, 1000);
         for (int copy = 0; copy < copy_count; ++copy) {
             const auto placement = document::copy_placement(layer, copy);
@@ -150,7 +162,18 @@ void render_document(
             transform.scale(
                 layer.transform.scale_x * placement.scale,
                 layer.transform.scale_y * placement.scale);
-            painter.drawPath(transform.map(path));
+            if (!subpaths.empty()) {
+                for (std::size_t part = 0; part < subpaths.size(); ++part) {
+                    const auto appearance = document::appearance_for_palette_index(layer.appearance, part);
+                    set_appearance(painter, appearance);
+                    painter.drawPath(transform.map(subpaths[part]));
+                }
+            } else {
+                const auto appearance = document::appearance_for_palette_index(
+                    layer.appearance, static_cast<std::size_t>(copy));
+                set_appearance(painter, appearance);
+                painter.drawPath(transform.map(whole_path));
+            }
         }
         painter.restore();
     }

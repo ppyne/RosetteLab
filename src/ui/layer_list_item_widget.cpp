@@ -89,6 +89,24 @@ core::BezierPath layer_path(const document::CurveLayer& layer)
     return {};
 }
 
+QPainterPath painter_path(const core::BezierPath& curve, const document::FillRule rule)
+{
+    QPainterPath path;
+    for (std::size_t index = 0; index < curve.segments.size(); ++index) {
+        const auto& segment = curve.segments[index];
+        if (index == 0 || std::find(curve.subpath_starts.begin(), curve.subpath_starts.end(), index)
+                != curve.subpath_starts.end()) {
+            if (index != 0 && curve.closed) path.closeSubpath();
+            path.moveTo(segment.start.x, segment.start.y);
+        }
+        path.cubicTo(segment.control1.x, segment.control1.y,
+            segment.control2.x, segment.control2.y, segment.end.x, segment.end.y);
+    }
+    if (curve.closed) path.closeSubpath();
+    path.setFillRule(rule == document::FillRule::EvenOdd ? Qt::OddEvenFill : Qt::WindingFill);
+    return path;
+}
+
 QPixmap layer_preview(
     const document::CurveLayer& layer,
     const document::RgbaColor& document_background)
@@ -122,25 +140,7 @@ QPixmap layer_preview(
         return pixmap;
     }
 
-    QPainterPath path;
-    for (std::size_t index = 0; index < curve.segments.size(); ++index) {
-        const auto& segment = curve.segments[index];
-        if (index == 0 || std::find(
-                curve.subpath_starts.begin(), curve.subpath_starts.end(), index) != curve.subpath_starts.end()) {
-            if (index != 0 && curve.closed) path.closeSubpath();
-            path.moveTo(segment.start.x, segment.start.y);
-        }
-        path.cubicTo(
-            segment.control1.x, segment.control1.y,
-            segment.control2.x, segment.control2.y,
-            segment.end.x, segment.end.y);
-    }
-    if (curve.closed) {
-        path.closeSubpath();
-    }
-    path.setFillRule(layer.appearance.fill_rule == document::FillRule::EvenOdd
-        ? Qt::OddEvenFill
-        : Qt::WindingFill);
+    const QPainterPath base_path = painter_path(curve, layer.appearance.fill_rule);
 
     QPainterPath composed_path;
     const int copy_count = std::clamp(layer.copies.count, 1, 1000);
@@ -152,10 +152,9 @@ QPixmap layer_preview(
         layer_transform.scale(
             layer.transform.scale_x * placement.scale,
             layer.transform.scale_y * placement.scale);
-        composed_path.addPath(layer_transform.map(path));
+        composed_path.addPath(layer_transform.map(base_path));
     }
-    path = composed_path;
-    const auto bounds = path.boundingRect();
+    const auto bounds = composed_path.boundingRect();
     if (bounds.width() <= 0.0 || bounds.height() <= 0.0) {
         return pixmap;
     }
@@ -164,27 +163,44 @@ QPixmap layer_preview(
     transform.translate(size / 2.0, size / 2.0);
     transform.scale(scale, scale);
     transform.translate(-bounds.center().x(), -bounds.center().y());
-    path = transform.map(path);
-
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setOpacity(std::clamp(layer.appearance.opacity, 0.0, 1.0));
-    if (layer.appearance.stroke_enabled) {
-        QPen pen(to_qcolor(layer.appearance.stroke));
+    const auto draw = [&](const QPainterPath& source, const document::LayerAppearance& appearance) {
+    if (appearance.stroke_enabled) {
+        QPen pen(to_qcolor(appearance.stroke));
         constexpr double preview_stroke_reduction = 0.5;
         constexpr double minimum_preview_stroke = 0.25;
         constexpr double maximum_preview_stroke = 1.25;
         pen.setWidthF(std::clamp(
-            layer.appearance.stroke_width * scale * preview_stroke_reduction,
+            appearance.stroke_width * scale * preview_stroke_reduction,
             minimum_preview_stroke,
             maximum_preview_stroke));
         painter.setPen(pen);
     } else {
         painter.setPen(Qt::NoPen);
     }
-    painter.setBrush(layer.appearance.fill_enabled
-        ? QBrush(to_qcolor(layer.appearance.fill))
+    painter.setBrush(appearance.fill_enabled
+        ? QBrush(to_qcolor(appearance.fill))
         : QBrush(Qt::NoBrush));
-    painter.drawPath(path);
+    painter.drawPath(source);
+    };
+    const bool color_subpaths = layer.appearance.cyclic_palette.enabled &&
+        layer.appearance.cyclic_palette.scope == document::PaletteScope::Subpaths;
+    const auto parts = color_subpaths ? core::split_subpaths(curve) : std::vector<core::BezierPath>{curve};
+    for (int copy = 0; copy < copy_count; ++copy) {
+        const auto placement = document::copy_placement(layer, copy);
+        QTransform placement_transform;
+        placement_transform.translate(placement.position_x, placement.position_y);
+        placement_transform.rotate(placement.rotation_degrees);
+        placement_transform.scale(layer.transform.scale_x * placement.scale,
+                                  layer.transform.scale_y * placement.scale);
+        for (std::size_t part = 0; part < parts.size(); ++part) {
+            const auto appearance = document::appearance_for_palette_index(
+                layer.appearance, color_subpaths ? part : static_cast<std::size_t>(copy));
+            draw(transform.map(placement_transform.map(
+                painter_path(parts[part], layer.appearance.fill_rule))), appearance);
+        }
+    }
     painter.setOpacity(1.0);
     painter.setPen(QColor(0, 0, 0, 80));
     painter.setBrush(Qt::NoBrush);

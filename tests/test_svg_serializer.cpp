@@ -168,7 +168,12 @@ void test_droplet_rosette_contains_compound_geometry_and_metadata()
     rosettelab::document::Document document;
     rosettelab::curves::DropletRosetteParameters parameters;
     parameters.droplets = 5;
-    static_cast<void>(document.add_droplet_rosette(parameters));
+    auto& layer = document.add_droplet_rosette(parameters);
+    layer.appearance.fill_enabled = true;
+    layer.appearance.cyclic_palette.enabled = true;
+    layer.appearance.cyclic_palette.scope = rosettelab::document::PaletteScope::Subpaths;
+    layer.appearance.cyclic_palette.target = rosettelab::document::PaletteTarget::Fill;
+    layer.appearance.cyclic_palette.colors = {{1, 0, 0, 1}, {1, 0.5, 0, 1}, {1, 1, 0, 1}};
     const auto svg = rosettelab::svg::serialize_rosettelab_svg(document);
     require(contains(svg, "rosettelab:type=\"droplet-rosette\""), "Droplet Rosette type should be stored");
     require(contains(svg, "droplets=\"5\""), "droplet count should be stored");
@@ -176,8 +181,14 @@ void test_droplet_rosette_contains_compound_geometry_and_metadata()
     require(!contains(svg, "swirl-degrees="), "obsolete swirl should not be stored");
     require(!contains(svg, "width-percent="), "obsolete angular width should not be stored");
     require(!contains(svg, "roundness="), "obsolete roundness should not be stored");
-    require(occurrence_count(svg, " Z M ") == 4,
-            "five droplets should serialize as five closed SVG subpaths");
+    require(contains(svg, "cyclic-palette-scope=\"subpaths\""), "palette scope should be stored");
+    require(contains(svg, "cyclic-palette-colors=\"#FF0000FF,#FF8000FF,#FFFF00FF\""),
+            "editable palette colors should be stored");
+    require(contains(svg, "fill=\"#FF0000\""), "first droplet should use the first palette color");
+    require(contains(svg, "fill=\"#FF8000\""), "second droplet should use the second palette color");
+    require(contains(svg, "fill=\"#FFFF00\""), "third droplet should use the third palette color");
+    require(occurrence_count(svg, "    <path d=") == 5,
+            "a colored five-droplet rosette should serialize as five SVG paths");
 }
 
 void test_preset_state_is_metadata()

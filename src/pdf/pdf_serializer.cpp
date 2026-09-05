@@ -161,25 +161,31 @@ std::string serialize_vector_pdf(const document::Document& document, const Expor
         if (curve.segments.empty()) continue;
 
         const auto& appearance = layer.appearance;
-        const int path_state_id = objects.add(
-            "<< /Type /ExtGState /CA " + number(appearance.stroke.alpha) +
-            " /ca " + number(appearance.fill.alpha) + " /BM /" +
-            std::string(blend_name(appearance.blend_mode)) + " >>");
+        std::vector<document::LayerAppearance> palette_appearances{
+            document::appearance_for_palette_index(appearance, 0)};
+        if (appearance.cyclic_palette.enabled && !appearance.cyclic_palette.colors.empty()) {
+            palette_appearances.clear();
+            for (std::size_t index = 0; index < appearance.cyclic_palette.colors.size(); ++index)
+                palette_appearances.push_back(document::appearance_for_palette_index(appearance, index));
+        }
+        std::vector<int> path_state_ids;
+        for (const auto& item : palette_appearances) {
+            path_state_ids.push_back(objects.add(
+                "<< /Type /ExtGState /CA " + number(item.stroke.alpha) +
+                " /ca " + number(item.fill.alpha) + " /BM /" +
+                std::string(blend_name(item.blend_mode)) + " >>"));
+        }
         const int group_state_id = objects.add(
             "<< /Type /ExtGState /BM /" + std::string(blend_name(appearance.blend_mode)) +
             " /CA " + number(std::clamp(appearance.opacity, 0.0, 1.0)) +
             " /ca " + number(std::clamp(appearance.opacity, 0.0, 1.0)) + " >>");
 
         std::ostringstream content;
-        content << "q\n/PathGS gs\n";
-        if (appearance.stroke_enabled) {
-            content << color_operands(appearance.stroke, true, options.color_model)
-                << number(std::max(0.0, appearance.stroke_width)) << " w\n";
-        }
-        if (appearance.fill_enabled)
-            content << color_operands(appearance.fill, false, options.color_model);
-        const auto commands = path_commands(curve);
-        const auto paint = paint_operator(appearance);
+        content << "q\n";
+        const bool color_subpaths = appearance.cyclic_palette.enabled &&
+            appearance.cyclic_palette.scope == document::PaletteScope::Subpaths &&
+            !appearance.cyclic_palette.colors.empty();
+        const auto parts = color_subpaths ? core::split_subpaths(curve) : std::vector<core::BezierPath>{curve};
         const int count = std::clamp(layer.copies.count, 1, 1000);
         for (int copy = 0; copy < count; ++copy) {
             const auto placement = document::copy_placement(layer, copy);
@@ -190,8 +196,24 @@ std::string serialize_vector_pdf(const document::Document& document, const Expor
             const double s = std::sin(angle);
             content << "q\n" << number(c * sx) << ' ' << number(s * sx) << ' '
                 << number(-s * sy) << ' ' << number(c * sy) << ' '
-                << number(placement.position_x) << ' ' << number(placement.position_y) << " cm\n"
-                << commands << paint << "Q\n";
+                << number(placement.position_x) << ' ' << number(placement.position_y) << " cm\n";
+            for (std::size_t part = 0; part < parts.size(); ++part) {
+                const std::size_t palette_index = color_subpaths ? part : static_cast<std::size_t>(copy);
+                const auto resolved = appearance.cyclic_palette.enabled
+                    ? document::appearance_for_palette_index(appearance, palette_index) : appearance;
+                const auto state_index = appearance.cyclic_palette.enabled && !appearance.cyclic_palette.colors.empty()
+                    ? static_cast<std::size_t>((static_cast<long long>(palette_index) + appearance.cyclic_palette.offset) %
+                        static_cast<long long>(appearance.cyclic_palette.colors.size()) +
+                        static_cast<long long>(appearance.cyclic_palette.colors.size())) % appearance.cyclic_palette.colors.size()
+                    : 0;
+                content << "/PathGS" << state_index << " gs\n";
+                if (resolved.stroke_enabled)
+                    content << color_operands(resolved.stroke, true, options.color_model)
+                            << number(std::max(0.0, resolved.stroke_width)) << " w\n";
+                if (resolved.fill_enabled) content << color_operands(resolved.fill, false, options.color_model);
+                content << path_commands(parts[part]) << paint_operator(resolved);
+            }
+            content << "Q\n";
         }
         content << "Q\n";
 
@@ -202,9 +224,12 @@ std::string serialize_vector_pdf(const document::Document& document, const Expor
             number(-half_height) + " " + number(half_width) + " " + number(half_height) +
             "] /Group << /S /Transparency /I true /K false /CS /" +
             std::string(options.color_model == ColorModel::Rgb ? "DeviceRGB" : "DeviceCMYK") +
-            " >> /Resources << /ExtGState << /PathGS " +
-            std::to_string(path_state_id) + " 0 R >> >>";
-        const int form_id = objects.add(stream_object(dictionary, content.str()));
+            " >> /Resources << /ExtGState <<";
+        std::string resources = dictionary;
+        for (std::size_t index = 0; index < path_state_ids.size(); ++index)
+            resources += " /PathGS" + std::to_string(index) + " " + std::to_string(path_state_ids[index]) + " 0 R";
+        resources += " >> >>";
+        const int form_id = objects.add(stream_object(resources, content.str()));
         layers.push_back({form_id, group_state_id});
     }
 

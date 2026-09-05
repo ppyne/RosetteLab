@@ -3,7 +3,9 @@
 #include <QApplication>
 #include <QAction>
 #include <QComboBox>
+#include <QCheckBox>
 #include <QDoubleSpinBox>
+#include <QListWidget>
 #include <QPushButton>
 #include <QSpinBox>
 
@@ -61,13 +63,29 @@ int main(int argc, char** argv)
     auto* polar_numerator=window.findChild<QSpinBox*>("polarNumeratorField");
     auto* polar_denominator=window.findChild<QSpinBox*>("polarDenominatorField");
     auto* restore_preset=window.findChild<QPushButton*>("restorePresetButton");
+    auto* palette_enabled=window.findChild<QCheckBox*>("cyclicPaletteEnabled");
+    auto* palette_colors=window.findChild<QListWidget*>("cyclicPaletteColors");
+    auto* palette_hue_step=window.findChild<QDoubleSpinBox*>("cyclicPaletteHueStep");
+    auto* palette_distribute=window.findChild<QPushButton*>("distributeCyclicPaletteHues");
+    auto* palette_generate=window.findChild<QPushButton*>("generateCyclicPalette");
     if (undo==nullptr || redo==nullptr || transform_x==nullptr || transform_y==nullptr ||
         reset_transform==nullptr ||
         copy_count==nullptr || reset_copies==nullptr || copy_arrangement==nullptr ||
         circular_angle==nullptr || distribute_copies==nullptr || polar_k==nullptr ||
         polar_k_mode==nullptr || polar_numerator==nullptr || polar_denominator==nullptr ||
-        restore_preset==nullptr) {
+        restore_preset==nullptr || palette_enabled==nullptr || palette_colors==nullptr ||
+        palette_hue_step==nullptr || palette_distribute==nullptr || palette_generate==nullptr) {
         std::cerr << "Undo/Redo test controls were not initialized\n";
+        return 1;
+    }
+
+    copy_count->setValue(3);
+    palette_enabled->setChecked(true);
+    palette_distribute->click();
+    palette_generate->click();
+    if (palette_hue_step->value()!=120.0 || palette_colors->count()!=3 ||
+        palette_colors->item(0)->text()==palette_colors->item(1)->text()) {
+        std::cerr << "Cyclic palette hue generation failed\n";
         return 1;
     }
 

@@ -11,6 +11,7 @@
 #include "svg/qt_svg_parser.hpp"
 
 #include <QAbstractItemModel>
+#include <QAbstractItemView>
 #include <QAction>
 #include <QCheckBox>
 #include <QCloseEvent>
@@ -531,6 +532,43 @@ MainWindow::MainWindow(QWidget* parent)
         }
     }
 
+    palette_enabled_ = new QCheckBox("Enabled", appearance_group_);
+    palette_enabled_->setObjectName("cyclicPaletteEnabled");
+    palette_scope_ = new QComboBox(appearance_group_);
+    palette_scope_->setObjectName("cyclicPaletteScope");
+    palette_scope_->addItem("Copies", static_cast<int>(document::PaletteScope::Copies));
+    palette_scope_->addItem("Droplets", static_cast<int>(document::PaletteScope::Subpaths));
+    palette_target_ = new QComboBox(appearance_group_);
+    palette_target_->setObjectName("cyclicPaletteTarget");
+    palette_target_->addItem("Fill", static_cast<int>(document::PaletteTarget::Fill));
+    palette_target_->addItem("Stroke", static_cast<int>(document::PaletteTarget::Stroke));
+    palette_target_->addItem("Fill and stroke", static_cast<int>(document::PaletteTarget::FillAndStroke));
+    palette_start_color_button_ = new ColorPreviewButton(appearance_group_);
+    palette_colors_ = new QListWidget(appearance_group_);
+    palette_colors_->setObjectName("cyclicPaletteColors");
+    palette_colors_->setMaximumHeight(92);
+    palette_colors_->setDragDropMode(QAbstractItemView::InternalMove);
+    palette_offset_ = new QSpinBox(appearance_group_);
+    palette_offset_->setRange(-1000, 1000);
+    palette_hue_step_ = new QDoubleSpinBox(appearance_group_);
+    palette_hue_step_->setObjectName("cyclicPaletteHueStep");
+    palette_hue_step_->setRange(-360.0, 360.0);
+    palette_hue_step_->setValue(30.0);
+    palette_hue_step_->setSuffix(" deg");
+    auto* palette_buttons = new QWidget(appearance_group_);
+    auto* palette_buttons_layout = new QHBoxLayout(palette_buttons);
+    palette_buttons_layout->setContentsMargins(0, 0, 0, 0);
+    palette_add_ = new QPushButton("Add", palette_buttons);
+    palette_edit_ = new QPushButton("Edit", palette_buttons);
+    palette_remove_ = new QPushButton("Remove", palette_buttons);
+    palette_buttons_layout->addWidget(palette_add_);
+    palette_buttons_layout->addWidget(palette_edit_);
+    palette_buttons_layout->addWidget(palette_remove_);
+    palette_generate_ = new QPushButton("Generate palette", appearance_group_);
+    palette_generate_->setObjectName("generateCyclicPalette");
+    palette_distribute_ = new QPushButton("Distribute hues over 360 deg", appearance_group_);
+    palette_distribute_->setObjectName("distributeCyclicPaletteHues");
+
     appearance_form->addRow("Stroke", stroke_enabled_);
     appearance_form->addRow("Stroke color", stroke_color_button_);
     appearance_form->addRow("Stroke width", stroke_width_);
@@ -539,6 +577,16 @@ MainWindow::MainWindow(QWidget* parent)
     appearance_form->addRow("Fill rule", fill_rule_);
     appearance_form->addRow("Layer opacity", layer_opacity_);
     appearance_form->addRow("Blend mode", blend_mode_);
+    appearance_form->addRow("Cyclic palette", palette_enabled_);
+    appearance_form->addRow("Apply to", palette_scope_);
+    appearance_form->addRow("Target", palette_target_);
+    appearance_form->addRow("Start color", palette_start_color_button_);
+    appearance_form->addRow("Colors", palette_colors_);
+    appearance_form->addRow("", palette_buttons);
+    appearance_form->addRow("Offset", palette_offset_);
+    appearance_form->addRow("Hue step", palette_hue_step_);
+    appearance_form->addRow("", palette_distribute_);
+    appearance_form->addRow("", palette_generate_);
     parameters_layout->addWidget(appearance_group_);
     parameters_layout->addWidget(transform_group_);
     parameters_layout->addWidget(copies_group_);
@@ -729,6 +777,19 @@ MainWindow::MainWindow(QWidget* parent)
     connect(reset_copies_button_, &QPushButton::clicked, this, [this] { reset_layer_copies(); });
     connect(stroke_color_button_, &QPushButton::clicked, this, [this] { choose_stroke_color(); });
     connect(fill_color_button_, &QPushButton::clicked, this, [this] { choose_fill_color(); });
+    connect(palette_enabled_, &QCheckBox::toggled, this, [this] { refresh_palette_controls(); update_appearance(); });
+    connect(palette_scope_, &QComboBox::currentIndexChanged, this, [this] { refresh_palette_controls(); update_appearance(); });
+    connect(palette_target_, &QComboBox::currentIndexChanged, this, [this] { update_appearance(); });
+    connect(palette_start_color_button_, &QPushButton::clicked, this, [this] { choose_palette_start_color(); });
+    connect(palette_offset_, &QSpinBox::valueChanged, this, [this] { update_appearance("appearance.palette-offset"); });
+    connect(palette_add_, &QPushButton::clicked, this, [this] { add_palette_color(); });
+    connect(palette_edit_, &QPushButton::clicked, this, [this] { edit_palette_color(); });
+    connect(palette_remove_, &QPushButton::clicked, this, [this] { remove_palette_color(); });
+    connect(palette_generate_, &QPushButton::clicked, this, [this] { generate_hue_palette(); });
+    connect(palette_distribute_, &QPushButton::clicked, this, [this] { distribute_palette_hues(); });
+    connect(palette_colors_, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem*) { edit_palette_color(); });
+    connect(palette_colors_, &QListWidget::itemSelectionChanged, this, [this] { refresh_palette_controls(); });
+    connect(palette_colors_->model(), &QAbstractItemModel::rowsMoved, this, [this] { update_appearance(); });
     connect(stroke_enabled_, &QCheckBox::toggled, this, [this] { update_appearance(); });
     connect(stroke_width_, &QDoubleSpinBox::valueChanged, this, [this] { update_appearance("appearance.stroke-width"); });
     connect(fill_enabled_, &QCheckBox::toggled, this, [this] { update_appearance(); });
@@ -1681,6 +1742,10 @@ void MainWindow::load_active_layer()
     const QSignalBlocker fill_rule_blocker(fill_rule_);
     const QSignalBlocker opacity_blocker(layer_opacity_);
     const QSignalBlocker blend_blocker(blend_mode_);
+    const QSignalBlocker palette_enabled_blocker(palette_enabled_);
+    const QSignalBlocker palette_scope_blocker(palette_scope_);
+    const QSignalBlocker palette_target_blocker(palette_target_);
+    const QSignalBlocker palette_offset_blocker(palette_offset_);
     if (parameters != nullptr) {
         radius_->setValue(parameters->radius);
         k_mode_->setCurrentIndex(k_mode_->findData(static_cast<int>(parameters->k_mode)));
@@ -1751,12 +1816,27 @@ void MainWindow::load_active_layer()
     fill_rule_->setCurrentIndex(fill_rule_->findData(static_cast<int>(layer->appearance.fill_rule)));
     layer_opacity_->setValue(static_cast<int>(std::lround(layer->appearance.opacity * 100.0)));
     blend_mode_->setCurrentIndex(blend_mode_->findData(static_cast<int>(layer->appearance.blend_mode)));
+    const auto& cyclic_palette = layer->appearance.cyclic_palette;
+    palette_enabled_->setChecked(cyclic_palette.enabled);
+    palette_scope_->setCurrentIndex(palette_scope_->findData(static_cast<int>(cyclic_palette.scope)));
+    palette_target_->setCurrentIndex(palette_target_->findData(static_cast<int>(cyclic_palette.target)));
+    palette_offset_->setValue(cyclic_palette.offset);
+    palette_colors_->clear();
+    palette_start_color_ = cyclic_palette.colors.empty()
+        ? QColor(Qt::red) : qcolor_from_rgba(cyclic_palette.colors.front());
+    for (const auto& stored : cyclic_palette.colors) {
+        const auto color = qcolor_from_rgba(stored);
+        auto* item = new QListWidgetItem(color.name(QColor::HexArgb).toUpper(), palette_colors_);
+        item->setData(Qt::UserRole, color);
+        item->setBackground(color);
+    }
     refresh_color_buttons();
     refresh_k_mode_controls();
     refresh_ellipse_radius_controls();
     refresh_trochoid_trace_controls();
     refresh_transform_controls();
     refresh_copy_controls();
+    refresh_palette_controls();
 }
 
 void MainWindow::refresh_k_mode_controls()
@@ -1906,6 +1986,100 @@ void MainWindow::choose_fill_color()
     }
 }
 
+void MainWindow::add_palette_color()
+{
+    const QColor initial = palette_colors_->count() > 0
+        ? palette_colors_->item(palette_colors_->count() - 1)->data(Qt::UserRole).value<QColor>()
+        : palette_start_color_;
+    ColorEditorDialog dialog(initial, "Add palette color", this);
+    if (dialog.exec() != QDialog::Accepted) return;
+    auto* item = new QListWidgetItem(dialog.color().name(QColor::HexArgb).toUpper(), palette_colors_);
+    item->setData(Qt::UserRole, dialog.color());
+    item->setBackground(dialog.color());
+    palette_colors_->setCurrentItem(item);
+    refresh_palette_controls();
+    update_appearance();
+}
+
+void MainWindow::choose_palette_start_color()
+{
+    ColorEditorDialog dialog(palette_start_color_, "Palette start color", this);
+    if (dialog.exec() != QDialog::Accepted) return;
+    palette_start_color_ = dialog.color();
+    style_color_button(palette_start_color_button_, palette_start_color_);
+}
+
+void MainWindow::edit_palette_color()
+{
+    auto* item = palette_colors_->currentItem();
+    if (item == nullptr) return;
+    ColorEditorDialog dialog(item->data(Qt::UserRole).value<QColor>(), "Edit palette color", this);
+    if (dialog.exec() != QDialog::Accepted) return;
+    item->setText(dialog.color().name(QColor::HexArgb).toUpper());
+    item->setData(Qt::UserRole, dialog.color());
+    item->setBackground(dialog.color());
+    update_appearance();
+}
+
+void MainWindow::remove_palette_color()
+{
+    delete palette_colors_->takeItem(palette_colors_->currentRow());
+    refresh_palette_controls();
+    update_appearance();
+}
+
+void MainWindow::distribute_palette_hues()
+{
+    const bool subpaths = static_cast<document::PaletteScope>(palette_scope_->currentData().toInt())
+        == document::PaletteScope::Subpaths;
+    const int count = subpaths ? droplet_count_->value() : copy_count_->value();
+    if (count > 0) palette_hue_step_->setValue(360.0 / count);
+}
+
+void MainWindow::generate_hue_palette()
+{
+    const bool subpaths = static_cast<document::PaletteScope>(palette_scope_->currentData().toInt())
+        == document::PaletteScope::Subpaths;
+    const int count = subpaths ? droplet_count_->value() : copy_count_->value();
+    const QColor start = palette_start_color_;
+    const qreal saturation = start.hslSaturationF();
+    const qreal lightness = start.lightnessF();
+    const qreal alpha = start.alphaF();
+    qreal hue = start.hslHueF();
+    if (hue < 0.0) hue = 0.0;
+    const qreal step = palette_hue_step_->value() / 360.0;
+    palette_colors_->clear();
+    for (int index = 0; index < count; ++index) {
+        QColor color;
+        qreal generated_hue = hue + index * step;
+        generated_hue -= std::floor(generated_hue);
+        color.setHslF(generated_hue, saturation, lightness, alpha);
+        auto* item = new QListWidgetItem(color.name(QColor::HexArgb).toUpper(), palette_colors_);
+        item->setData(Qt::UserRole, color);
+        item->setBackground(color);
+    }
+    refresh_palette_controls();
+    update_appearance();
+}
+
+void MainWindow::refresh_palette_controls()
+{
+    const bool enabled = palette_enabled_->isChecked();
+    const auto* layer = document_.find_layer(active_layer_id_);
+    const bool droplets = layer != nullptr && layer->type == document::CurveType::DropletRosette;
+    if (auto* model = qobject_cast<QStandardItemModel*>(palette_scope_->model()))
+        model->item(palette_scope_->findData(static_cast<int>(document::PaletteScope::Subpaths)))->setEnabled(droplets);
+    if (!droplets && static_cast<document::PaletteScope>(palette_scope_->currentData().toInt())
+            == document::PaletteScope::Subpaths)
+        palette_scope_->setCurrentIndex(palette_scope_->findData(static_cast<int>(document::PaletteScope::Copies)));
+    for (auto* widget : std::initializer_list<QWidget*>{palette_scope_, palette_target_, palette_start_color_button_, palette_colors_,
+                         palette_offset_, palette_hue_step_, palette_add_, palette_generate_, palette_distribute_})
+        widget->setEnabled(enabled);
+    const bool selected = enabled && palette_colors_->currentRow() >= 0;
+    palette_edit_->setEnabled(selected);
+    palette_remove_->setEnabled(selected);
+}
+
 void MainWindow::update_appearance(const QString& coalescing_key)
 {
     auto* layer = document_.find_layer(active_layer_id_);
@@ -1920,6 +2094,15 @@ void MainWindow::update_appearance(const QString& coalescing_key)
     layer->appearance.fill_rule = static_cast<document::FillRule>(fill_rule_->currentData().toInt());
     layer->appearance.opacity = static_cast<double>(layer_opacity_->value()) / 100.0;
     layer->appearance.blend_mode = static_cast<document::BlendMode>(blend_mode_->currentData().toInt());
+    auto& palette = layer->appearance.cyclic_palette;
+    palette.enabled = palette_enabled_->isChecked();
+    palette.scope = static_cast<document::PaletteScope>(palette_scope_->currentData().toInt());
+    palette.target = static_cast<document::PaletteTarget>(palette_target_->currentData().toInt());
+    palette.offset = palette_offset_->value();
+    palette.colors.clear();
+    for (int index = 0; index < palette_colors_->count(); ++index)
+        palette.colors.push_back(rgba_from_qcolor(
+            palette_colors_->item(index)->data(Qt::UserRole).value<QColor>()));
     refresh_color_buttons();
     refresh_layer_preview(active_layer_id_);
     preview_->update();
@@ -1930,6 +2113,7 @@ void MainWindow::refresh_color_buttons()
 {
     style_color_button(stroke_color_button_, stroke_color_);
     style_color_button(fill_color_button_, fill_color_);
+    style_color_button(palette_start_color_button_, palette_start_color_);
     stroke_color_button_->setEnabled(stroke_enabled_->isChecked());
     stroke_width_->setEnabled(stroke_enabled_->isChecked());
     const bool fill_controls_enabled = fill_enabled_->isChecked();
