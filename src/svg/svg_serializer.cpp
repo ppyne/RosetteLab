@@ -289,10 +289,6 @@ void write_droplet_rosette(std::ostringstream& output, const document::CurveLaye
     output << "    <rosettelab:curve"
            << " droplets=\"" << p->droplets << "\""
            << " outer-radius=\"" << number(p->outer_radius) << "\""
-           << " core-radius=\"" << number(p->core_radius) << "\""
-           << " swirl-degrees=\"" << number(p->swirl_degrees) << "\""
-           << " width-percent=\"" << number(p->width_percent) << "\""
-           << " roundness=\"" << number(p->roundness) << "\""
            << " rotation-degrees=\"" << number(p->rotation_degrees) << "\"/>\n";
     write_rendered_path(output, path, layer.appearance, layer);
 }

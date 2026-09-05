@@ -53,8 +53,6 @@ void validate(const DropletRosetteParameters& p)
         throw std::invalid_argument("Droplet count must be between 2 and 128");
     }
     if (!std::isfinite(p.outer_radius) || p.outer_radius <= 0.0 ||
-        !std::isfinite(p.core_radius) || !std::isfinite(p.swirl_degrees) ||
-        !std::isfinite(p.width_percent) || !std::isfinite(p.roundness) ||
         !std::isfinite(p.rotation_degrees)) {
         throw std::invalid_argument("Droplet Rosette parameters must be finite");
     }

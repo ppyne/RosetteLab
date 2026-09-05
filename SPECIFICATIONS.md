@@ -311,9 +311,9 @@ polygon shown in the supplied historical construction plate.
 All droplets are stored as closed subpaths of one compound path, so stroke, fill,
 fill rule, opacity, blending, layer transforms, copies, and vector exports apply
 uniformly. Native SVG metadata uses the stable type identifier
-`droplet-rosette`. The legacy core-radius, swirl, angular-width, and roundness
-metadata fields are retained for project compatibility but disabled and ignored;
-the exact circle construction is determined by `n`, `R`, and rotation.
+`droplet-rosette`. New files store only `n`, `R`, and rotation. The reader accepts
+and ignores the obsolete `core-radius`, `swirl-degrees`, `width-percent`, and
+`roundness` attributes when opening older RosetteLab files.
 
 ## 6. Presets
 

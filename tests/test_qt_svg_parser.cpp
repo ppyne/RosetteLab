@@ -83,14 +83,21 @@ void test_save_open_round_trip()
     rosettelab::curves::DropletRosetteParameters droplet_parameters;
     droplet_parameters.droplets = 5;
     droplet_parameters.outer_radius = 92.0;
-    droplet_parameters.core_radius = 17.0;
-    droplet_parameters.swirl_degrees = -24.0;
-    droplet_parameters.width_percent = 84.0;
-    droplet_parameters.roundness = 0.7;
     droplet_parameters.rotation_degrees = 12.0;
     static_cast<void>(source.add_droplet_rosette(droplet_parameters, "Fivefold wheel"));
 
     const auto text = rosettelab::svg::serialize_rosettelab_svg(source);
+    auto legacy_text = text;
+    const std::string droplet_marker = " droplets=\"5\"";
+    const auto droplet_position = legacy_text.find(droplet_marker);
+    require(droplet_position != std::string::npos, "droplet metadata should be present");
+    legacy_text.insert(
+        droplet_position + droplet_marker.size(),
+        " core-radius=\"17\" swirl-degrees=\"-24\" width-percent=\"84\" roundness=\"0.7\"");
+    const auto legacy_loaded = rosettelab::svg::parse_rosettelab_svg(
+        QByteArray::fromStdString(legacy_text));
+    require(legacy_loaded.layers().size() == 5,
+            "obsolete Droplet Rosette attributes should be ignored when loading old files");
     const auto loaded = rosettelab::svg::parse_rosettelab_svg(QByteArray::fromStdString(text));
     require(loaded.layers().size() == 5, "all implemented curve families should round-trip");
     require(loaded.settings().page_width == 297.0 && loaded.settings().page_height == 210.0,

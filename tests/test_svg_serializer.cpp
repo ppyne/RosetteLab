@@ -168,14 +168,14 @@ void test_droplet_rosette_contains_compound_geometry_and_metadata()
     rosettelab::document::Document document;
     rosettelab::curves::DropletRosetteParameters parameters;
     parameters.droplets = 5;
-    parameters.core_radius = 14.0;
-    parameters.swirl_degrees = -32.0;
     static_cast<void>(document.add_droplet_rosette(parameters));
     const auto svg = rosettelab::svg::serialize_rosettelab_svg(document);
     require(contains(svg, "rosettelab:type=\"droplet-rosette\""), "Droplet Rosette type should be stored");
     require(contains(svg, "droplets=\"5\""), "droplet count should be stored");
-    require(contains(svg, "core-radius=\"14\""), "core radius should be stored");
-    require(contains(svg, "swirl-degrees=\"-32\""), "swirl should be stored");
+    require(!contains(svg, "core-radius="), "obsolete core radius should not be stored");
+    require(!contains(svg, "swirl-degrees="), "obsolete swirl should not be stored");
+    require(!contains(svg, "width-percent="), "obsolete angular width should not be stored");
+    require(!contains(svg, "roundness="), "obsolete roundness should not be stored");
     require(occurrence_count(svg, " Z M ") == 4,
             "five droplets should serialize as five closed SVG subpaths");
 }

@@ -228,10 +228,6 @@ void parse_curve_metadata(const QXmlStreamAttributes& a, curves::DropletRosetteP
 {
     p.droplets = parse_integer(required_attribute(a, "droplets"), "droplets");
     p.outer_radius = parse_double(required_attribute(a, "outer-radius"), "outer-radius");
-    p.core_radius = parse_double(required_attribute(a, "core-radius"), "core-radius");
-    p.swirl_degrees = parse_double(required_attribute(a, "swirl-degrees"), "swirl-degrees");
-    p.width_percent = parse_double(required_attribute(a, "width-percent"), "width-percent");
-    p.roundness = parse_double(required_attribute(a, "roundness"), "roundness");
     p.rotation_degrees = parse_double(required_attribute(a, "rotation-degrees"), "rotation-degrees");
 }
 

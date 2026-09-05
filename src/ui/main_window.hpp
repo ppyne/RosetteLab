@@ -102,7 +102,6 @@ private:
     void refresh_k_mode_controls();
     void refresh_ellipse_radius_controls();
     void refresh_trochoid_trace_controls();
-    void refresh_droplet_controls();
     void refresh_preset_choices();
     void apply_selected_preset();
     void restore_active_preset();
@@ -181,10 +180,6 @@ private:
     QGroupBox* droplet_group_{};
     QSpinBox* droplet_count_{};
     QDoubleSpinBox* droplet_outer_radius_{};
-    QDoubleSpinBox* droplet_core_radius_{};
-    QDoubleSpinBox* droplet_swirl_{};
-    QDoubleSpinBox* droplet_width_{};
-    QDoubleSpinBox* droplet_roundness_{};
     QDoubleSpinBox* droplet_rotation_{};
     QGroupBox* transform_group_{};
     QDoubleSpinBox* transform_x_{};
