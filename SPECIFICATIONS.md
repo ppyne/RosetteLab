@@ -288,28 +288,32 @@ Parameters:
 
 - droplet count `n`, from 2 to 128;
 - outer radius, which bounds every droplet;
-- core radius, strictly smaller than the outer radius, which controls the central
-  curvilinear opening (`0` is allowed for a common central point);
-- signed swirl angle, with positive and negative values selecting opposite handedness;
-- angular width as a percentage of one radial sector;
-- roundness, controlling the inner Bézier handles;
 - angular rotation of the complete rosette.
 
-Each droplet consists of a circular bulb approximated by three cubic Bézier arcs
-and two curved boundaries forming a taper that ends at the core. All droplets are stored as closed
-subpaths of one compound path, so stroke, fill, fill rule, opacity, blending,
-layer transforms, copies, and vector exports apply uniformly. Native SVG metadata
-uses the stable type identifier `droplet-rosette` and preserves every parameter.
-The initial preset catalogue includes 2-, 3-, 5-, and 8-droplet examples.
+The construction is the same for every `n`, including `n = 2`. Let `R` be the
+outer radius and let `r` be the radius of each of the `n` equal inner circles:
 
-The two-droplet case is deliberately canonical rather than an approximation of
-the multi-droplet model. **Taijitu pair** consists of two congruent compound
-contours. Each contour uses two tangent semicircles of radius `outer radius / 2`
-for the S-shaped division and one semicircle of `outer radius` for the exterior;
-the second contour is obtained by a 180-degree rotation. Consequently core radius,
-swirl, angular width, and roundness do not alter the two-droplet case. Rotation and
-outer radius remain editable. This construction must match the geometry of the
-standard two-part yin-yang outline supplied as the visual reference.
+\[
+r=\frac{R\sin(\pi/n)}{1+\sin(\pi/n)}
+\]
+
+Their centres lie at radius `R-r`; consequently adjacent inner circles are
+externally tangent and every inner circle is internally tangent to the outer
+circle. Each closed droplet contour comprises the short arc of the outer circle,
+the major arc of one inner circle, and the minor arc of the preceding inner
+circle. The two inner arcs have a common tangent at their kissing point. This is
+the single compass-derived construction used by **Taijitu pair**, **Triple
+tomoe**, **Fivefold wheel**, and all other counts. For `n = 2`, it reduces to the
+three tangent semicircles of the standard taijitu reference. For `n = 3` and
+`n = 5`, it produces the circular heads, tapering tails, and central curvilinear
+polygon shown in the supplied historical construction plate.
+
+All droplets are stored as closed subpaths of one compound path, so stroke, fill,
+fill rule, opacity, blending, layer transforms, copies, and vector exports apply
+uniformly. Native SVG metadata uses the stable type identifier
+`droplet-rosette`. The legacy core-radius, swirl, angular-width, and roundness
+metadata fields are retained for project compatibility but disabled and ignored;
+the exact circle construction is determined by `n`, `R`, and rotation.
 
 ## 6. Presets
 

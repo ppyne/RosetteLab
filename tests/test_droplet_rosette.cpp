@@ -20,7 +20,7 @@ int main()
             parameters.droplets = count;
             const auto path = rosettelab::curves::generate_droplet_rosette_bezier(parameters);
             require(path.closed, "Droplet Rosette must be closed");
-            const std::size_t segments_per_droplet = count == 2 ? 6 : 5;
+            const std::size_t segments_per_droplet = count == 3 ? 7 : 6;
             require(path.segments.size() == static_cast<std::size_t>(count) * segments_per_droplet,
                     "each droplet must contain the expected cubic segments");
             require(path.subpath_starts.size() == static_cast<std::size_t>(count),
@@ -43,8 +43,8 @@ int main()
         const auto taijitu = rosettelab::curves::generate_droplet_rosette_bezier(pair);
         require(taijitu.subpath_starts == std::vector<std::size_t>{0, 6},
                 "Taijitu must contain two six-segment contours");
-        require(std::hypot(taijitu.segments.front().start.x - 100.0,
-                           taijitu.segments.front().start.y) < 1e-9,
+        require(std::abs(std::hypot(taijitu.segments.front().start.x,
+                                    taijitu.segments.front().start.y) - 100.0) < 1e-9,
                 "Taijitu contour must start on its outer circle");
 
         bool rejected = false;

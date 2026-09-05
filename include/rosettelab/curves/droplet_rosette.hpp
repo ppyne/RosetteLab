@@ -17,8 +17,8 @@ struct DropletRosetteParameters {
         const DropletRosetteParameters&, const DropletRosetteParameters&) = default;
 };
 
-// Generates one closed cubic-Bezier subpath per droplet. Each contour has a
-// circular bulb and a curved taper ending on the core circle.
+// Generates one closed cubic-Bezier subpath per droplet using only arcs of the
+// outer circle and a ring of equal mutually tangent inner circles.
 [[nodiscard]] core::BezierPath generate_droplet_rosette_bezier(
     const DropletRosetteParameters& parameters);
 

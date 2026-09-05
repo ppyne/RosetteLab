@@ -18,19 +18,9 @@ core::Point tangent(const double angle)
     return {-std::sin(angle), std::cos(angle)};
 }
 
-core::Point add(const core::Point point, const core::Point vector, const double scale)
+core::Point add(const core::Point point, const core::Point vector, const double factor)
 {
-    return {point.x + vector.x * scale, point.y + vector.y * scale};
-}
-
-core::Point rotate(const core::Point point, const double angle)
-{
-    const double cosine = std::cos(angle);
-    const double sine = std::sin(angle);
-    return {
-        point.x * cosine - point.y * sine,
-        point.x * sine + point.y * cosine,
-    };
+    return {point.x + vector.x * factor, point.y + vector.y * factor};
 }
 
 void append_circular_arc(
@@ -38,22 +28,15 @@ void append_circular_arc(
     const core::Point centre,
     const double radius,
     const double start_angle,
-    const double end_angle)
+    const double sweep)
 {
-    const double sweep = end_angle - start_angle;
     const int pieces = std::max(1, static_cast<int>(
         std::ceil(std::abs(sweep) / (std::numbers::pi / 2.0))));
     for (int piece = 0; piece < pieces; ++piece) {
         const double start = start_angle + sweep * static_cast<double>(piece) / pieces;
         const double end = start_angle + sweep * static_cast<double>(piece + 1) / pieces;
-        const core::Point p0{
-            centre.x + radius * std::cos(start),
-            centre.y + radius * std::sin(start),
-        };
-        const core::Point p3{
-            centre.x + radius * std::cos(end),
-            centre.y + radius * std::sin(end),
-        };
+        const auto p0 = add(centre, polar(1.0, start), radius);
+        const auto p3 = add(centre, polar(1.0, end), radius);
         const double handle = 4.0 / 3.0 * std::tan((end - start) / 4.0) * radius;
         path.segments.push_back({
             p0,
@@ -64,50 +47,16 @@ void append_circular_arc(
     }
 }
 
-core::BezierPath generate_taijitu_pair(const DropletRosetteParameters& p)
-{
-    core::BezierPath half;
-    half.closed = true;
-    const double radius = p.outer_radius;
-    const double inner = radius / 2.0;
-    append_circular_arc(half, {inner, 0.0}, inner, 0.0, std::numbers::pi);
-    append_circular_arc(half, {-inner, 0.0}, inner, 0.0, -std::numbers::pi);
-    append_circular_arc(half, {0.0, 0.0}, radius, std::numbers::pi, 0.0);
-
-    core::BezierPath result;
-    result.closed = true;
-    result.segments.reserve(half.segments.size() * 2);
-    result.subpath_starts = {0, half.segments.size()};
-    const double rotation = p.rotation_degrees * std::numbers::pi / 180.0;
-    for (int copy = 0; copy < 2; ++copy) {
-        const double angle = rotation + copy * std::numbers::pi;
-        for (const auto& segment : half.segments) {
-            result.segments.push_back({
-                rotate(segment.start, angle),
-                rotate(segment.control1, angle),
-                rotate(segment.control2, angle),
-                rotate(segment.end, angle),
-            });
-        }
-    }
-    return result;
-}
-
 void validate(const DropletRosetteParameters& p)
 {
     if (p.droplets < 2 || p.droplets > 128) {
         throw std::invalid_argument("Droplet count must be between 2 and 128");
     }
     if (!std::isfinite(p.outer_radius) || p.outer_radius <= 0.0 ||
-        !std::isfinite(p.core_radius) || p.core_radius < 0.0 ||
-        p.core_radius >= p.outer_radius) {
-        throw std::invalid_argument("Droplet radii must be finite and satisfy 0 <= core < outer");
-    }
-    if (!std::isfinite(p.swirl_degrees) || !std::isfinite(p.width_percent) ||
-        p.width_percent <= 0.0 || p.width_percent > 100.0 ||
-        !std::isfinite(p.roundness) || p.roundness < 0.05 || p.roundness > 1.0 ||
+        !std::isfinite(p.core_radius) || !std::isfinite(p.swirl_degrees) ||
+        !std::isfinite(p.width_percent) || !std::isfinite(p.roundness) ||
         !std::isfinite(p.rotation_degrees)) {
-        throw std::invalid_argument("Invalid Droplet Rosette shape parameter");
+        throw std::invalid_argument("Droplet Rosette parameters must be finite");
     }
 }
 
@@ -117,89 +66,38 @@ core::BezierPath generate_droplet_rosette_bezier(
     const DropletRosetteParameters& p)
 {
     validate(p);
-    if (p.droplets == 2) {
-        return generate_taijitu_pair(p);
-    }
+
     core::BezierPath result;
     result.closed = true;
-    result.segments.reserve(static_cast<std::size_t>(p.droplets) * 5);
-    result.subpath_starts.reserve(static_cast<std::size_t>(p.droplets));
-
-    const double sector = 2.0 * std::numbers::pi / static_cast<double>(p.droplets);
-    const double half_span = sector * std::clamp(p.width_percent / 100.0, 0.01, 1.0) / 2.0;
+    const double count = static_cast<double>(p.droplets);
+    const double sector = 2.0 * std::numbers::pi / count;
+    const double half_sector = std::numbers::pi / count;
+    const double sine = std::sin(half_sector);
+    const double inner_radius = p.outer_radius * sine / (1.0 + sine);
+    const double centre_radius = p.outer_radius - inner_radius;
     const double rotation = p.rotation_degrees * std::numbers::pi / 180.0;
-    const double swirl = p.swirl_degrees * std::numbers::pi / 180.0;
-    const double radial_span = p.outer_radius - p.core_radius;
-    const double packing_sine = std::sin(std::numbers::pi / static_cast<double>(p.droplets));
-    const double packing_radius = p.outer_radius * packing_sine / (1.0 + packing_sine);
-    const double bulb_radius = std::min(
-        radial_span * 0.43,
-        packing_radius * p.width_percent / 100.0);
-    const double bulb_distance = p.outer_radius - bulb_radius;
-    const double attachment_offset = half_span * 0.72;
-    const double attachment_leading = std::numbers::pi - attachment_offset;
-    const double attachment_trailing = std::numbers::pi + attachment_offset;
-    const double tip_angle = swirl;
-    const auto tip = polar(p.core_radius, tip_angle);
-    const auto tip_tangent = tangent(tip_angle);
-    const core::Point bulb_centre{bulb_distance, 0.0};
-    const auto point_on_bulb = [&](const double angle) {
-        return core::Point{
-            bulb_centre.x + bulb_radius * std::cos(angle),
-            bulb_centre.y + bulb_radius * std::sin(angle),
-        };
-    };
 
-    core::BezierPath base;
-    base.closed = true;
-    const auto leading = point_on_bulb(attachment_leading);
-    const auto trailing = point_on_bulb(attachment_trailing);
-    const double tail_handle = radial_span * (0.12 + 0.20 * p.roundness);
-    base.segments.push_back({
-        tip,
-        add(tip, tip_tangent, tail_handle),
-        add(leading, tangent(attachment_leading), bulb_radius * (0.30 + 0.45 * p.roundness)),
-        leading,
-    });
-
-    // Traverse the long, outward side of the bulb clockwise in three arcs.
-    const double arc_end = attachment_trailing - 2.0 * std::numbers::pi;
-    constexpr int arc_segments = 3;
-    for (int arc = 0; arc < arc_segments; ++arc) {
-        const double start_angle = attachment_leading +
-            (arc_end - attachment_leading) * static_cast<double>(arc) / arc_segments;
-        const double end_angle = attachment_leading +
-            (arc_end - attachment_leading) * static_cast<double>(arc + 1) / arc_segments;
-        const auto start = point_on_bulb(start_angle);
-        const auto end = point_on_bulb(end_angle);
-        const double handle = 4.0 / 3.0 *
-            std::tan((end_angle - start_angle) / 4.0) * bulb_radius;
-        base.segments.push_back({
-            start,
-            add(start, tangent(start_angle), handle),
-            add(end, tangent(end_angle), -handle),
-            end,
-        });
-    }
-    base.segments.push_back({
-        trailing,
-        add(trailing, tangent(attachment_trailing),
-            -bulb_radius * (0.18 + 0.36 * p.roundness)),
-        add(tip, tip_tangent, -radial_span * (0.24 + 0.34 * p.roundness)),
-        tip,
-    });
+    // Each contour consists of a short outer arc, the major arc of the current
+    // packed circle, and the minor arc of the previous packed circle. The two
+    // inner arcs share a tangent at their common kissing point.
+    const double major_sweep = 3.0 * std::numbers::pi / 2.0 - half_sector;
+    const double minor_sweep = -(std::numbers::pi / 2.0 + half_sector);
 
     for (int index = 0; index < p.droplets; ++index) {
         result.subpath_starts.push_back(result.segments.size());
-        const double centre = rotation + static_cast<double>(index) * sector;
-        for (const auto& segment : base.segments) {
-            result.segments.push_back({
-                rotate(segment.start, centre),
-                rotate(segment.control1, centre),
-                rotate(segment.control2, centre),
-                rotate(segment.end, centre),
-            });
-        }
+        const double current_angle = rotation + static_cast<double>(index) * sector;
+        const double previous_angle = current_angle - sector;
+        const auto current_centre = polar(centre_radius, current_angle);
+        const auto previous_centre = polar(centre_radius, previous_angle);
+
+        append_circular_arc(
+            result, {0.0, 0.0}, p.outer_radius, previous_angle, sector);
+        append_circular_arc(
+            result, current_centre, inner_radius, current_angle, major_sweep);
+        append_circular_arc(
+            result, previous_centre, inner_radius,
+            previous_angle + std::numbers::pi / 2.0 + half_sector,
+            minor_sweep);
     }
     return result;
 }
