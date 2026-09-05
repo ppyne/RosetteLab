@@ -295,8 +295,8 @@ Parameters:
 - roundness, controlling the inner Bézier handles;
 - angular rotation of the complete rosette.
 
-Each droplet consists of an outer circular arc approximated by a cubic Bézier and
-two cubic inner boundaries meeting at the core. All droplets are stored as closed
+Each droplet consists of a circular bulb approximated by three cubic Bézier arcs
+and two curved boundaries forming a taper that ends at the core. All droplets are stored as closed
 subpaths of one compound path, so stroke, fill, fill rule, opacity, blending,
 layer transforms, copies, and vector exports apply uniformly. Native SVG metadata
 uses the stable type identifier `droplet-rosette` and preserves every parameter.

@@ -20,17 +20,17 @@ int main()
             parameters.droplets = count;
             const auto path = rosettelab::curves::generate_droplet_rosette_bezier(parameters);
             require(path.closed, "Droplet Rosette must be closed");
-            require(path.segments.size() == static_cast<std::size_t>(count * 3),
-                    "each droplet must contain three cubic segments");
+            require(path.segments.size() == static_cast<std::size_t>(count * 5),
+                    "each droplet must contain five cubic segments");
             require(path.subpath_starts.size() == static_cast<std::size_t>(count),
                     "each droplet must begin an independent subpath");
             for (int i = 0; i < count; ++i) {
-                const auto first = static_cast<std::size_t>(i * 3);
+                const auto first = static_cast<std::size_t>(i * 5);
                 require(path.subpath_starts[static_cast<std::size_t>(i)] == first,
                         "subpath starts must be deterministic");
                 require(std::hypot(
-                    path.segments[first].start.x - path.segments[first + 2].end.x,
-                    path.segments[first].start.y - path.segments[first + 2].end.y) < 1e-9,
+                    path.segments[first].start.x - path.segments[first + 4].end.x,
+                    path.segments[first].start.y - path.segments[first + 4].end.y) < 1e-9,
                     "every droplet must close geometrically");
             }
         }

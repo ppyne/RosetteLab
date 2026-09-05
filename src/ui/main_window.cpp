@@ -395,7 +395,7 @@ MainWindow::MainWindow(QWidget* parent)
         control->setRange(0.0, 100000.0); control->setDecimals(2); control->setSuffix(" units");
     }
     droplet_outer_radius_->setMinimum(0.01); droplet_outer_radius_->setValue(80.0);
-    droplet_core_radius_->setValue(16.0);
+    droplet_core_radius_->setValue(10.0);
     droplet_swirl_ = angle_control(droplet_group_); droplet_swirl_->setValue(28.0);
     droplet_width_ = new QDoubleSpinBox(droplet_group_);
     droplet_width_->setRange(1.0, 100.0); droplet_width_->setValue(88.0); droplet_width_->setSuffix(" %");
@@ -2283,7 +2283,7 @@ void MainWindow::apply_selected_preset()
     } else if (id.startsWith("droplet-")) {
         droplet_count_->setValue(id.mid(QString("droplet-").size()).toInt());
         droplet_outer_radius_->setValue(80);
-        droplet_core_radius_->setValue(id == "droplet-2" ? 0 : 16);
+        droplet_core_radius_->setValue(id == "droplet-2" ? 0 : 10);
         droplet_swirl_->setValue(id == "droplet-2" ? 42 : 28);
         droplet_width_->setValue(id == "droplet-8" ? 82 : 88);
         droplet_roundness_->setValue(0.55);
