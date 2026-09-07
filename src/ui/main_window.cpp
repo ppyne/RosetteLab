@@ -24,6 +24,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFormLayout>
+#include <QFontComboBox>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QInputDialog>
@@ -401,6 +402,27 @@ MainWindow::MainWindow(QWidget* parent)
     droplet_form->addRow("Rotation", droplet_rotation_);
     droplet_group_->hide(); parameters_layout->addWidget(droplet_group_);
 
+    text_group_ = new QGroupBox("Text parameters", parameters_panel);
+    auto* text_form = new QFormLayout(text_group_);
+    text_value_ = new QLineEdit("Text", text_group_);
+    text_value_->setObjectName("textValueField");
+    text_font_ = new QFontComboBox(text_group_);
+    text_font_->setObjectName("textFontSelector");
+    text_size_ = new QDoubleSpinBox(text_group_);
+    text_size_->setRange(0.1, 10000.0); text_size_->setDecimals(1); text_size_->setValue(12.0);
+    text_size_->setSuffix(" units");
+    text_alignment_ = new QComboBox(text_group_);
+    text_alignment_->addItem("Left", static_cast<int>(document::TextAlignment::Left));
+    text_alignment_->addItem("Center", static_cast<int>(document::TextAlignment::Center));
+    text_alignment_->addItem("Right", static_cast<int>(document::TextAlignment::Right));
+    text_color_button_ = new ColorPreviewButton(text_group_);
+    text_form->addRow("Text", text_value_);
+    text_form->addRow("Font", text_font_);
+    text_form->addRow("Size", text_size_);
+    text_form->addRow("Color", text_color_button_);
+    text_form->addRow("Alignment", text_alignment_);
+    text_group_->hide(); parameters_layout->addWidget(text_group_);
+
     transform_group_ = new QGroupBox("Layer transform", parameters_panel);
     auto* transform_form = new QFormLayout(transform_group_);
     transform_x_ = new QDoubleSpinBox(transform_group_);
@@ -655,6 +677,7 @@ MainWindow::MainWindow(QWidget* parent)
     add_menu->addAction("Lissajous", this, [this] { add_lissajous(); });
     add_menu->addAction("Harmonograph", this, [this] { add_harmonograph(); });
     add_menu->addAction("Droplet Rosette", this, [this] { add_droplet_rosette(); });
+    add_menu->addAction("Text", this, [this] { add_text(); });
     add_button->setMenu(add_menu);
     layers_layout->addWidget(add_button);
 
@@ -740,6 +763,11 @@ MainWindow::MainWindow(QWidget* parent)
             update_preview(QStringLiteral("curve.droplet.%1").arg(reinterpret_cast<quintptr>(control)));
         });
     }
+    connect(text_value_, &QLineEdit::textEdited, this, [this] { update_preview("text.value"); });
+    connect(text_font_, &QFontComboBox::currentFontChanged, this, [this] { update_preview(); });
+    connect(text_size_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("text.size"); });
+    connect(text_alignment_, &QComboBox::currentIndexChanged, this, [this] { update_preview(); });
+    connect(text_color_button_, &QPushButton::clicked, this, [this] { choose_text_color(); });
     connect(transform_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("transform.x"); });
     connect(transform_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("transform.y"); });
     connect(transform_scale_x_, &QDoubleSpinBox::valueChanged, this, [this] {
@@ -1431,6 +1459,14 @@ void MainWindow::export_pdf()
     auto* options_form = new QFormLayout;
     auto* rendering_control = new QComboBox(&options_dialog);
     rendering_control->addItems({"Preserve vector blend modes", "Rasterize for compatibility"});
+    const bool contains_text = std::any_of(document_.layers().begin(), document_.layers().end(),
+        [](const document::CurveLayer& layer) { return layer.type == document::CurveType::Text; });
+    if (contains_text) {
+        rendering_control->setCurrentIndex(1);
+        rendering_control->setItemData(0, 0, Qt::UserRole - 1);
+        rendering_control->setToolTip(
+            "PDF font embedding is not yet available; text layers require compatibility rendering.");
+    }
     options_form->addRow("Rendering", rendering_control);
     auto* color_model_control = new QComboBox(&options_dialog);
     color_model_control->addItem("RGB");
@@ -1615,6 +1651,20 @@ void MainWindow::add_droplet_rosette()
     mark_document_modified();
 }
 
+void MainWindow::add_text()
+{
+    const auto suggested = QString::fromStdString(document_.suggested_default_name(document::CurveType::Text));
+    bool accepted = false;
+    const auto name = QInputDialog::getText(
+        this, "New text", "Layer name", QLineEdit::Normal, suggested, &accepted).trimmed();
+    if (!accepted || name.isEmpty()) return;
+    auto& layer = document_.add_text({}, name.toUtf8().toStdString());
+    auto* item = add_layer_row(layer);
+    layers_->setCurrentItem(item);
+    preview_->update();
+    mark_document_modified();
+}
+
 QListWidgetItem* MainWindow::add_layer_row(const document::CurveLayer& layer, const int row)
 {
     auto* item = new QListWidgetItem;
@@ -1681,12 +1731,14 @@ void MainWindow::load_active_layer()
     const auto* lissajous_parameters = std::get_if<curves::LissajousParameters>(&layer->parameters);
     const auto* harmonograph_parameters = std::get_if<curves::HarmonographParameters>(&layer->parameters);
     const auto* droplet_parameters = std::get_if<curves::DropletRosetteParameters>(&layer->parameters);
+    const auto* text_parameters = std::get_if<document::TextParameters>(&layer->parameters);
     curve_group_->setVisible(parameters != nullptr);
     ellipse_group_->setVisible(ellipse_parameters != nullptr);
     trochoid_group_->setVisible(trochoid_parameters != nullptr);
     lissajous_group_->setVisible(lissajous_parameters != nullptr);
     harmonograph_group_->setVisible(harmonograph_parameters != nullptr);
     droplet_group_->setVisible(droplet_parameters != nullptr);
+    text_group_->setVisible(text_parameters != nullptr);
 
     const QSignalBlocker radius_blocker(radius_);
     const QSignalBlocker k_mode_blocker(k_mode_);
@@ -1720,6 +1772,8 @@ void MainWindow::load_active_layer()
     const QSignalBlocker harm_ax(harmonograph_amplitude_x_),harm_ay(harmonograph_amplitude_y_),harm_fx(harmonograph_frequency_x_),harm_fy(harmonograph_frequency_y_),harm_px(harmonograph_phase_x_),harm_py(harmonograph_phase_y_),harm_dx(harmonograph_damping_x_),harm_dy(harmonograph_damping_y_),harm_duration(harmonograph_duration_),harm_rotation(harmonograph_rotation_),harm_tolerance(harmonograph_tolerance_);
     const QSignalBlocker drop_count(droplet_count_), drop_outer(droplet_outer_radius_),
         drop_rotation(droplet_rotation_);
+    const QSignalBlocker text_value_blocker(text_value_), text_font_blocker(text_font_),
+        text_size_blocker(text_size_), text_alignment_blocker(text_alignment_);
     const QSignalBlocker transform_x_blocker(transform_x_);
     const QSignalBlocker transform_y_blocker(transform_y_);
     const QSignalBlocker transform_scale_x_blocker(transform_scale_x_);
@@ -1790,6 +1844,12 @@ void MainWindow::load_active_layer()
         droplet_count_->setValue(droplet_parameters->droplets);
         droplet_outer_radius_->setValue(droplet_parameters->outer_radius);
         droplet_rotation_->setValue(droplet_parameters->rotation_degrees);
+    } else if (text_parameters != nullptr) {
+        text_value_->setText(QString::fromUtf8(text_parameters->text.data(), static_cast<qsizetype>(text_parameters->text.size())));
+        text_font_->setCurrentFont(QFont(QString::fromUtf8(text_parameters->font_family.data(), static_cast<qsizetype>(text_parameters->font_family.size()))));
+        text_size_->setValue(text_parameters->font_size);
+        text_alignment_->setCurrentIndex(text_alignment_->findData(static_cast<int>(text_parameters->alignment)));
+        text_color_ = qcolor_from_rgba(text_parameters->color);
     }
     transform_x_->setValue(layer->transform.position_x);
     transform_y_->setValue(layer->transform.position_y);
@@ -1986,6 +2046,16 @@ void MainWindow::choose_fill_color()
     }
 }
 
+void MainWindow::choose_text_color()
+{
+    ColorEditorDialog dialog(text_color_, "Text color", this);
+    if (dialog.exec() == QDialog::Accepted) {
+        text_color_ = dialog.color();
+        refresh_color_buttons();
+        update_preview();
+    }
+}
+
 void MainWindow::add_palette_color()
 {
     const QColor initial = palette_colors_->count() > 0
@@ -2114,6 +2184,7 @@ void MainWindow::refresh_color_buttons()
     style_color_button(stroke_color_button_, stroke_color_);
     style_color_button(fill_color_button_, fill_color_);
     style_color_button(palette_start_color_button_, palette_start_color_);
+    style_color_button(text_color_button_, text_color_);
     stroke_color_button_->setEnabled(stroke_enabled_->isChecked());
     stroke_width_->setEnabled(stroke_enabled_->isChecked());
     const bool fill_controls_enabled = fill_enabled_->isChecked();
@@ -2210,6 +2281,8 @@ void MainWindow::refresh_layer_actions()
     trochoid_group_->setEnabled(has_layer && !layer->locked);
     lissajous_group_->setEnabled(has_layer && !layer->locked);
     harmonograph_group_->setEnabled(has_layer && !layer->locked);
+    droplet_group_->setEnabled(has_layer && !layer->locked);
+    text_group_->setEnabled(has_layer && !layer->locked);
     transform_group_->setEnabled(has_layer && !layer->locked);
     copies_group_->setEnabled(has_layer && !layer->locked);
     appearance_group_->setEnabled(has_layer && !layer->locked);
@@ -2316,6 +2389,12 @@ void MainWindow::update_preview(const QString& coalescing_key)
         parameters->droplets = droplet_count_->value();
         parameters->outer_radius = droplet_outer_radius_->value();
         parameters->rotation_degrees = droplet_rotation_->value();
+    } else if (auto* parameters = std::get_if<document::TextParameters>(&layer->parameters)) {
+        parameters->text = text_value_->text().toUtf8().toStdString();
+        parameters->font_family = text_font_->currentFont().family().toUtf8().toStdString();
+        parameters->font_size = text_size_->value();
+        parameters->color = rgba_from_qcolor(text_color_);
+        parameters->alignment = static_cast<document::TextAlignment>(text_alignment_->currentData().toInt());
     }
     refresh_layer_preview(active_layer_id_);
     preview_->update();
@@ -2372,6 +2451,8 @@ void MainWindow::refresh_preset_choices()
         add("Triple tomoe", "droplet-3");
         add("Fivefold wheel", "droplet-5");
         add("Eightfold vortex", "droplet-8");
+        break;
+    case document::CurveType::Text:
         break;
     case document::CurveType::Count: break;
     }

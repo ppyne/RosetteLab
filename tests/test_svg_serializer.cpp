@@ -202,6 +202,32 @@ void test_preset_state_is_metadata()
     require(contains(svg,"rosettelab:preset-customized=\"true\""),"customized state should be stored");
 }
 
+void test_utf8_text_layer_is_standard_svg_text()
+{
+    rosettelab::document::Document document;
+    rosettelab::document::TextParameters parameters;
+    parameters.text = "Rosette â è±";
+    parameters.font_family = "DejaVu Sans";
+    parameters.font_size = 18.5;
+    parameters.color = {0.2, 0.4, 0.6, 0.5};
+    parameters.alignment = rosettelab::document::TextAlignment::Right;
+    auto& layer = document.add_text(parameters);
+    layer.transform.position_x = 12.0;
+    layer.transform.position_y = -7.0;
+
+    const auto native = rosettelab::svg::serialize_rosettelab_svg(document);
+    require(contains(native, "rosettelab:type=\"text\""), "text type should be stored");
+    require(contains(native, "font-family=\"DejaVu Sans\""), "font family should be stored");
+    require(contains(native, "font-size=\"18.5\""), "font size should be stored");
+    require(contains(native, "text-anchor=\"end\""), "right alignment should use SVG end anchoring");
+    require(contains(native, "translate(12 -7)"), "text position should be rendered");
+    require(contains(native, parameters.text), "UTF-8 text should be preserved");
+
+    const auto clean = rosettelab::svg::serialize_clean_svg(document);
+    require(contains(clean, "<text "), "clean SVG should retain live text");
+    require(!contains(clean, "rosettelab:"), "clean text SVG should omit editing metadata");
+}
+
 void test_clean_svg_contains_only_visible_rendered_content()
 {
     rosettelab::document::Document document;
@@ -244,6 +270,7 @@ int main()
         test_lissajous_contains_editable_metadata();
         test_droplet_rosette_contains_compound_geometry_and_metadata();
         test_preset_state_is_metadata();
+        test_utf8_text_layer_is_standard_svg_text();
         test_clean_svg_contains_only_visible_rendered_content();
         std::cout << "All RosetteLab SVG serializer tests passed\n";
         return 0;

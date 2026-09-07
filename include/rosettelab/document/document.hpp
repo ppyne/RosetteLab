@@ -27,19 +27,33 @@ enum class CurveType : std::size_t {
     Lissajous,
     Harmonograph,
     DropletRosette,
+    Text,
     Count,
 };
 
 [[nodiscard]] std::string curve_type_name(CurveType type);
 
 using LayerId = std::uint64_t;
+enum class TextAlignment { Left, Center, Right };
+
+struct TextParameters {
+    std::string text{"Text"};
+    std::string font_family{"Sans Serif"};
+    double font_size{12.0};
+    RgbaColor color{0.0, 0.0, 0.0, 1.0};
+    TextAlignment alignment{TextAlignment::Left};
+
+    friend bool operator==(const TextParameters&, const TextParameters&) = default;
+};
+
 using CurveParameters = std::variant<
     curves::PolarRoseParameters,
     curves::EllipseParameters,
     curves::TrochoidParameters,
     curves::LissajousParameters,
     curves::HarmonographParameters,
-    curves::DropletRosetteParameters>;
+    curves::DropletRosetteParameters,
+    TextParameters>;
 
 struct LayerTransform {
     double position_x{0.0};
@@ -150,6 +164,9 @@ public:
         std::optional<std::string> name = std::nullopt);
     [[nodiscard]] CurveLayer& add_droplet_rosette(
         const curves::DropletRosetteParameters& parameters = {},
+        std::optional<std::string> name = std::nullopt);
+    [[nodiscard]] CurveLayer& add_text(
+        const TextParameters& parameters = {},
         std::optional<std::string> name = std::nullopt);
     [[nodiscard]] CurveLayer& add_trochoid(
         CurveType type,

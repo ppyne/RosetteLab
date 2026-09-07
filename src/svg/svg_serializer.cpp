@@ -324,6 +324,32 @@ void write_droplet_rosette(std::ostringstream& output, const document::CurveLaye
     write_rendered_path(output, path, layer.appearance, layer);
 }
 
+const char* text_anchor(const document::TextAlignment alignment)
+{
+    if (alignment == document::TextAlignment::Center) return "middle";
+    if (alignment == document::TextAlignment::Right) return "end";
+    return "start";
+}
+
+void write_text(std::ostringstream& output, const document::CurveLayer& layer)
+{
+    const auto* p = std::get_if<document::TextParameters>(&layer.parameters);
+    if (p == nullptr) throw std::invalid_argument("Text layer has incompatible parameters");
+    output << "    <text x=\"0\" y=\"0\""
+           << " transform=\"translate(" << number(layer.transform.position_x) << ' '
+           << number(layer.transform.position_y) << ") rotate("
+           << number(layer.transform.rotation_degrees) << ") scale("
+           << number(layer.transform.scale_x) << ' ' << number(layer.transform.scale_y) << ")\""
+           << " font-family=\"" << xml_escape(p->font_family) << "\""
+           << " font-size=\"" << number(p->font_size) << "\""
+           << " text-anchor=\"" << text_anchor(p->alignment) << "\""
+           << " fill=\"" << rgb_hex(p->color) << "\""
+           << " fill-opacity=\"" << number(std::clamp(p->color.alpha, 0.0, 1.0)) << "\""
+           << " opacity=\"" << number(std::clamp(layer.appearance.opacity, 0.0, 1.0)) << "\""
+           << " style=\"mix-blend-mode:" << blend_mode_name(layer.appearance.blend_mode) << "\">"
+           << xml_escape(p->text) << "</text>\n";
+}
+
 const char* curve_type_id(const document::CurveType type)
 {
     switch (type) {
@@ -334,6 +360,7 @@ const char* curve_type_id(const document::CurveType type)
     case document::CurveType::Lissajous: return "lissajous";
     case document::CurveType::Harmonograph: return "harmonograph";
     case document::CurveType::DropletRosette: return "droplet-rosette";
+    case document::CurveType::Text: return "text";
     default: throw std::invalid_argument("Unsupported curve type for SVG export");
     }
 }
@@ -431,6 +458,8 @@ std::string serialize_rosettelab_svg(
             write_harmonograph(output, layer);
         } else if (layer.type == document::CurveType::DropletRosette) {
             write_droplet_rosette(output, layer);
+        } else if (layer.type == document::CurveType::Text) {
+            write_text(output, layer);
         }
         output << "  </g>\n";
     }
@@ -468,8 +497,12 @@ std::string serialize_clean_svg(const document::Document& document)
         }
         output << "  <g id=\"layer-" << layer.id << "\">\n"
                << "    <title>" << xml_escape(layer.name) << "</title>\n";
-        const auto path = generated_layer_path(layer);
-        write_rendered_path(output, path, layer.appearance, layer, false);
+        if (layer.type == document::CurveType::Text) {
+            write_text(output, layer);
+        } else {
+            const auto path = generated_layer_path(layer);
+            write_rendered_path(output, path, layer.appearance, layer, false);
+        }
         output << "  </g>\n";
     }
     output << "</svg>\n";

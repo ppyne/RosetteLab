@@ -2,6 +2,8 @@
 
 #include <QPainter>
 #include <QPainterPath>
+#include <QFont>
+#include <QFontMetricsF>
 #include <QTransform>
 
 #include <algorithm>
@@ -130,6 +132,26 @@ void render_document(
 
     for (const auto& layer : document.layers()) {
         if (!layer.visible) {
+            continue;
+        }
+        if (const auto* text = std::get_if<document::TextParameters>(&layer.parameters)) {
+            painter.save();
+            painter.setOpacity(std::clamp(layer.appearance.opacity, 0.0, 1.0));
+            painter.setCompositionMode(composition_mode(layer.appearance.blend_mode));
+            painter.translate(layer.transform.position_x, layer.transform.position_y);
+            painter.rotate(layer.transform.rotation_degrees);
+            painter.scale(layer.transform.scale_x, layer.transform.scale_y);
+            QFont font(QString::fromUtf8(text->font_family.data(), static_cast<qsizetype>(text->font_family.size())));
+            font.setPixelSize(std::max(1, static_cast<int>(std::lround(text->font_size))));
+            painter.setFont(font);
+            painter.setPen(to_qcolor(text->color));
+            const QString value = QString::fromUtf8(text->text.data(), static_cast<qsizetype>(text->text.size()));
+            const double width = QFontMetricsF(font).horizontalAdvance(value);
+            double x = 0.0;
+            if (text->alignment == document::TextAlignment::Center) x = -width / 2.0;
+            else if (text->alignment == document::TextAlignment::Right) x = -width;
+            painter.drawText(QPointF(x, 0.0), value);
+            painter.restore();
             continue;
         }
         core::BezierPath curve;

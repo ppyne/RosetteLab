@@ -24,6 +24,8 @@ std::string curve_type_name(const CurveType type)
         return "Harmonograph";
     case CurveType::DropletRosette:
         return "Droplet Rosette";
+    case CurveType::Text:
+        return "Text";
     case CurveType::Count:
         break;
     }
@@ -119,6 +121,16 @@ CurveLayer& Document::add_droplet_rosette(
     return layers_.back();
 }
 
+CurveLayer& Document::add_text(
+    const TextParameters& parameters, std::optional<std::string> name)
+{
+    const auto default_name = next_default_name(CurveType::Text);
+    if (!name.has_value() || name->empty()) name = default_name;
+    layers_.push_back({next_id_++, std::move(*name), CurveType::Text,
+                       parameters, true, false, {}, {}, {}, "", false});
+    return layers_.back();
+}
+
 std::string Document::suggested_default_name(const CurveType type) const
 {
     const auto index = static_cast<std::size_t>(type);
@@ -178,6 +190,8 @@ bool Document::import_layer(CurveLayer layer)
          std::holds_alternative<curves::HarmonographParameters>(layer.parameters)) ||
         (layer.type == CurveType::DropletRosette &&
          std::holds_alternative<curves::DropletRosetteParameters>(layer.parameters)) ||
+        (layer.type == CurveType::Text &&
+         std::holds_alternative<TextParameters>(layer.parameters)) ||
         ((layer.type == CurveType::Hypotrochoid || layer.type == CurveType::Epitrochoid) &&
          std::holds_alternative<curves::TrochoidParameters>(layer.parameters));
     if (!compatible) {

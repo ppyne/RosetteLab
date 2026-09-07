@@ -86,6 +86,18 @@ void test_droplet_rosette_names_and_parameters()
             "Droplet Rosette parameters should be retained");
 }
 
+void test_text_names_and_utf8_parameters()
+{
+    rosettelab::document::Document document;
+    rosettelab::document::TextParameters parameters;
+    parameters.text = "Mandala â à¤®à¤à¤¡à¤²";
+    parameters.alignment = rosettelab::document::TextAlignment::Center;
+    const auto& layer = document.add_text(parameters);
+    require(layer.name == "Text 1", "text should have its own name sequence");
+    require(std::get<rosettelab::document::TextParameters>(layer.parameters) == parameters,
+            "text parameters should retain UTF-8 content and styling");
+}
+
 void test_trochoid_names_and_parameters()
 {
     rosettelab::document::Document document;
@@ -239,6 +251,7 @@ int main()
         test_default_fill_rule_is_even_odd();
         test_lissajous_names_and_parameters();
         test_droplet_rosette_names_and_parameters();
+        test_text_names_and_utf8_parameters();
         test_trochoid_names_and_parameters();
         test_custom_name_and_layer_state();
         test_layer_reordering();

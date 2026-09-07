@@ -140,6 +140,30 @@ A clickable unlocked or locked UTF-8 padlock glyph is the second control in the 
 
 Layer rows are reorderable by drag and drop. The topmost painted layer is shown at the top of the list and the bottommost painted layer at the bottom. Internally, SVG elements remain serialized in standard paint order from bottom to top, while the UI presents the exact visual inverse. Drag-and-drop changes must keep both representations consistent.
 
+### 4.4 Single-line text layers
+
+A text layer contains one UTF-8 line, a font-family name, a positive font size in
+document units, an RGBA text color, and Left, Center, or Right alignment. Its X and
+Y coordinates use the common layer Position X and Position Y controls; the point
+identified by those coordinates is respectively the left edge, horizontal center,
+or right edge of the baseline. New text layers default to `Text`, `Sans Serif`, 12
+units, opaque black, and left alignment.
+
+Text is edited directly in the inspector and participates in visibility, locking,
+ordering, naming, duplication, transforms, opacity, blend mode, Undo/Redo, dirty
+state, thumbnails, live preview, PNG, JPEG, and clean SVG export. A single-line
+editor is deliberate: embedded line breaks are not supported in this first version.
+The selected family is stored by name; when it is unavailable, the platform font
+system substitutes a font without changing the stored name.
+
+Native project SVG represents the rendered object with a standard SVG `<text>`
+element and preserves all editable values, including UTF-8 content. Clean SVG keeps
+the same standard text element and removes RosetteLab metadata. Text remains live
+SVG text rather than being converted to outlines. Because the native vector PDF
+writer does not yet embed arbitrary fonts, a document containing a text layer
+automatically selects and requires **Rasterize for compatibility** for PDF export;
+this prevents silent omission or font substitution in that format.
+
 ## 5. Curve families
 
 ### 5.1 Polar rose

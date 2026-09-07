@@ -91,6 +91,15 @@ void test_save_open_round_trip()
     droplet_layer.appearance.cyclic_palette.offset = -1;
     droplet_layer.appearance.cyclic_palette.colors = {
         {1, 0, 0, 1}, {1, 128.0 / 255.0, 0, 204.0 / 255.0}};
+    rosettelab::document::TextParameters text_parameters;
+    text_parameters.text = "Rosette â è±";
+    text_parameters.font_family = "DejaVu Sans";
+    text_parameters.font_size = 16.5;
+    text_parameters.color = {0.3, 0.4, 0.5, 0.6};
+    text_parameters.alignment = rosettelab::document::TextAlignment::Center;
+    auto& text_layer = source.add_text(text_parameters, "UTF-8 label");
+    text_layer.transform.position_x = 23.0;
+    text_layer.transform.position_y = -11.0;
 
     const auto text = rosettelab::svg::serialize_rosettelab_svg(source);
     auto legacy_text = text;
@@ -102,10 +111,10 @@ void test_save_open_round_trip()
         " core-radius=\"17\" swirl-degrees=\"-24\" width-percent=\"84\" roundness=\"0.7\"");
     const auto legacy_loaded = rosettelab::svg::parse_rosettelab_svg(
         QByteArray::fromStdString(legacy_text));
-    require(legacy_loaded.layers().size() == 5,
+    require(legacy_loaded.layers().size() == 6,
             "obsolete Droplet Rosette attributes should be ignored when loading old files");
     const auto loaded = rosettelab::svg::parse_rosettelab_svg(QByteArray::fromStdString(text));
-    require(loaded.layers().size() == 5, "all implemented curve families should round-trip");
+    require(loaded.layers().size() == 6, "all implemented layer families should round-trip");
     require(loaded.settings().page_width == 297.0 && loaded.settings().page_height == 210.0,
             "page dimensions should round-trip");
     require(color_close(loaded.settings().background, source.settings().background),
@@ -156,6 +165,14 @@ void test_save_open_round_trip()
             "Droplet Rosette parameters should round-trip");
     require(loaded.layers()[4].appearance.cyclic_palette == droplet_layer.appearance.cyclic_palette,
             "Cyclic palette should round-trip");
+    const auto& restored_text = std::get<rosettelab::document::TextParameters>(loaded.layers()[5].parameters);
+    require(restored_text.text == text_parameters.text &&
+            restored_text.font_family == text_parameters.font_family &&
+            restored_text.font_size == text_parameters.font_size &&
+            restored_text.alignment == text_parameters.alignment,
+            "UTF-8 text parameters should round-trip");
+    require(color_close(restored_text.color, text_parameters.color),
+            "text color should round-trip within 8-bit SVG precision");
 }
 
 void test_rejects_ordinary_or_unsafe_svg()

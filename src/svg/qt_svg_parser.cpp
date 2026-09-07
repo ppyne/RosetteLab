@@ -247,6 +247,11 @@ void parse_curve_metadata(const QXmlStreamAttributes& a, curves::DropletRosetteP
     p.rotation_degrees = parse_double(required_attribute(a, "rotation-degrees"), "rotation-degrees");
 }
 
+void parse_curve_metadata(const QXmlStreamAttributes&, document::TextParameters&)
+{
+    throw parse_error("Text layers do not use curve metadata");
+}
+
 void parse_path_appearance(
     const QXmlStreamAttributes& attributes,
     const QString& metadata_ns,
@@ -295,6 +300,7 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
     else if (type == "lissajous") layer.type = document::CurveType::Lissajous;
     else if (type == "harmonograph") layer.type = document::CurveType::Harmonograph;
     else if (type == "droplet-rosette") layer.type = document::CurveType::DropletRosette;
+    else if (type == "text") layer.type = document::CurveType::Text;
     else throw parse_error("Unsupported RosetteLab curve type");
     layer.visible = parse_boolean(
         required_metadata_attribute(group_attributes, metadata_ns, "visible"), "visible");
@@ -396,11 +402,14 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
         parameters = curves::HarmonographParameters{};
     } else if (layer.type == document::CurveType::DropletRosette) {
         parameters = curves::DropletRosetteParameters{};
+    } else if (layer.type == document::CurveType::Text) {
+        parameters = document::TextParameters{};
     } else {
         parameters = curves::TrochoidParameters{};
     }
     bool found_curve = false;
     bool found_path = false;
+    bool found_text = false;
     while (reader.readNextStartElement()) {
         if (reader.namespaceUri() == metadata_ns && reader.name() == "curve") {
             std::visit([&reader](auto& value) {
@@ -414,11 +423,29 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
                 found_path = true;
             }
             reader.skipCurrentElement();
+        } else if (reader.namespaceUri() == "http://www.w3.org/2000/svg" && reader.name() == "text" &&
+                   layer.type == document::CurveType::Text) {
+            auto& text = std::get<document::TextParameters>(parameters);
+            const auto attributes = reader.attributes();
+            text.font_family = required_attribute(attributes, "font-family").toUtf8().toStdString();
+            text.font_size = parse_double(required_attribute(attributes, "font-size"), "font-size");
+            if (text.font_size <= 0.0) throw parse_error("Invalid text font size");
+            const auto anchor = required_attribute(attributes, "text-anchor");
+            if (anchor == "start") text.alignment = document::TextAlignment::Left;
+            else if (anchor == "middle") text.alignment = document::TextAlignment::Center;
+            else if (anchor == "end") text.alignment = document::TextAlignment::Right;
+            else throw parse_error("Unsupported text alignment");
+            text.color = parse_rgb(required_attribute(attributes, "fill"),
+                parse_double(required_attribute(attributes, "fill-opacity"), "fill-opacity"));
+            layer.appearance.opacity = parse_double(required_attribute(attributes, "opacity"), "opacity");
+            layer.appearance.blend_mode = parse_blend_mode(required_attribute(attributes, "style"));
+            text.text = reader.readElementText().toUtf8().toStdString();
+            found_text = true;
         } else {
             reader.skipCurrentElement();
         }
     }
-    if (!found_curve || !found_path) {
+    if (layer.type == document::CurveType::Text ? !found_text : (!found_curve || !found_path)) {
         throw parse_error("RosetteLab layer is missing curve metadata or rendered path");
     }
     layer.parameters = parameters;
