@@ -23,6 +23,7 @@ struct CubicBezier {
     Point control1;
     Point control2;
     Point end;
+    friend constexpr bool operator==(const CubicBezier&, const CubicBezier&) = default;
 };
 
 struct BezierPath {
@@ -32,6 +33,7 @@ struct BezierPath {
     // independently closed contours while retaining a single SVG/PDF path.
     std::vector<std::size_t> subpath_starts;
     bool closed{false};
+    friend bool operator==(const BezierPath&, const BezierPath&) = default;
 };
 
 [[nodiscard]] inline std::vector<BezierPath> split_subpaths(const BezierPath& path)

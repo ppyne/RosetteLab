@@ -97,6 +97,7 @@ void test_save_open_round_trip()
     text_parameters.font_size = 16.5;
     text_parameters.color = {0.3, 0.4, 0.5, 0.6};
     text_parameters.alignment = rosettelab::document::TextAlignment::Center;
+    text_parameters.vectorize = true;
     auto& text_layer = source.add_text(text_parameters, "UTF-8 label");
     text_layer.transform.position_x = 23.0;
     text_layer.transform.position_y = -11.0;
@@ -169,7 +170,7 @@ void test_save_open_round_trip()
     require(restored_text.text == text_parameters.text &&
             restored_text.font_family == text_parameters.font_family &&
             restored_text.font_size == text_parameters.font_size &&
-            restored_text.alignment == text_parameters.alignment,
+            restored_text.alignment == text_parameters.alignment && restored_text.vectorize,
             "UTF-8 text parameters should round-trip");
     require(color_close(restored_text.color, text_parameters.color),
             "text color should round-trip within 8-bit SVG precision");

@@ -52,6 +52,7 @@ private:
     void add_droplet_rosette();
     void add_text();
     void choose_text_color();
+    void update_text_outline(document::TextParameters& parameters);
     void new_document();
     void open_file();
     void open_document(const QString& path);
@@ -197,6 +198,7 @@ private:
     QFontComboBox* text_font_{};
     QDoubleSpinBox* text_size_{};
     QComboBox* text_alignment_{};
+    QCheckBox* text_vectorize_{};
     ColorPreviewButton* text_color_button_{};
     QColor text_color_{Qt::black};
     QGroupBox* transform_group_{};

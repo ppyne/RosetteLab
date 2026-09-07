@@ -331,10 +331,34 @@ const char* text_anchor(const document::TextAlignment alignment)
     return "start";
 }
 
-void write_text(std::ostringstream& output, const document::CurveLayer& layer)
+void write_text(std::ostringstream& output, const document::CurveLayer& layer,
+                const bool include_editing_metadata)
 {
     const auto* p = std::get_if<document::TextParameters>(&layer.parameters);
     if (p == nullptr) throw std::invalid_argument("Text layer has incompatible parameters");
+    if (include_editing_metadata) {
+        output << "    <rosettelab:text font-family=\"" << xml_escape(p->font_family)
+               << "\" font-size=\"" << number(p->font_size)
+               << "\" alignment=\"" << text_anchor(p->alignment)
+               << "\" color=\"" << rgb_hex(p->color)
+               << "\" color-opacity=\"" << number(std::clamp(p->color.alpha, 0.0, 1.0))
+               << "\" vectorize=\"" << (p->vectorize ? "true" : "false")
+               << "\" opacity=\"" << number(std::clamp(layer.appearance.opacity, 0.0, 1.0))
+               << "\" blend-mode=\"" << blend_mode_name(layer.appearance.blend_mode) << "\">"
+               << xml_escape(p->text) << "</rosettelab:text>\n";
+    }
+    if (p->vectorize && !p->outline.segments.empty()) {
+        output << "    <path d=\"" << path_data(p->outline) << "\""
+               << " transform=\"translate(" << number(layer.transform.position_x) << ' '
+               << number(layer.transform.position_y) << ") rotate("
+               << number(layer.transform.rotation_degrees) << ") scale("
+               << number(layer.transform.scale_x) << ' ' << number(layer.transform.scale_y) << ")\""
+               << " fill=\"" << rgb_hex(p->color) << "\" fill-opacity=\""
+               << number(std::clamp(p->color.alpha, 0.0, 1.0)) << "\" fill-rule=\"nonzero\""
+               << " opacity=\"" << number(std::clamp(layer.appearance.opacity, 0.0, 1.0)) << "\""
+               << " style=\"mix-blend-mode:" << blend_mode_name(layer.appearance.blend_mode) << "\"/>\n";
+        return;
+    }
     output << "    <text x=\"0\" y=\"0\""
            << " transform=\"translate(" << number(layer.transform.position_x) << ' '
            << number(layer.transform.position_y) << ") rotate("
@@ -459,7 +483,7 @@ std::string serialize_rosettelab_svg(
         } else if (layer.type == document::CurveType::DropletRosette) {
             write_droplet_rosette(output, layer);
         } else if (layer.type == document::CurveType::Text) {
-            write_text(output, layer);
+            write_text(output, layer, true);
         }
         output << "  </g>\n";
     }
@@ -498,7 +522,7 @@ std::string serialize_clean_svg(const document::Document& document)
         output << "  <g id=\"layer-" << layer.id << "\">\n"
                << "    <title>" << xml_escape(layer.name) << "</title>\n";
         if (layer.type == document::CurveType::Text) {
-            write_text(output, layer);
+            write_text(output, layer, false);
         } else {
             const auto path = generated_layer_path(layer);
             write_rendered_path(output, path, layer.appearance, layer, false);

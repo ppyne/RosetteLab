@@ -228,6 +228,24 @@ void test_utf8_text_layer_is_standard_svg_text()
     require(!contains(clean, "rosettelab:"), "clean text SVG should omit editing metadata");
 }
 
+void test_vectorized_text_layer_uses_paths_in_clean_svg()
+{
+    rosettelab::document::Document document;
+    rosettelab::document::TextParameters parameters;
+    parameters.text = "A";
+    parameters.vectorize = true;
+    parameters.outline.closed = true;
+    parameters.outline.subpath_starts = {0};
+    parameters.outline.segments.push_back({{0, 0}, {0, 0}, {5, -10}, {10, 0}});
+    static_cast<void>(document.add_text(parameters));
+    const auto clean = rosettelab::svg::serialize_clean_svg(document);
+    require(contains(clean, "<path d=\""), "vectorized text should export as an SVG path");
+    require(!contains(clean, "<text "), "vectorized clean SVG should not contain live text");
+    const auto native = rosettelab::svg::serialize_rosettelab_svg(document);
+    require(contains(native, "<rosettelab:text"), "native SVG should retain editable text metadata");
+    require(contains(native, "vectorize=\"true\""), "native SVG should retain vectorization choice");
+}
+
 void test_clean_svg_contains_only_visible_rendered_content()
 {
     rosettelab::document::Document document;
@@ -271,6 +289,7 @@ int main()
         test_droplet_rosette_contains_compound_geometry_and_metadata();
         test_preset_state_is_metadata();
         test_utf8_text_layer_is_standard_svg_text();
+        test_vectorized_text_layer_uses_paths_in_clean_svg();
         test_clean_svg_contains_only_visible_rendered_content();
         std::cout << "All RosetteLab SVG serializer tests passed\n";
         return 0;

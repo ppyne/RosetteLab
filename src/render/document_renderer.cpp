@@ -141,6 +141,13 @@ void render_document(
             painter.translate(layer.transform.position_x, layer.transform.position_y);
             painter.rotate(layer.transform.rotation_degrees);
             painter.scale(layer.transform.scale_x, layer.transform.scale_y);
+            if (text->vectorize && !text->outline.segments.empty()) {
+                painter.setPen(Qt::NoPen);
+                painter.setBrush(to_qcolor(text->color));
+                painter.drawPath(painter_path(text->outline, document::FillRule::NonZero));
+                painter.restore();
+                continue;
+            }
             QFont font(QString::fromUtf8(text->font_family.data(), static_cast<qsizetype>(text->font_family.size())));
             font.setPixelSize(std::max(1, static_cast<int>(std::lround(text->font_size))));
             painter.setFont(font);

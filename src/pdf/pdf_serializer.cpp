@@ -48,6 +48,8 @@ core::BezierPath layer_path(const document::CurveLayer& layer)
         return curves::generate_harmonograph_bezier(*p, p->bezier_tolerance);
     if (const auto* p = std::get_if<curves::DropletRosetteParameters>(&layer.parameters))
         return curves::generate_droplet_rosette_bezier(*p);
+    if (const auto* p = std::get_if<document::TextParameters>(&layer.parameters))
+        return p->vectorize ? p->outline : core::BezierPath{};
     return {};
 }
 
@@ -160,7 +162,14 @@ std::string serialize_vector_pdf(const document::Document& document, const Expor
         try { curve = layer_path(layer); } catch (...) { continue; }
         if (curve.segments.empty()) continue;
 
-        const auto& appearance = layer.appearance;
+        auto appearance = layer.appearance;
+        if (const auto* text = std::get_if<document::TextParameters>(&layer.parameters)) {
+            appearance.stroke_enabled = false;
+            appearance.fill_enabled = true;
+            appearance.fill = text->color;
+            appearance.fill_rule = document::FillRule::NonZero;
+            appearance.cyclic_palette = {};
+        }
         std::vector<document::LayerAppearance> palette_appearances{
             document::appearance_for_palette_index(appearance, 0)};
         if (appearance.cyclic_palette.enabled && !appearance.cyclic_palette.colors.empty()) {

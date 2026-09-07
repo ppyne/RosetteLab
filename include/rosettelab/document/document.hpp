@@ -42,6 +42,8 @@ struct TextParameters {
     double font_size{12.0};
     RgbaColor color{0.0, 0.0, 0.0, 1.0};
     TextAlignment alignment{TextAlignment::Left};
+    bool vectorize{false};
+    core::BezierPath outline{};
 
     friend bool operator==(const TextParameters&, const TextParameters&) = default;
 };

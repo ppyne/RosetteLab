@@ -25,6 +25,7 @@
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QFontComboBox>
+#include <QFontMetricsF>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QInputDialog>
@@ -39,6 +40,7 @@
 #include <QPageLayout>
 #include <QPageSize>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPdfWriter>
 #include <QtGlobal>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
@@ -415,12 +417,15 @@ MainWindow::MainWindow(QWidget* parent)
     text_alignment_->addItem("Left", static_cast<int>(document::TextAlignment::Left));
     text_alignment_->addItem("Center", static_cast<int>(document::TextAlignment::Center));
     text_alignment_->addItem("Right", static_cast<int>(document::TextAlignment::Right));
+    text_vectorize_ = new QCheckBox("Enabled", text_group_);
+    text_vectorize_->setObjectName("vectorizeTextCheckBox");
     text_color_button_ = new ColorPreviewButton(text_group_);
     text_form->addRow("Text", text_value_);
     text_form->addRow("Font", text_font_);
     text_form->addRow("Size", text_size_);
     text_form->addRow("Color", text_color_button_);
     text_form->addRow("Alignment", text_alignment_);
+    text_form->addRow("Vectorize text", text_vectorize_);
     text_group_->hide(); parameters_layout->addWidget(text_group_);
 
     transform_group_ = new QGroupBox("Layer transform", parameters_panel);
@@ -767,6 +772,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(text_font_, &QFontComboBox::currentFontChanged, this, [this] { update_preview(); });
     connect(text_size_, &QDoubleSpinBox::valueChanged, this, [this] { update_preview("text.size"); });
     connect(text_alignment_, &QComboBox::currentIndexChanged, this, [this] { update_preview(); });
+    connect(text_vectorize_, &QCheckBox::toggled, this, [this] { update_preview(); });
     connect(text_color_button_, &QPushButton::clicked, this, [this] { choose_text_color(); });
     connect(transform_x_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("transform.x"); });
     connect(transform_y_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("transform.y"); });
@@ -1459,14 +1465,6 @@ void MainWindow::export_pdf()
     auto* options_form = new QFormLayout;
     auto* rendering_control = new QComboBox(&options_dialog);
     rendering_control->addItems({"Preserve vector blend modes", "Rasterize for compatibility"});
-    const bool contains_text = std::any_of(document_.layers().begin(), document_.layers().end(),
-        [](const document::CurveLayer& layer) { return layer.type == document::CurveType::Text; });
-    if (contains_text) {
-        rendering_control->setCurrentIndex(1);
-        rendering_control->setItemData(0, 0, Qt::UserRole - 1);
-        rendering_control->setToolTip(
-            "PDF font embedding is not yet available; text layers require compatibility rendering.");
-    }
     options_form->addRow("Rendering", rendering_control);
     auto* color_model_control = new QComboBox(&options_dialog);
     color_model_control->addItem("RGB");
@@ -1497,6 +1495,34 @@ void MainWindow::export_pdf()
         path += ".pdf";
     }
     remember_selected_directory(export_directory_setting, path);
+
+    const bool has_live_text = std::any_of(document_.layers().begin(), document_.layers().end(),
+        [](const document::CurveLayer& layer) {
+            const auto* text = std::get_if<document::TextParameters>(&layer.parameters);
+            return layer.visible && text != nullptr && !text->vectorize;
+        });
+    if (preserve_vector_blends && has_live_text) {
+        QPdfWriter writer(path);
+        writer.setTitle("RosetteLab vector export");
+        writer.setCreator("RosetteLab");
+        writer.setResolution(1200);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+        writer.setColorModel(use_cmyk ? QPdfWriter::ColorModel::CMYK : QPdfWriter::ColorModel::RGB);
+#endif
+        const QPageSize page_size(
+            QSizeF(document_.settings().page_width, document_.settings().page_height),
+            QPageSize::Millimeter, "RosetteLab page", QPageSize::ExactMatch);
+        writer.setPageLayout(QPageLayout(
+            page_size, QPageLayout::Portrait, QMarginsF(0, 0, 0, 0), QPageLayout::Millimeter));
+        QPainter painter;
+        if (!painter.begin(&writer)) {
+            QMessageBox::critical(this, "Unable to export", "Qt could not create the vector PDF file.");
+            return;
+        }
+        render::render_document(painter, document_, QRectF(0, 0, writer.width(), writer.height()));
+        painter.end();
+        return;
+    }
 
     if (preserve_vector_blends) {
         pdf::ExportOptions options;
@@ -1719,7 +1745,7 @@ void MainWindow::select_layer(const document::LayerId id)
 
 void MainWindow::load_active_layer()
 {
-    const auto* layer = document_.find_layer(active_layer_id_);
+    auto* layer = document_.find_layer(active_layer_id_);
     if (layer == nullptr) {
         return;
     }
@@ -1731,7 +1757,7 @@ void MainWindow::load_active_layer()
     const auto* lissajous_parameters = std::get_if<curves::LissajousParameters>(&layer->parameters);
     const auto* harmonograph_parameters = std::get_if<curves::HarmonographParameters>(&layer->parameters);
     const auto* droplet_parameters = std::get_if<curves::DropletRosetteParameters>(&layer->parameters);
-    const auto* text_parameters = std::get_if<document::TextParameters>(&layer->parameters);
+    auto* text_parameters = std::get_if<document::TextParameters>(&layer->parameters);
     curve_group_->setVisible(parameters != nullptr);
     ellipse_group_->setVisible(ellipse_parameters != nullptr);
     trochoid_group_->setVisible(trochoid_parameters != nullptr);
@@ -1773,7 +1799,8 @@ void MainWindow::load_active_layer()
     const QSignalBlocker drop_count(droplet_count_), drop_outer(droplet_outer_radius_),
         drop_rotation(droplet_rotation_);
     const QSignalBlocker text_value_blocker(text_value_), text_font_blocker(text_font_),
-        text_size_blocker(text_size_), text_alignment_blocker(text_alignment_);
+        text_size_blocker(text_size_), text_alignment_blocker(text_alignment_),
+        text_vectorize_blocker(text_vectorize_);
     const QSignalBlocker transform_x_blocker(transform_x_);
     const QSignalBlocker transform_y_blocker(transform_y_);
     const QSignalBlocker transform_scale_x_blocker(transform_scale_x_);
@@ -1849,7 +1876,9 @@ void MainWindow::load_active_layer()
         text_font_->setCurrentFont(QFont(QString::fromUtf8(text_parameters->font_family.data(), static_cast<qsizetype>(text_parameters->font_family.size()))));
         text_size_->setValue(text_parameters->font_size);
         text_alignment_->setCurrentIndex(text_alignment_->findData(static_cast<int>(text_parameters->alignment)));
+        text_vectorize_->setChecked(text_parameters->vectorize);
         text_color_ = qcolor_from_rgba(text_parameters->color);
+        update_text_outline(*text_parameters);
     }
     transform_x_->setValue(layer->transform.position_x);
     transform_y_->setValue(layer->transform.position_y);
@@ -2054,6 +2083,45 @@ void MainWindow::choose_text_color()
         refresh_color_buttons();
         update_preview();
     }
+}
+
+void MainWindow::update_text_outline(document::TextParameters& parameters)
+{
+    parameters.outline = {};
+    QFont font(QString::fromUtf8(parameters.font_family.data(),
+        static_cast<qsizetype>(parameters.font_family.size())));
+    font.setPixelSize(std::max(1, static_cast<int>(std::lround(parameters.font_size))));
+    const QString value = QString::fromUtf8(
+        parameters.text.data(), static_cast<qsizetype>(parameters.text.size()));
+    const double width = QFontMetricsF(font).horizontalAdvance(value);
+    double origin_x = 0.0;
+    if (parameters.alignment == document::TextAlignment::Center) origin_x = -width / 2.0;
+    else if (parameters.alignment == document::TextAlignment::Right) origin_x = -width;
+
+    QPainterPath glyphs;
+    glyphs.addText(QPointF(origin_x, 0.0), font, value);
+    core::Point current{};
+    for (int index = 0; index < glyphs.elementCount(); ++index) {
+        const auto element = glyphs.elementAt(index);
+        const core::Point point{element.x, element.y};
+        if (element.type == QPainterPath::MoveToElement) {
+            parameters.outline.subpath_starts.push_back(parameters.outline.segments.size());
+            current = point;
+        } else if (element.type == QPainterPath::LineToElement) {
+            parameters.outline.segments.push_back({current,
+                {current.x + (point.x - current.x) / 3.0, current.y + (point.y - current.y) / 3.0},
+                {current.x + 2.0 * (point.x - current.x) / 3.0, current.y + 2.0 * (point.y - current.y) / 3.0},
+                point});
+            current = point;
+        } else if (element.type == QPainterPath::CurveToElement && index + 2 < glyphs.elementCount()) {
+            const auto control2 = glyphs.elementAt(++index);
+            const auto end = glyphs.elementAt(++index);
+            parameters.outline.segments.push_back({current, point,
+                {control2.x, control2.y}, {end.x, end.y}});
+            current = {end.x, end.y};
+        }
+    }
+    parameters.outline.closed = true;
 }
 
 void MainWindow::add_palette_color()
@@ -2395,6 +2463,8 @@ void MainWindow::update_preview(const QString& coalescing_key)
         parameters->font_size = text_size_->value();
         parameters->color = rgba_from_qcolor(text_color_);
         parameters->alignment = static_cast<document::TextAlignment>(text_alignment_->currentData().toInt());
+        parameters->vectorize = text_vectorize_->isChecked();
+        update_text_outline(*parameters);
     }
     refresh_layer_preview(active_layer_id_);
     preview_->update();

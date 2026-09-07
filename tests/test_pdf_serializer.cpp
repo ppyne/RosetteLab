@@ -117,6 +117,22 @@ int main(const int argc, char** argv)
     require(contains(cmyk, " K\n"), "CMYK stroke operator should be emitted");
     require(contains(cmyk, " k\n"), "CMYK fill operator should be emitted");
 
+    rosettelab::document::Document text_document;
+    rosettelab::document::TextParameters text;
+    text.text = "A";
+    text.vectorize = true;
+    text.color = {0.25, 0.5, 0.75, 1.0};
+    text.outline.closed = true;
+    text.outline.subpath_starts = {0};
+    text.outline.segments.push_back({{0, 0}, {2, -8}, {8, -8}, {10, 0}});
+    static_cast<void>(text_document.add_text(text));
+    const auto outlined_pdf = rosettelab::pdf::serialize_vector_pdf(text_document);
+    require(contains(outlined_pdf, "0.25 0.5 0.75 rg\n"),
+            "vectorized PDF text should retain its fill color");
+    require(contains(outlined_pdf, " c\n"), "vectorized PDF text should use Bezier paths");
+    require(!contains(outlined_pdf, "/Subtype /Image"),
+            "vectorized PDF text should contain no raster image");
+
     if (argc == 2) {
         std::ofstream output(argv[1], std::ios::binary);
         output.write(rgb.data(), static_cast<std::streamsize>(rgb.size()));

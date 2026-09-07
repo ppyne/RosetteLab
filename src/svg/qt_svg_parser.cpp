@@ -411,14 +411,33 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
     bool found_path = false;
     bool found_text = false;
     while (reader.readNextStartElement()) {
-        if (reader.namespaceUri() == metadata_ns && reader.name() == "curve") {
+        if (reader.namespaceUri() == metadata_ns && reader.name() == "text" &&
+            layer.type == document::CurveType::Text) {
+            auto& text = std::get<document::TextParameters>(parameters);
+            const auto attributes = reader.attributes();
+            text.font_family = required_attribute(attributes, "font-family").toUtf8().toStdString();
+            text.font_size = parse_double(required_attribute(attributes, "font-size"), "font-size");
+            if (text.font_size <= 0.0) throw parse_error("Invalid text font size");
+            const auto anchor = required_attribute(attributes, "alignment");
+            if (anchor == "start") text.alignment = document::TextAlignment::Left;
+            else if (anchor == "middle") text.alignment = document::TextAlignment::Center;
+            else if (anchor == "end") text.alignment = document::TextAlignment::Right;
+            else throw parse_error("Unsupported text alignment");
+            text.color = parse_rgb(required_attribute(attributes, "color"),
+                parse_double(required_attribute(attributes, "color-opacity"), "color-opacity"));
+            text.vectorize = parse_boolean(required_attribute(attributes, "vectorize"), "vectorize");
+            layer.appearance.opacity = parse_double(required_attribute(attributes, "opacity"), "opacity");
+            layer.appearance.blend_mode = parse_blend_mode(required_attribute(attributes, "blend-mode"));
+            text.text = reader.readElementText().toUtf8().toStdString();
+            found_text = true;
+        } else if (reader.namespaceUri() == metadata_ns && reader.name() == "curve") {
             std::visit([&reader](auto& value) {
                 parse_curve_metadata(reader.attributes(), value);
             }, parameters);
             found_curve = true;
             reader.skipCurrentElement();
         } else if (reader.namespaceUri() == "http://www.w3.org/2000/svg" && reader.name() == "path") {
-            if (!found_path) {
+            if (!found_path && layer.type != document::CurveType::Text) {
                 parse_path_appearance(reader.attributes(), metadata_ns, layer.appearance);
                 found_path = true;
             }

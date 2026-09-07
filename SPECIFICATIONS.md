@@ -156,13 +156,24 @@ editor is deliberate: embedded line breaks are not supported in this first versi
 The selected family is stored by name; when it is unavailable, the platform font
 system substitutes a font without changing the stored name.
 
-Native project SVG represents the rendered object with a standard SVG `<text>`
-element and preserves all editable values, including UTF-8 content. Clean SVG keeps
-the same standard text element and removes RosetteLab metadata. Text remains live
-SVG text rather than being converted to outlines. Because the native vector PDF
-writer does not yet embed arbitrary fonts, a document containing a text layer
-automatically selects and requires **Rasterize for compatibility** for PDF export;
-this prevents silent omission or font substitution in that format.
+Each text layer provides a **Vectorize text** checkbox, disabled by default. Native
+project SVG always retains the original UTF-8 string, font family, size, color,
+alignment, and vectorization choice as editable metadata. When vectorization is
+disabled, both the rendered project SVG and clean SVG use a standard `<text>`
+element. When enabled, the rendered project SVG and clean SVG replace the glyphs
+with standard closed cubic Bézier `<path>` contours while retaining the editable
+text metadata only in the native project. Clean SVG deliberately omits that metadata.
+
+PDF export must never rasterize merely because text is present. With vectorization
+disabled, **Preserve vector blend modes** uses Qt's PDF font machinery to retain
+real text and embed or represent the selected font according to the platform PDF
+engine. With vectorization enabled, the native PDF writer emits the same glyph
+contours as filled vector paths. Mixed documents are supported; the presence of any
+live text selects the Qt vector PDF route for the complete page so stacking remains
+correct. Explicit **Rasterize for compatibility** remains available only when the
+user deliberately selects it. Failure to create vector output is reported and must
+never trigger an automatic raster fallback. Font substitution by the operating
+system remains possible when a stored family is unavailable.
 
 ## 5. Curve families
 
