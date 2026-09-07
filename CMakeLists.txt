@@ -24,6 +24,7 @@ add_library(rosettelab_core
     src/curves/trochoid.cpp
     src/document/document.cpp
     src/pdf/pdf_serializer.cpp
+    src/palette/gpl_palette.cpp
     src/svg/svg_serializer.cpp
 )
 
@@ -245,4 +246,8 @@ if(ROSETTELAB_BUILD_TESTS)
     add_executable(rosettelab_pdf_tests tests/test_pdf_serializer.cpp)
     target_link_libraries(rosettelab_pdf_tests PRIVATE rosettelab_core)
     add_test(NAME rosettelab_pdf_tests COMMAND rosettelab_pdf_tests)
+
+    add_executable(rosettelab_gpl_palette_tests tests/test_gpl_palette.cpp)
+    target_link_libraries(rosettelab_gpl_palette_tests PRIVATE rosettelab_core)
+    add_test(NAME rosettelab_gpl_palette_tests COMMAND rosettelab_gpl_palette_tests)
 endif()

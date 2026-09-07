@@ -89,6 +89,8 @@ private:
     void add_palette_color();
     void edit_palette_color();
     void remove_palette_color();
+    void import_palette();
+    void export_palette();
     void generate_hue_palette();
     void distribute_palette_hues();
     void refresh_palette_controls();
@@ -243,6 +245,8 @@ private:
     QPushButton* palette_remove_{};
     QPushButton* palette_generate_{};
     QPushButton* palette_distribute_{};
+    QPushButton* palette_import_{};
+    QPushButton* palette_export_{};
     QColor stroke_color_{Qt::black};
     QColor fill_color_{Qt::white};
     QColor palette_start_color_{Qt::red};

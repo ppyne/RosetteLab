@@ -6,7 +6,9 @@
 #include "ui/preview_widget.hpp"
 
 #include "render/document_renderer.hpp"
+#include "render/text_support.hpp"
 #include "rosettelab/pdf/pdf_serializer.hpp"
+#include "rosettelab/palette/gpl_palette.hpp"
 #include "rosettelab/svg/svg_serializer.hpp"
 #include "svg/qt_svg_parser.hpp"
 
@@ -71,6 +73,7 @@ namespace {
 constexpr auto open_directory_setting = "paths/openDirectory";
 constexpr auto save_as_directory_setting = "paths/saveAsDirectory";
 constexpr auto export_directory_setting = "paths/exportDirectory";
+constexpr auto palette_directory_setting = "paths/paletteDirectory";
 
 QString remembered_directory(const char* setting)
 {
@@ -112,6 +115,15 @@ document::RgbaColor rgba_from_qcolor(const QColor& color)
 QColor qcolor_from_rgba(const document::RgbaColor& color)
 {
     return QColor::fromRgbF(color.red, color.green, color.blue, color.alpha);
+}
+
+QString qcolor_rgba_hex(const QColor& color)
+{
+    return QStringLiteral("#%1%2%3%4")
+        .arg(color.red(), 2, 16, QLatin1Char('0'))
+        .arg(color.green(), 2, 16, QLatin1Char('0'))
+        .arg(color.blue(), 2, 16, QLatin1Char('0'))
+        .arg(color.alpha(), 2, 16, QLatin1Char('0')).toUpper();
 }
 
 void style_color_button(ColorPreviewButton* button, const QColor& color)
@@ -591,6 +603,13 @@ MainWindow::MainWindow(QWidget* parent)
     palette_buttons_layout->addWidget(palette_add_);
     palette_buttons_layout->addWidget(palette_edit_);
     palette_buttons_layout->addWidget(palette_remove_);
+    auto* palette_io_buttons = new QWidget(appearance_group_);
+    auto* palette_io_layout = new QHBoxLayout(palette_io_buttons);
+    palette_io_layout->setContentsMargins(0, 0, 0, 0);
+    palette_import_ = new QPushButton("Import GPL...", palette_io_buttons);
+    palette_export_ = new QPushButton("Export GPL...", palette_io_buttons);
+    palette_io_layout->addWidget(palette_import_);
+    palette_io_layout->addWidget(palette_export_);
     palette_generate_ = new QPushButton("Generate palette", appearance_group_);
     palette_generate_->setObjectName("generateCyclicPalette");
     palette_distribute_ = new QPushButton("Distribute hues over 360 deg", appearance_group_);
@@ -614,6 +633,7 @@ MainWindow::MainWindow(QWidget* parent)
     appearance_form->addRow("Hue step", palette_hue_step_);
     appearance_form->addRow("", palette_distribute_);
     appearance_form->addRow("", palette_generate_);
+    appearance_form->addRow("Palette file", palette_io_buttons);
     parameters_layout->addWidget(appearance_group_);
     parameters_layout->addWidget(transform_group_);
     parameters_layout->addWidget(copies_group_);
@@ -821,6 +841,8 @@ MainWindow::MainWindow(QWidget* parent)
     connect(palette_remove_, &QPushButton::clicked, this, [this] { remove_palette_color(); });
     connect(palette_generate_, &QPushButton::clicked, this, [this] { generate_hue_palette(); });
     connect(palette_distribute_, &QPushButton::clicked, this, [this] { distribute_palette_hues(); });
+    connect(palette_import_, &QPushButton::clicked, this, [this] { import_palette(); });
+    connect(palette_export_, &QPushButton::clicked, this, [this] { export_palette(); });
     connect(palette_colors_, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem*) { edit_palette_color(); });
     connect(palette_colors_, &QListWidget::itemSelectionChanged, this, [this] { refresh_palette_controls(); });
     connect(palette_colors_->model(), &QAbstractItemModel::rowsMoved, this, [this] { update_appearance(); });
@@ -1915,7 +1937,7 @@ void MainWindow::load_active_layer()
         ? QColor(Qt::red) : qcolor_from_rgba(cyclic_palette.colors.front());
     for (const auto& stored : cyclic_palette.colors) {
         const auto color = qcolor_from_rgba(stored);
-        auto* item = new QListWidgetItem(color.name(QColor::HexArgb).toUpper(), palette_colors_);
+        auto* item = new QListWidgetItem(qcolor_rgba_hex(color), palette_colors_);
         item->setData(Qt::UserRole, color);
         item->setBackground(color);
     }
@@ -2091,8 +2113,9 @@ void MainWindow::update_text_outline(document::TextParameters& parameters)
     QFont font(QString::fromUtf8(parameters.font_family.data(),
         static_cast<qsizetype>(parameters.font_family.size())));
     font.setPixelSize(std::max(1, static_cast<int>(std::lround(parameters.font_size))));
-    const QString value = QString::fromUtf8(
-        parameters.text.data(), static_cast<qsizetype>(parameters.text.size()));
+    const QString value = render::replace_unsupported_glyphs(QString::fromUtf8(
+        parameters.text.data(), static_cast<qsizetype>(parameters.text.size())), font);
+    parameters.rendered_text = value.toUtf8().toStdString();
     const double width = QFontMetricsF(font).horizontalAdvance(value);
     double origin_x = 0.0;
     if (parameters.alignment == document::TextAlignment::Center) origin_x = -width / 2.0;
@@ -2131,7 +2154,7 @@ void MainWindow::add_palette_color()
         : palette_start_color_;
     ColorEditorDialog dialog(initial, "Add palette color", this);
     if (dialog.exec() != QDialog::Accepted) return;
-    auto* item = new QListWidgetItem(dialog.color().name(QColor::HexArgb).toUpper(), palette_colors_);
+    auto* item = new QListWidgetItem(qcolor_rgba_hex(dialog.color()), palette_colors_);
     item->setData(Qt::UserRole, dialog.color());
     item->setBackground(dialog.color());
     palette_colors_->setCurrentItem(item);
@@ -2153,7 +2176,7 @@ void MainWindow::edit_palette_color()
     if (item == nullptr) return;
     ColorEditorDialog dialog(item->data(Qt::UserRole).value<QColor>(), "Edit palette color", this);
     if (dialog.exec() != QDialog::Accepted) return;
-    item->setText(dialog.color().name(QColor::HexArgb).toUpper());
+    item->setText(qcolor_rgba_hex(dialog.color()));
     item->setData(Qt::UserRole, dialog.color());
     item->setBackground(dialog.color());
     update_appearance();
@@ -2164,6 +2187,66 @@ void MainWindow::remove_palette_color()
     delete palette_colors_->takeItem(palette_colors_->currentRow());
     refresh_palette_controls();
     update_appearance();
+}
+
+void MainWindow::import_palette()
+{
+    const auto path = QFileDialog::getOpenFileName(
+        this, "Import GIMP palette", remembered_directory(palette_directory_setting),
+        "GIMP palette (*.gpl)");
+    if (path.isEmpty()) return;
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        QMessageBox::critical(this, "Unable to import palette", "RosetteLab could not read the selected file.");
+        return;
+    }
+    std::vector<document::RgbaColor> colors;
+    try {
+        const auto bytes = file.readAll();
+        colors = palette::parse_gpl(std::string_view(bytes.constData(), static_cast<std::size_t>(bytes.size())));
+    } catch (const std::exception& error) {
+        QMessageBox::critical(this, "Unable to import palette", QString::fromUtf8(error.what()));
+        return;
+    }
+    remember_selected_directory(palette_directory_setting, path);
+    const QSignalBlocker enabled_blocker(palette_enabled_);
+    palette_enabled_->setChecked(true);
+    palette_colors_->clear();
+    for (const auto& stored : colors) {
+        const auto color = qcolor_from_rgba(stored);
+        auto* item = new QListWidgetItem(qcolor_rgba_hex(color), palette_colors_);
+        item->setData(Qt::UserRole, color);
+        item->setBackground(color);
+    }
+    refresh_palette_controls();
+    update_appearance();
+}
+
+void MainWindow::export_palette()
+{
+    if (palette_colors_->count() == 0) return;
+    const auto* layer = document_.find_layer(active_layer_id_);
+    const QString base_name = layer == nullptr ? QStringLiteral("RosetteLab-palette")
+        : QString::fromStdString(layer->name);
+    auto path = QFileDialog::getSaveFileName(
+        this, "Export GIMP palette",
+        QDir(remembered_directory(palette_directory_setting)).filePath(base_name + ".gpl"),
+        "GIMP palette (*.gpl)");
+    if (path.isEmpty()) return;
+    if (!path.endsWith(".gpl", Qt::CaseInsensitive)) path += ".gpl";
+    std::vector<document::RgbaColor> colors;
+    colors.reserve(static_cast<std::size_t>(palette_colors_->count()));
+    for (int index = 0; index < palette_colors_->count(); ++index)
+        colors.push_back(rgba_from_qcolor(palette_colors_->item(index)->data(Qt::UserRole).value<QColor>()));
+    const auto name = layer == nullptr ? std::string("RosetteLab palette") : layer->name;
+    const auto bytes = palette::serialize_gpl(colors, name);
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) ||
+        file.write(bytes.data(), static_cast<qint64>(bytes.size())) != static_cast<qint64>(bytes.size())) {
+        QMessageBox::critical(this, "Unable to export palette", "RosetteLab could not write the selected file.");
+        return;
+    }
+    remember_selected_directory(palette_directory_setting, path);
 }
 
 void MainWindow::distribute_palette_hues()
@@ -2192,7 +2275,7 @@ void MainWindow::generate_hue_palette()
         qreal generated_hue = hue + index * step;
         generated_hue -= std::floor(generated_hue);
         color.setHslF(generated_hue, saturation, lightness, alpha);
-        auto* item = new QListWidgetItem(color.name(QColor::HexArgb).toUpper(), palette_colors_);
+        auto* item = new QListWidgetItem(qcolor_rgba_hex(color), palette_colors_);
         item->setData(Qt::UserRole, color);
         item->setBackground(color);
     }
@@ -2216,6 +2299,7 @@ void MainWindow::refresh_palette_controls()
     const bool selected = enabled && palette_colors_->currentRow() >= 0;
     palette_edit_->setEnabled(selected);
     palette_remove_->setEnabled(selected);
+    palette_export_->setEnabled(palette_colors_->count() > 0);
 }
 
 void MainWindow::update_appearance(const QString& coalescing_key)

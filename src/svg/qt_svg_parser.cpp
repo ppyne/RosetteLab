@@ -458,7 +458,9 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
                 parse_double(required_attribute(attributes, "fill-opacity"), "fill-opacity"));
             layer.appearance.opacity = parse_double(required_attribute(attributes, "opacity"), "opacity");
             layer.appearance.blend_mode = parse_blend_mode(required_attribute(attributes, "style"));
-            text.text = reader.readElementText().toUtf8().toStdString();
+            const auto rendered = reader.readElementText().toUtf8().toStdString();
+            if (!found_text) text.text = rendered;
+            text.rendered_text = rendered;
             found_text = true;
         } else {
             reader.skipCurrentElement();

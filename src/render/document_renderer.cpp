@@ -1,4 +1,5 @@
 #include "render/document_renderer.hpp"
+#include "render/text_support.hpp"
 
 #include <QPainter>
 #include <QPainterPath>
@@ -152,7 +153,9 @@ void render_document(
             font.setPixelSize(std::max(1, static_cast<int>(std::lround(text->font_size))));
             painter.setFont(font);
             painter.setPen(to_qcolor(text->color));
-            const QString value = QString::fromUtf8(text->text.data(), static_cast<qsizetype>(text->text.size()));
+            const auto& stored_value = text->rendered_text.empty() ? text->text : text->rendered_text;
+            const QString value = replace_unsupported_glyphs(
+                QString::fromUtf8(stored_value.data(), static_cast<qsizetype>(stored_value.size())), font);
             const double width = QFontMetricsF(font).horizontalAdvance(value);
             double x = 0.0;
             if (text->alignment == document::TextAlignment::Center) x = -width / 2.0;

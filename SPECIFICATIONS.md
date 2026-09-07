@@ -153,8 +153,13 @@ Text is edited directly in the inspector and participates in visibility, locking
 ordering, naming, duplication, transforms, opacity, blend mode, Undo/Redo, dirty
 state, thumbnails, live preview, PNG, JPEG, and clean SVG export. A single-line
 editor is deliberate: embedded line breaks are not supported in this first version.
-The selected family is stored by name; when it is unavailable, the platform font
-system substitutes a font without changing the stored name.
+The selected family is stored by name. Before preview, outline generation, SVG, or
+PDF output, every Unicode code point is checked against that selected font. A code
+point for which the selected font has no glyph is replaced by the visible empty
+square `□`; RosetteLab must not silently borrow the original glyph from a fallback
+font. The editable UTF-8 source remains unchanged so choosing another font can
+restore the intended character. If the selected family itself is unavailable, the
+platform font system substitutes a family without changing the stored name.
 
 Each text layer provides a **Vectorize text** checkbox, disabled by default. Native
 project SVG always retains the original UTF-8 string, font family, size, color,
@@ -445,6 +450,17 @@ Disabled or empty palettes retain the ordinary single fill and stroke colors.
 Native SVG stores the palette, scope, target, and offset; files without these fields
 load with cyclic coloring disabled. Preview, thumbnails, SVG, raster, and vector PDF
 exports must use the same modular color selection.
+
+Every palette row displays its hexadecimal value strictly as `#RRGGBBAA`; Qt's
+native `#AARRGGBB` ordering must not be exposed. **Import GPL...** and **Export
+GPL...** buttons read and write the widespread textual GIMP Palette (`.gpl`)
+format used by GIMP and Inkscape. Standard GPL stores the three 8-bit RGB channels
+and is imported as opaque. To preserve RosetteLab alpha without breaking other GPL
+consumers, every exported color line also carries the compatible name/comment
+extension `#RRGGBBAA=RRGGBBAA`. GIMP and Inkscape use the leading RGB fields;
+RosetteLab uses the extension on reimport to restore all four channels exactly.
+Import replaces the active layer's palette colors, enables its cyclic palette, and
+is one Undo/Redo operation. Export does not modify the document.
 
 ### 8.5 Layer rendering
 

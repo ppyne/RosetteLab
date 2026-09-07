@@ -371,7 +371,7 @@ void write_text(std::ostringstream& output, const document::CurveLayer& layer,
            << " fill-opacity=\"" << number(std::clamp(p->color.alpha, 0.0, 1.0)) << "\""
            << " opacity=\"" << number(std::clamp(layer.appearance.opacity, 0.0, 1.0)) << "\""
            << " style=\"mix-blend-mode:" << blend_mode_name(layer.appearance.blend_mode) << "\">"
-           << xml_escape(p->text) << "</text>\n";
+           << xml_escape(p->rendered_text.empty() ? p->text : p->rendered_text) << "</text>\n";
 }
 
 const char* curve_type_id(const document::CurveType type)
