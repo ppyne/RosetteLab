@@ -119,9 +119,9 @@ void test_save_open_round_trip()
     droplet_layer.appearance.cyclic_palette.enabled = true;
     droplet_layer.appearance.cyclic_palette.scope = rosettelab::document::PaletteScope::Subpaths;
     droplet_layer.appearance.cyclic_palette.target = rosettelab::document::PaletteTarget::FillAndStroke;
-    droplet_layer.appearance.cyclic_palette.offset = -1;
+    droplet_layer.appearance.cyclic_palette.offset = 1;
     droplet_layer.appearance.cyclic_palette.colors = {
-        {1, 0, 0, 1}, {1, 128.0 / 255.0, 0, 204.0 / 255.0}};
+        {1, 0, 0, 1}, {0, 0, 1, 1}};
     rosettelab::document::TextParameters text_parameters;
     text_parameters.text = "Rosette â è±";
     text_parameters.font_family = "DejaVu Sans";
