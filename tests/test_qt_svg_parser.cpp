@@ -134,7 +134,7 @@ void test_save_open_round_trip()
     text_layer.transform.position_y = -11.0;
     rosettelab::document::ImportedSvgParameters imported_parameters;
     imported_parameters.geometry = rosettelab::svg::parse_svg_path_data(
-        "M -10 -5 L 10 -5 L 10 5 L -10 5 Z");
+        "M -9 -6 L 9 -6 L 9 6 L -9 6 Z");
     auto& imported_layer = source.add_imported_svg(imported_parameters, "Imported emblem");
     imported_layer.appearance.fill_enabled = true;
 
