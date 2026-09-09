@@ -53,6 +53,7 @@ private:
     void add_text();
     void choose_text_color();
     void update_text_outline(document::TextParameters& parameters);
+    void rebuild_text_outlines();
     void new_document();
     void open_file();
     void open_document(const QString& path);

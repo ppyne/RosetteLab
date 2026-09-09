@@ -50,6 +50,7 @@ int main(int argc, char** argv)
 
     auto* undo=window.findChild<QAction*>("undoAction");
     auto* redo=window.findChild<QAction*>("redoAction");
+    auto* save=window.findChild<QAction*>("saveAction");
     auto* transform_x=window.findChild<QDoubleSpinBox*>("transformXField");
     auto* transform_y=window.findChild<QDoubleSpinBox*>("transformYField");
     auto* reset_transform=window.findChild<QPushButton*>("resetTransformButton");
@@ -68,7 +69,8 @@ int main(int argc, char** argv)
     auto* palette_hue_step=window.findChild<QDoubleSpinBox*>("cyclicPaletteHueStep");
     auto* palette_distribute=window.findChild<QPushButton*>("distributeCyclicPaletteHues");
     auto* palette_generate=window.findChild<QPushButton*>("generateCyclicPalette");
-    if (undo==nullptr || redo==nullptr || transform_x==nullptr || transform_y==nullptr ||
+    if (undo==nullptr || redo==nullptr || save==nullptr || !save->isEnabled() ||
+        transform_x==nullptr || transform_y==nullptr ||
         reset_transform==nullptr ||
         copy_count==nullptr || reset_copies==nullptr || copy_arrangement==nullptr ||
         circular_angle==nullptr || distribute_copies==nullptr || polar_k==nullptr ||

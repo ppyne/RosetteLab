@@ -11,6 +11,7 @@
 #include <cmath>
 #include <iomanip>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -49,7 +50,7 @@ core::BezierPath layer_path(const document::CurveLayer& layer)
     if (const auto* p = std::get_if<curves::DropletRosetteParameters>(&layer.parameters))
         return curves::generate_droplet_rosette_bezier(*p);
     if (const auto* p = std::get_if<document::TextParameters>(&layer.parameters))
-        return p->vectorize ? p->outline : core::BezierPath{};
+        return p->outline;
     return {};
 }
 
@@ -158,6 +159,10 @@ std::string serialize_vector_pdf(const document::Document& document, const Expor
     std::vector<LayerResources> layers;
     for (const auto& layer : document.layers()) {
         if (!layer.visible) continue;
+        if (const auto* text = std::get_if<document::TextParameters>(&layer.parameters);
+            text != nullptr && !text->text.empty() && text->outline.segments.empty()) {
+            throw std::invalid_argument("Vectorized text layer has no glyph outlines");
+        }
         core::BezierPath curve;
         try { curve = layer_path(layer); } catch (...) { continue; }
         if (curve.segments.empty()) continue;

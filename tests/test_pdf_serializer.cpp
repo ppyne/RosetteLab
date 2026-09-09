@@ -120,7 +120,7 @@ int main(const int argc, char** argv)
     rosettelab::document::Document text_document;
     rosettelab::document::TextParameters text;
     text.text = "A";
-    text.vectorize = true;
+    text.vectorize = false;
     text.color = {0.25, 0.5, 0.75, 1.0};
     text.outline.closed = true;
     text.outline.subpath_starts = {0};
@@ -128,10 +128,22 @@ int main(const int argc, char** argv)
     static_cast<void>(text_document.add_text(text));
     const auto outlined_pdf = rosettelab::pdf::serialize_vector_pdf(text_document);
     require(contains(outlined_pdf, "0.25 0.5 0.75 rg\n"),
-            "vectorized PDF text should retain its fill color");
-    require(contains(outlined_pdf, " c\n"), "vectorized PDF text should use Bezier paths");
+            "PDF text outlines should retain their fill color");
+    require(contains(outlined_pdf, " c\n"), "PDF text should use Bezier outlines even when SVG vectorization is disabled");
     require(!contains(outlined_pdf, "/Subtype /Image"),
             "vectorized PDF text should contain no raster image");
+
+    rosettelab::document::Document invalid_text_document;
+    rosettelab::document::TextParameters invalid_text;
+    invalid_text.text = "Missing outline";
+    static_cast<void>(invalid_text_document.add_text(invalid_text));
+    bool rejected_missing_outline = false;
+    try {
+        static_cast<void>(rosettelab::pdf::serialize_vector_pdf(invalid_text_document));
+    } catch (const std::invalid_argument&) {
+        rejected_missing_outline = true;
+    }
+    require(rejected_missing_outline, "non-empty PDF text must never be silently omitted");
 
     if (argc == 2) {
         std::ofstream output(argv[1], std::ios::binary);

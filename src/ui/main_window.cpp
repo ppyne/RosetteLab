@@ -156,8 +156,8 @@ MainWindow::MainWindow(QWidget* parent)
     refresh_recent_files_menu();
     file_menu->addSeparator();
     save_action_ = file_menu->addAction("Save");
+    save_action_->setObjectName("saveAction");
     save_action_->setShortcut(QKeySequence::Save);
-    save_action_->setEnabled(false);
     connect(save_action_, &QAction::triggered, this, [this] { save(); });
     auto* save_as_action = file_menu->addAction("Save As...");
     save_as_action->setShortcut(QKeySequence::SaveAs);
@@ -946,7 +946,6 @@ void MainWindow::new_document()
     zoom_levels_->setCurrentIndex(0);
     fit_to_workspace();
     preview_->update();
-    save_action_->setEnabled(false);
     reset_history();
 }
 
@@ -968,6 +967,7 @@ void MainWindow::open_document(const QString& path)
         QMessageBox::critical(this, "Unable to open", error.what());
         return;
     }
+    rebuild_text_outlines();
     rebuild_layer_list();
     load_document_settings();
     preview_->update();
@@ -1355,6 +1355,7 @@ void MainWindow::save()
 
 bool MainWindow::save_document(const QString& path)
 {
+    rebuild_text_outlines();
 
     std::string svg_text;
     try {
@@ -1385,6 +1386,7 @@ bool MainWindow::save_document(const QString& path)
 
 void MainWindow::export_svg()
 {
+    rebuild_text_outlines();
     auto path = QFileDialog::getSaveFileName(
         this, "Export clean SVG",
         suggested_output_path(export_directory_setting, current_file_path_, "svg"),
@@ -1481,12 +1483,17 @@ void MainWindow::export_raster(const bool jpeg)
 
 void MainWindow::export_pdf()
 {
+    rebuild_text_outlines();
     QDialog options_dialog(this);
     options_dialog.setWindowTitle("Export PDF");
     auto* options_layout = new QVBoxLayout(&options_dialog);
     auto* options_form = new QFormLayout;
     auto* rendering_control = new QComboBox(&options_dialog);
-    rendering_control->addItems({"Preserve vector blend modes", "Rasterize for compatibility"});
+    rendering_control->addItems({
+        "Vector PDF (live transparency and blend modes)",
+        "Flatten transparency for printing (600 DPI)"});
+    rendering_control->setToolTip(
+        "Use the flattened option only for printer drivers or RIPs that do not reproduce PDF transparency correctly.");
     options_form->addRow("Rendering", rendering_control);
     auto* color_model_control = new QComboBox(&options_dialog);
     color_model_control->addItem("RGB");
@@ -1518,34 +1525,6 @@ void MainWindow::export_pdf()
     }
     remember_selected_directory(export_directory_setting, path);
 
-    const bool has_live_text = std::any_of(document_.layers().begin(), document_.layers().end(),
-        [](const document::CurveLayer& layer) {
-            const auto* text = std::get_if<document::TextParameters>(&layer.parameters);
-            return layer.visible && text != nullptr && !text->vectorize;
-        });
-    if (preserve_vector_blends && has_live_text) {
-        QPdfWriter writer(path);
-        writer.setTitle("RosetteLab vector export");
-        writer.setCreator("RosetteLab");
-        writer.setResolution(1200);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
-        writer.setColorModel(use_cmyk ? QPdfWriter::ColorModel::CMYK : QPdfWriter::ColorModel::RGB);
-#endif
-        const QPageSize page_size(
-            QSizeF(document_.settings().page_width, document_.settings().page_height),
-            QPageSize::Millimeter, "RosetteLab page", QPageSize::ExactMatch);
-        writer.setPageLayout(QPageLayout(
-            page_size, QPageLayout::Portrait, QMarginsF(0, 0, 0, 0), QPageLayout::Millimeter));
-        QPainter painter;
-        if (!painter.begin(&writer)) {
-            QMessageBox::critical(this, "Unable to export", "Qt could not create the vector PDF file.");
-            return;
-        }
-        render::render_document(painter, document_, QRectF(0, 0, writer.width(), writer.height()));
-        painter.end();
-        return;
-    }
-
     if (preserve_vector_blends) {
         pdf::ExportOptions options;
         options.color_model = use_cmyk ? pdf::ColorModel::Cmyk : pdf::ColorModel::Rgb;
@@ -1567,7 +1546,7 @@ void MainWindow::export_pdf()
     QPdfWriter writer(path);
     writer.setTitle("RosetteLab export");
     writer.setCreator("RosetteLab");
-    writer.setResolution(300);
+    writer.setResolution(600);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
     if (use_cmyk) {
         writer.setColorModel(QPdfWriter::ColorModel::CMYK);
@@ -2145,6 +2124,15 @@ void MainWindow::update_text_outline(document::TextParameters& parameters)
         }
     }
     parameters.outline.closed = true;
+}
+
+void MainWindow::rebuild_text_outlines()
+{
+    for (auto& layer : document_.layers()) {
+        if (auto* text = std::get_if<document::TextParameters>(&layer.parameters)) {
+            update_text_outline(*text);
+        }
+    }
 }
 
 void MainWindow::add_palette_color()
