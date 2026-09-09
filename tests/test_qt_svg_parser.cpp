@@ -33,13 +33,13 @@ bool color_close(
 
 void test_imports_only_supported_geometry_and_normalizes_homothetically()
 {
-    const QByteArray source = R"(<svg xmlns="http://www.w3.org/2000/svg">
+    const QByteArray source = R"SVG(<svg xmlns="http://www.w3.org/2000/svg">
       <style>path { fill: red; stroke: blue }</style>
       <g transform="scale(99 2)" opacity="0.1">
         <rect x="10" y="20" width="400" height="200" fill="#ff0000"/>
         <text x="10" y="10">ignored</text><image href="ignored.png"/>
       </g>
-    </svg>)";
+    </svg>)SVG";
     const auto geometry = rosettelab::svg::import_svg_shapes(source, 100.0, 100.0);
     require(geometry.segments.size() == 4, "only the raw rectangle geometry should be retained");
     double left = 1e9, right = -1e9, top = 1e9, bottom = -1e9;
