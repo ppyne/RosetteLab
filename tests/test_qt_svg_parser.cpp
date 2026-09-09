@@ -122,6 +122,7 @@ void test_save_open_round_trip()
     droplet_layer.appearance.cyclic_palette.offset = 1;
     droplet_layer.appearance.cyclic_palette.colors = {
         {1, 0, 0, 1}, {0, 0, 1, 1}};
+    const auto expected_palette = droplet_layer.appearance.cyclic_palette;
     rosettelab::document::TextParameters text_parameters;
     text_parameters.text = "Rosette â è±";
     text_parameters.font_family = "DejaVu Sans";
@@ -201,7 +202,6 @@ void test_save_open_round_trip()
     require(droplet == droplet_parameters,
             "Droplet Rosette parameters should round-trip");
     const auto& restored_palette = loaded.layers()[4].appearance.cyclic_palette;
-    const auto& expected_palette = droplet_layer.appearance.cyclic_palette;
     require(restored_palette.enabled == expected_palette.enabled,
             "Cyclic palette enabled state should round-trip");
     require(restored_palette.scope == expected_palette.scope,
