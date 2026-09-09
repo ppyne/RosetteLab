@@ -90,7 +90,7 @@ void test_native_svg_contains_geometry_and_metadata()
     require(contains(svg, "rosettelab:copy-count=\"3\""), "copy count should be stored");
     require(contains(svg, "rosettelab:copy-arrangement=\"linear\""),
             "copy arrangement should be stored");
-    require(contains(svg, "translate(14.5 -9) rotate(47) scale(1.35 0.675)"),
+    require(contains(svg, "translate(14.5 -9) rotate(47) scale(-1.35 0.675)"),
             "second rendered copy should use progressive transform settings");
     require(occurrence_count(svg, "    <path d=\"") == 3,
             "one rendered SVG path should be emitted per copy");
