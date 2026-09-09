@@ -157,8 +157,10 @@ QPixmap layer_preview(
         layer_transform.translate(placement.position_x, placement.position_y);
         layer_transform.rotate(placement.rotation_degrees);
         layer_transform.scale(
-            layer.transform.scale_x * placement.scale,
-            layer.transform.scale_y * placement.scale);
+            layer.transform.scale_x * placement.scale *
+                (layer.transform.mirror_horizontal ? -1.0 : 1.0),
+            layer.transform.scale_y * placement.scale *
+                (layer.transform.mirror_vertical ? -1.0 : 1.0));
         composed_path.addPath(layer_transform.map(base_path));
     }
     const auto bounds = composed_path.boundingRect();
@@ -199,8 +201,11 @@ QPixmap layer_preview(
         QTransform placement_transform;
         placement_transform.translate(placement.position_x, placement.position_y);
         placement_transform.rotate(placement.rotation_degrees);
-        placement_transform.scale(layer.transform.scale_x * placement.scale,
-                                  layer.transform.scale_y * placement.scale);
+        placement_transform.scale(
+            layer.transform.scale_x * placement.scale *
+                (layer.transform.mirror_horizontal ? -1.0 : 1.0),
+            layer.transform.scale_y * placement.scale *
+                (layer.transform.mirror_vertical ? -1.0 : 1.0));
         for (std::size_t part = 0; part < parts.size(); ++part) {
             const auto appearance = document::appearance_for_palette_index(
                 layer.appearance, color_subpaths ? part : static_cast<std::size_t>(copy));

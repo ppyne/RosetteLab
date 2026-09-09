@@ -79,6 +79,8 @@ void test_save_open_round_trip()
     layer.preset_id = "rose-seven";
     layer.preset_customized = true;
     layer.transform = {12.5, -8.0, 1.5, 0.75, false, 30.0};
+    layer.transform.mirror_horizontal = true;
+    layer.transform.mirror_vertical = true;
     layer.copies.arrangement = rosettelab::document::CopyArrangement::Circular;
     layer.copies.count = 5;
     layer.copies.rotation_step_degrees = 17.0;

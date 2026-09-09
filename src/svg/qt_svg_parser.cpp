@@ -325,6 +325,10 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
         group_attributes, metadata_ns, "link-scales", true);
     layer.transform.rotation_degrees = optional_metadata_double(
         group_attributes, metadata_ns, "layer-rotation-degrees", 0.0);
+    layer.transform.mirror_horizontal = optional_metadata_boolean(
+        group_attributes, metadata_ns, "mirror-horizontal", false);
+    layer.transform.mirror_vertical = optional_metadata_boolean(
+        group_attributes, metadata_ns, "mirror-vertical", false);
     const auto arrangement = group_attributes.value(metadata_ns, "copy-arrangement");
     if (arrangement.isNull()) {
         const double legacy_offset_x = optional_metadata_double(

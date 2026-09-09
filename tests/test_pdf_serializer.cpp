@@ -108,6 +108,7 @@ int main(const int argc, char** argv)
     scaled_layer.appearance.stroke_width = 0.6;
     scaled_layer.transform.scale_x = 2.0;
     scaled_layer.transform.scale_y = 3.0;
+    scaled_layer.transform.mirror_horizontal = true;
     scaled_layer.copies.count = 2;
     scaled_layer.copies.scale_step = 0.5;
     const auto scaled_pdf = rosettelab::pdf::serialize_vector_pdf(scaled_document);
@@ -115,10 +116,10 @@ int main(const int argc, char** argv)
             "each scaled PDF copy should retain the configured 0.6 stroke width");
     require(count_occurrences(scaled_pdf, "1 0 0 1 0 0 cm\n") == 2,
             "layer and copy scales should not affect the PDF graphics-state line width");
-    require(contains(scaled_pdf, "20 0 m\n"),
-            "layer scale should be baked into PDF path geometry");
-    require(contains(scaled_pdf, "10 0 m\n"),
-            "scale per copy should be baked into each PDF path geometry");
+    require(contains(scaled_pdf, "-20 0 m\n"),
+            "layer scale and horizontal mirror should be baked into PDF path geometry");
+    require(contains(scaled_pdf, "-10 0 m\n"),
+            "scale per copy and mirror should be baked into each PDF path geometry");
     require(!contains(scaled_pdf, "2 0 0 3 0 0 cm\n"),
             "PDF should not scale strokes through its transformation matrix");
 

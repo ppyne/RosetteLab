@@ -586,7 +586,8 @@ Every curve layer has a non-destructive transform applied after mathematical cur
 - horizontal and vertical position in document units;
 - uniform scale by default, with an explicit link control for independent X/Y scales;
 - global layer rotation;
-- **Reset transform**, which restores position 0/0, linked scale 100%, and rotation 0 degrees without changing curve parameters or copy settings.
+- independent **Horizontal mirror** and **Vertical mirror** controls, applied around the layer origin and combinable with scale, rotation, and copies;
+- **Reset transform**, which restores position 0/0, linked scale 100%, rotation 0 degrees, and disables both mirrors without changing curve parameters or copy settings.
 
 Every curve layer can also render a copy composition from the same parametric path:
 
@@ -598,7 +599,7 @@ Every curve layer can also render a copy composition from the same parametric pa
 
 The **Reset copies** command restores Superimposed arrangement, one copy, zero rotation, offsets, orbit radius and orbit angles, 100% scale progression, and enabled orbital orientation. It does not alter the layer transform, curve-family parameters, appearance, or preset state, and the reset is recorded as one Undo/Redo history operation.
 
-Transform and copy values are editable independently from curve-family parameters and presets. They are stored in RosetteLab SVG metadata, emitted as SVG path transforms, restored on open, duplicated with the layer, and applied identically in the live preview, layer thumbnail, PNG, JPEG, PDF, and SVG output. Each edit creates a normal document-history entry and is therefore supported by Undo/Redo.
+Transform and copy values, including both mirror flags, are editable independently from curve-family parameters and presets. They are stored in RosetteLab SVG metadata, emitted as SVG path transforms, restored on open, duplicated with the layer, and applied identically in the live preview, layer thumbnail, PNG, JPEG, PDF, and SVG output. Each edit creates a normal document-history entry and is therefore supported by Undo/Redo.
 
 Undo/Redo history must never contain consecutive duplicate document states. Composite actions—including applying or restoring a preset, Reset transform, and Reset copies—produce exactly one history entry, so one Undo always restores the complete state immediately preceding the action and one Redo reapplies it.
 

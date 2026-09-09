@@ -73,6 +73,8 @@ struct LayerTransform {
     double scale_y{1.0};
     bool link_scales{true};
     double rotation_degrees{0.0};
+    bool mirror_horizontal{false};
+    bool mirror_vertical{false};
 
     friend constexpr bool operator==(const LayerTransform&, const LayerTransform&) = default;
 };

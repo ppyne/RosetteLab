@@ -148,7 +148,9 @@ void render_document(
             painter.setCompositionMode(composition_mode(layer.appearance.blend_mode));
             painter.translate(layer.transform.position_x, layer.transform.position_y);
             painter.rotate(layer.transform.rotation_degrees);
-            painter.scale(layer.transform.scale_x, layer.transform.scale_y);
+            painter.scale(
+                layer.transform.scale_x * (layer.transform.mirror_horizontal ? -1.0 : 1.0),
+                layer.transform.scale_y * (layer.transform.mirror_vertical ? -1.0 : 1.0));
             if (text->vectorize && !text->outline.segments.empty()) {
                 painter.setPen(Qt::NoPen);
                 painter.setBrush(to_qcolor(text->color));
@@ -199,8 +201,10 @@ void render_document(
             transform.translate(placement.position_x, placement.position_y);
             transform.rotate(placement.rotation_degrees);
             transform.scale(
-                layer.transform.scale_x * placement.scale,
-                layer.transform.scale_y * placement.scale);
+                layer.transform.scale_x * placement.scale *
+                    (layer.transform.mirror_horizontal ? -1.0 : 1.0),
+                layer.transform.scale_y * placement.scale *
+                    (layer.transform.mirror_vertical ? -1.0 : 1.0));
             if (!subpaths.empty()) {
                 for (std::size_t part = 0; part < subpaths.size(); ++part) {
                     const auto appearance = document::appearance_for_palette_index(layer.appearance, part);

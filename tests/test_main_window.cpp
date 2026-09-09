@@ -53,6 +53,8 @@ int main(int argc, char** argv)
     auto* save=window.findChild<QAction*>("saveAction");
     auto* transform_x=window.findChild<QDoubleSpinBox*>("transformXField");
     auto* transform_y=window.findChild<QDoubleSpinBox*>("transformYField");
+    auto* mirror_horizontal=window.findChild<QCheckBox*>("transformMirrorHorizontalCheckBox");
+    auto* mirror_vertical=window.findChild<QCheckBox*>("transformMirrorVerticalCheckBox");
     auto* reset_transform=window.findChild<QPushButton*>("resetTransformButton");
     auto* copy_count=window.findChild<QSpinBox*>("copyCountField");
     auto* reset_copies=window.findChild<QPushButton*>("resetCopiesButton");
@@ -70,7 +72,8 @@ int main(int argc, char** argv)
     auto* palette_distribute=window.findChild<QPushButton*>("distributeCyclicPaletteHues");
     auto* palette_generate=window.findChild<QPushButton*>("generateCyclicPalette");
     if (undo==nullptr || redo==nullptr || save==nullptr || !save->isEnabled() ||
-        transform_x==nullptr || transform_y==nullptr ||
+        transform_x==nullptr || transform_y==nullptr || mirror_horizontal==nullptr ||
+        mirror_vertical==nullptr ||
         reset_transform==nullptr ||
         copy_count==nullptr || reset_copies==nullptr || copy_arrangement==nullptr ||
         circular_angle==nullptr || distribute_copies==nullptr || polar_k==nullptr ||
@@ -80,6 +83,20 @@ int main(int argc, char** argv)
         std::cerr << "Undo/Redo test controls were not initialized\n";
         return 1;
     }
+
+    mirror_horizontal->setChecked(true);
+    mirror_vertical->setChecked(true);
+    reset_transform->click();
+    if (mirror_horizontal->isChecked() || mirror_vertical->isChecked()) {
+        std::cerr << "Reset transform did not disable mirrors\n";
+        return 1;
+    }
+    undo->trigger();
+    if (!mirror_horizontal->isChecked() || !mirror_vertical->isChecked()) {
+        std::cerr << "Mirror transform reset was not undone\n";
+        return 1;
+    }
+    reset_transform->click();
 
     copy_count->setValue(3);
     palette_enabled->setChecked(true);

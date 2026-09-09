@@ -174,8 +174,10 @@ void write_rendered_path(
            << " transform=\"translate("
            << number(placement.position_x) << ' ' << number(placement.position_y) << ") rotate("
            << number(placement.rotation_degrees)
-           << ") scale(" << number(layer.transform.scale_x * placement.scale) << ' '
-           << number(layer.transform.scale_y * placement.scale) << ")\""
+           << ") scale(" << number(layer.transform.scale_x * placement.scale *
+                (layer.transform.mirror_horizontal ? -1.0 : 1.0)) << ' '
+           << number(layer.transform.scale_y * placement.scale *
+                (layer.transform.mirror_vertical ? -1.0 : 1.0)) << ")\""
            << " stroke=\"" << (resolved.stroke_enabled ? rgb_hex(resolved.stroke) : "none") << "\"";
         if (include_editing_metadata) {
             output << " rosettelab:stroke-color=\"" << rgb_hex(appearance.stroke) << "\""
@@ -362,7 +364,8 @@ void write_text(std::ostringstream& output, const document::CurveLayer& layer,
                << " transform=\"translate(" << number(layer.transform.position_x) << ' '
                << number(layer.transform.position_y) << ") rotate("
                << number(layer.transform.rotation_degrees) << ") scale("
-               << number(layer.transform.scale_x) << ' ' << number(layer.transform.scale_y) << ")\""
+               << number(layer.transform.scale_x * (layer.transform.mirror_horizontal ? -1.0 : 1.0)) << ' '
+               << number(layer.transform.scale_y * (layer.transform.mirror_vertical ? -1.0 : 1.0)) << ")\""
                << " fill=\"" << rgb_hex(p->color) << "\" fill-opacity=\""
                << number(std::clamp(p->color.alpha, 0.0, 1.0)) << "\" fill-rule=\"nonzero\""
                << " opacity=\"" << number(std::clamp(layer.appearance.opacity, 0.0, 1.0)) << "\""
@@ -373,7 +376,8 @@ void write_text(std::ostringstream& output, const document::CurveLayer& layer,
            << " transform=\"translate(" << number(layer.transform.position_x) << ' '
            << number(layer.transform.position_y) << ") rotate("
            << number(layer.transform.rotation_degrees) << ") scale("
-           << number(layer.transform.scale_x) << ' ' << number(layer.transform.scale_y) << ")\""
+           << number(layer.transform.scale_x * (layer.transform.mirror_horizontal ? -1.0 : 1.0)) << ' '
+           << number(layer.transform.scale_y * (layer.transform.mirror_vertical ? -1.0 : 1.0)) << ")\""
            << " font-family=\"" << xml_escape(p->font_family) << "\""
            << " font-size=\"" << number(p->font_size) << "\""
            << " text-anchor=\"" << text_anchor(p->alignment) << "\""
@@ -450,6 +454,8 @@ std::string serialize_rosettelab_svg(
                << " rosettelab:scale-y=\"" << number(layer.transform.scale_y) << "\""
                << " rosettelab:link-scales=\"" << (layer.transform.link_scales ? "true" : "false") << "\""
                << " rosettelab:layer-rotation-degrees=\"" << number(layer.transform.rotation_degrees) << "\""
+               << " rosettelab:mirror-horizontal=\"" << (layer.transform.mirror_horizontal ? "true" : "false") << "\""
+               << " rosettelab:mirror-vertical=\"" << (layer.transform.mirror_vertical ? "true" : "false") << "\""
                << " rosettelab:copy-arrangement=\"" << copy_arrangement_name(layer.copies.arrangement) << "\""
                << " rosettelab:copy-count=\"" << std::clamp(layer.copies.count, 1, 1000) << "\""
                << " rosettelab:copy-rotation-degrees=\"" << number(layer.copies.rotation_step_degrees) << "\""

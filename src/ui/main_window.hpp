@@ -213,6 +213,8 @@ private:
     QDoubleSpinBox* transform_scale_y_{};
     QCheckBox* transform_link_scales_{};
     QDoubleSpinBox* transform_rotation_{};
+    QCheckBox* transform_mirror_horizontal_{};
+    QCheckBox* transform_mirror_vertical_{};
     QPushButton* reset_transform_button_{};
     QGroupBox* copies_group_{};
     QComboBox* copy_arrangement_{};

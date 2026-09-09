@@ -181,6 +181,8 @@ void test_layer_duplication()
     source->appearance.opacity = 0.75;
     source->appearance.blend_mode = rosettelab::document::BlendMode::Multiply;
     source->transform = {20.0, -10.0, 1.25, 0.8, false, 22.5};
+    source->transform.mirror_horizontal = true;
+    source->transform.mirror_vertical = true;
     source->copies.arrangement = rosettelab::document::CopyArrangement::Linear;
     source->copies.count = 7;
     source->copies.rotation_step_degrees = 360.0 / 49.0;

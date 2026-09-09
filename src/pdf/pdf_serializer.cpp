@@ -217,8 +217,10 @@ std::string serialize_vector_pdf(const document::Document& document, const Expor
         for (int copy = 0; copy < count; ++copy) {
             const auto placement = document::copy_placement(layer, copy);
             const double angle = placement.rotation_degrees * pi / 180.0;
-            const double sx = layer.transform.scale_x * placement.scale;
-            const double sy = layer.transform.scale_y * placement.scale;
+            const double sx = layer.transform.scale_x * placement.scale *
+                (layer.transform.mirror_horizontal ? -1.0 : 1.0);
+            const double sy = layer.transform.scale_y * placement.scale *
+                (layer.transform.mirror_vertical ? -1.0 : 1.0);
             const double c = std::cos(angle);
             const double s = std::sin(angle);
             // Scale the geometry rather than the PDF graphics state so that the

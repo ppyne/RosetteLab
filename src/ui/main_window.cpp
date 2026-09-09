@@ -464,6 +464,10 @@ MainWindow::MainWindow(QWidget* parent)
     transform_link_scales_ = new QCheckBox("Link X/Y scales", transform_group_);
     transform_link_scales_->setChecked(true);
     transform_rotation_ = angle_control(transform_group_);
+    transform_mirror_horizontal_ = new QCheckBox("Horizontal mirror", transform_group_);
+    transform_mirror_horizontal_->setObjectName("transformMirrorHorizontalCheckBox");
+    transform_mirror_vertical_ = new QCheckBox("Vertical mirror", transform_group_);
+    transform_mirror_vertical_->setObjectName("transformMirrorVerticalCheckBox");
     reset_transform_button_ = new QPushButton("Reset transform", transform_group_);
     reset_transform_button_->setObjectName("resetTransformButton");
     transform_form->addRow("Position X", transform_x_);
@@ -472,6 +476,8 @@ MainWindow::MainWindow(QWidget* parent)
     transform_form->addRow("Scale Y", transform_scale_y_);
     transform_form->addRow("", transform_link_scales_);
     transform_form->addRow("Rotation", transform_rotation_);
+    transform_form->addRow("", transform_mirror_horizontal_);
+    transform_form->addRow("", transform_mirror_vertical_);
     transform_form->addRow("", reset_transform_button_);
 
     copies_group_ = new QGroupBox("Copies", parameters_panel);
@@ -816,6 +822,8 @@ MainWindow::MainWindow(QWidget* parent)
         update_layer_transform();
     });
     connect(transform_rotation_, &QDoubleSpinBox::valueChanged, this, [this] { update_layer_transform("transform.rotation"); });
+    connect(transform_mirror_horizontal_, &QCheckBox::toggled, this, [this] { update_layer_transform(); });
+    connect(transform_mirror_vertical_, &QCheckBox::toggled, this, [this] { update_layer_transform(); });
     connect(reset_transform_button_, &QPushButton::clicked, this, [this] { reset_layer_transform(); });
     connect(copy_count_, &QSpinBox::valueChanged, this, [this] { update_layer_transform("copies.count"); });
     connect(copy_arrangement_, &QComboBox::currentIndexChanged, this, [this] {
@@ -1842,6 +1850,8 @@ void MainWindow::load_active_layer()
     const QSignalBlocker transform_scale_y_blocker(transform_scale_y_);
     const QSignalBlocker transform_link_blocker(transform_link_scales_);
     const QSignalBlocker transform_rotation_blocker(transform_rotation_);
+    const QSignalBlocker transform_mirror_horizontal_blocker(transform_mirror_horizontal_);
+    const QSignalBlocker transform_mirror_vertical_blocker(transform_mirror_vertical_);
     const QSignalBlocker copy_arrangement_blocker(copy_arrangement_);
     const QSignalBlocker copy_count_blocker(copy_count_);
     const QSignalBlocker copy_rotation_blocker(copy_rotation_);
@@ -1921,6 +1931,8 @@ void MainWindow::load_active_layer()
     transform_scale_y_->setValue(layer->transform.scale_y * 100.0);
     transform_link_scales_->setChecked(layer->transform.link_scales);
     transform_rotation_->setValue(layer->transform.rotation_degrees);
+    transform_mirror_horizontal_->setChecked(layer->transform.mirror_horizontal);
+    transform_mirror_vertical_->setChecked(layer->transform.mirror_vertical);
     copy_arrangement_->setCurrentIndex(copy_arrangement_->findData(
         static_cast<int>(layer->copies.arrangement)));
     copy_count_->setValue(layer->copies.count);
@@ -2019,6 +2031,8 @@ void MainWindow::update_layer_transform(const QString& coalescing_key)
         ? layer->transform.scale_x
         : transform_scale_y_->value() / 100.0;
     layer->transform.rotation_degrees = transform_rotation_->value();
+    layer->transform.mirror_horizontal = transform_mirror_horizontal_->isChecked();
+    layer->transform.mirror_vertical = transform_mirror_vertical_->isChecked();
     layer->copies.arrangement = static_cast<document::CopyArrangement>(
         copy_arrangement_->currentData().toInt());
     layer->copies.count = copy_count_->value();
@@ -2043,12 +2057,16 @@ void MainWindow::reset_layer_transform()
     const QSignalBlocker scale_y_blocker(transform_scale_y_);
     const QSignalBlocker linked_blocker(transform_link_scales_);
     const QSignalBlocker rotation_blocker(transform_rotation_);
+    const QSignalBlocker mirror_horizontal_blocker(transform_mirror_horizontal_);
+    const QSignalBlocker mirror_vertical_blocker(transform_mirror_vertical_);
     transform_x_->setValue(0.0);
     transform_y_->setValue(0.0);
     transform_scale_x_->setValue(100.0);
     transform_scale_y_->setValue(100.0);
     transform_link_scales_->setChecked(true);
     transform_rotation_->setValue(0.0);
+    transform_mirror_horizontal_->setChecked(false);
+    transform_mirror_vertical_->setChecked(false);
     refresh_transform_controls();
     update_layer_transform();
 }
