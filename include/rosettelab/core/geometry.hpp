@@ -32,9 +32,20 @@ struct BezierPath {
     // beginning at segment zero. This permits one layer to contain several
     // independently closed contours while retaining a single SVG/PDF path.
     std::vector<std::size_t> subpath_starts;
+    // Optional per-subpath closure flags. When empty, `closed` applies to every
+    // subpath for backward compatibility with generated curve families.
+    std::vector<bool> subpath_closed;
     bool closed{false};
     friend bool operator==(const BezierPath&, const BezierPath&) = default;
 };
+
+[[nodiscard]] inline bool subpath_is_closed(
+    const BezierPath& path, const std::size_t subpath_index)
+{
+    return subpath_index < path.subpath_closed.size()
+        ? path.subpath_closed[subpath_index]
+        : path.closed;
+}
 
 [[nodiscard]] inline std::vector<BezierPath> split_subpaths(const BezierPath& path)
 {
@@ -46,7 +57,7 @@ struct BezierPath {
     result.reserve(starts.size() - 1);
     for (std::size_t index = 0; index + 1 < starts.size(); ++index) {
         BezierPath part;
-        part.closed = path.closed;
+        part.closed = subpath_is_closed(path, index);
         part.segments.assign(
             path.segments.begin() + static_cast<std::ptrdiff_t>(starts[index]),
             path.segments.begin() + static_cast<std::ptrdiff_t>(starts[index + 1]));

@@ -133,7 +133,12 @@ std::string path_data(const core::BezierPath& path)
     for (std::size_t index = 0; index < path.segments.size(); ++index) {
         const auto& segment = path.segments[index];
         if (starts_new_subpath(index)) {
-            if (index != 0 && path.closed) output << " Z ";
+            const auto subpath = static_cast<std::size_t>(std::distance(
+                path.subpath_starts.begin(), std::lower_bound(
+                    path.subpath_starts.begin(), path.subpath_starts.end(), index)));
+            if (index != 0) {
+                output << (core::subpath_is_closed(path, subpath - 1) ? " Z " : " ");
+            }
             output << "M " << segment.start.x << ' ' << segment.start.y;
         }
         output << " C "
@@ -141,7 +146,8 @@ std::string path_data(const core::BezierPath& path)
                << segment.control2.x << ' ' << segment.control2.y << ' '
                << segment.end.x << ' ' << segment.end.y;
     }
-    if (path.closed) {
+    const std::size_t subpath_count = path.subpath_starts.empty() ? 1 : path.subpath_starts.size();
+    if (core::subpath_is_closed(path, subpath_count - 1)) {
         output << " Z";
     }
     return output.str();
@@ -214,6 +220,9 @@ core::BezierPath generated_layer_path(const document::CurveLayer& layer)
     }
     if (const auto* p = std::get_if<curves::DropletRosetteParameters>(&layer.parameters)) {
         return curves::generate_droplet_rosette_bezier(*p);
+    }
+    if (const auto* p = std::get_if<document::ImportedSvgParameters>(&layer.parameters)) {
+        return p->geometry;
     }
     throw std::invalid_argument("Layer has incompatible curve parameters");
 }
@@ -386,6 +395,7 @@ const char* curve_type_id(const document::CurveType type)
     case document::CurveType::Harmonograph: return "harmonograph";
     case document::CurveType::DropletRosette: return "droplet-rosette";
     case document::CurveType::Text: return "text";
+    case document::CurveType::ImportedSvg: return "imported-svg";
     default: throw std::invalid_argument("Unsupported curve type for SVG export");
     }
 }
@@ -485,6 +495,9 @@ std::string serialize_rosettelab_svg(
             write_droplet_rosette(output, layer);
         } else if (layer.type == document::CurveType::Text) {
             write_text(output, layer, true);
+        } else if (layer.type == document::CurveType::ImportedSvg) {
+            output << "    <rosettelab:imported-svg/>\n";
+            write_rendered_path(output, generated_layer_path(layer), layer.appearance, layer);
         }
         output << "  </g>\n";
     }

@@ -1,9 +1,11 @@
 #include "svg/qt_svg_parser.hpp"
+#include "svg/svg_shape_importer.hpp"
 
 #include "rosettelab/svg/svg_serializer.hpp"
 
 #include <QByteArray>
 
+#include <algorithm>
 #include <exception>
 #include <cmath>
 #include <iostream>
@@ -27,6 +29,35 @@ bool color_close(
            std::abs(left.green - right.green) <= tolerance &&
            std::abs(left.blue - right.blue) <= tolerance &&
            std::abs(left.alpha - right.alpha) <= tolerance;
+}
+
+void test_imports_only_supported_geometry_and_normalizes_homothetically()
+{
+    const QByteArray source = R"(<svg xmlns="http://www.w3.org/2000/svg">
+      <style>path { fill: red; stroke: blue }</style>
+      <g transform="scale(99 2)" opacity="0.1">
+        <rect x="10" y="20" width="400" height="200" fill="#ff0000"/>
+        <text x="10" y="10">ignored</text><image href="ignored.png"/>
+      </g>
+    </svg>)";
+    const auto geometry = rosettelab::svg::import_svg_shapes(source, 100.0, 100.0);
+    require(geometry.segments.size() == 4, "only the raw rectangle geometry should be retained");
+    double left = 1e9, right = -1e9, top = 1e9, bottom = -1e9;
+    for (const auto& segment : geometry.segments) {
+        for (const auto point : {segment.start, segment.control1, segment.control2, segment.end}) {
+            left = std::min(left, point.x); right = std::max(right, point.x);
+            top = std::min(top, point.y); bottom = std::max(bottom, point.y);
+        }
+    }
+    require(std::abs(left + 45.0) < 1e-9 && std::abs(right - 45.0) < 1e-9 &&
+            std::abs(top + 22.5) < 1e-9 && std::abs(bottom - 22.5) < 1e-9,
+            "oversized geometry should be centered and homothetically fitted to 90 percent");
+
+    const auto path = rosettelab::svg::parse_svg_path_data(
+        "M 0 0 L 10 0 Z M 20 0 A 5 5 0 0 1 25 5");
+    require(path.subpath_starts.size() == 2 && path.subpath_closed.size() == 2 &&
+            path.subpath_closed[0] && !path.subpath_closed[1],
+            "path lines, arcs, and mixed subpath closure should be preserved");
 }
 
 void test_save_open_round_trip()
@@ -101,6 +132,11 @@ void test_save_open_round_trip()
     auto& text_layer = source.add_text(text_parameters, "UTF-8 label");
     text_layer.transform.position_x = 23.0;
     text_layer.transform.position_y = -11.0;
+    rosettelab::document::ImportedSvgParameters imported_parameters;
+    imported_parameters.geometry = rosettelab::svg::parse_svg_path_data(
+        "M -10 -5 L 10 -5 L 10 5 L -10 5 Z");
+    auto& imported_layer = source.add_imported_svg(imported_parameters, "Imported emblem");
+    imported_layer.appearance.fill_enabled = true;
 
     const auto text = rosettelab::svg::serialize_rosettelab_svg(source);
     auto legacy_text = text;
@@ -112,10 +148,10 @@ void test_save_open_round_trip()
         " core-radius=\"17\" swirl-degrees=\"-24\" width-percent=\"84\" roundness=\"0.7\"");
     const auto legacy_loaded = rosettelab::svg::parse_rosettelab_svg(
         QByteArray::fromStdString(legacy_text));
-    require(legacy_loaded.layers().size() == 6,
+    require(legacy_loaded.layers().size() == 7,
             "obsolete Droplet Rosette attributes should be ignored when loading old files");
     const auto loaded = rosettelab::svg::parse_rosettelab_svg(QByteArray::fromStdString(text));
-    require(loaded.layers().size() == 6, "all implemented layer families should round-trip");
+    require(loaded.layers().size() == 7, "all implemented layer families should round-trip");
     require(loaded.settings().page_width == 297.0 && loaded.settings().page_height == 210.0,
             "page dimensions should round-trip");
     require(color_close(loaded.settings().background, source.settings().background),
@@ -174,6 +210,10 @@ void test_save_open_round_trip()
             "UTF-8 text parameters should round-trip");
     require(color_close(restored_text.color, text_parameters.color),
             "text color should round-trip within 8-bit SVG precision");
+    const auto& restored_import = std::get<rosettelab::document::ImportedSvgParameters>(
+        loaded.layers()[6].parameters);
+    require(restored_import.geometry == imported_parameters.geometry,
+            "imported SVG geometry should round-trip without the external source file");
 }
 
 void test_rejects_ordinary_or_unsafe_svg()
@@ -197,6 +237,7 @@ void test_rejects_ordinary_or_unsafe_svg()
 int main()
 {
     try {
+        test_imports_only_supported_geometry_and_normalizes_homothetically();
         test_save_open_round_trip();
         test_rejects_ordinary_or_unsafe_svg();
         std::cout << "All RosetteLab Qt SVG parser tests passed\n";

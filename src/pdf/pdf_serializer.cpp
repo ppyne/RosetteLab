@@ -51,6 +51,8 @@ core::BezierPath layer_path(const document::CurveLayer& layer)
         return curves::generate_droplet_rosette_bezier(*p);
     if (const auto* p = std::get_if<document::TextParameters>(&layer.parameters))
         return p->outline;
+    if (const auto* p = std::get_if<document::ImportedSvgParameters>(&layer.parameters))
+        return p->geometry;
     return {};
 }
 
@@ -114,7 +116,10 @@ std::string path_commands(
     for (std::size_t index = 0; index < path.segments.size(); ++index) {
         const auto& segment = path.segments[index];
         if (starts_new_subpath(index)) {
-            if (index != 0 && path.closed) out << "h\n";
+            const auto subpath = static_cast<std::size_t>(std::distance(
+                path.subpath_starts.begin(), std::lower_bound(
+                    path.subpath_starts.begin(), path.subpath_starts.end(), index)));
+            if (index != 0 && core::subpath_is_closed(path, subpath - 1)) out << "h\n";
             out << number(segment.start.x * scale_x) << ' '
                 << number(segment.start.y * scale_y) << " m\n";
         }
@@ -125,7 +130,8 @@ std::string path_commands(
             << number(segment.end.x * scale_x) << ' '
             << number(segment.end.y * scale_y) << " c\n";
     }
-    if (path.closed) out << "h\n";
+    const std::size_t subpath_count = path.subpath_starts.empty() ? 1 : path.subpath_starts.size();
+    if (core::subpath_is_closed(path, subpath_count - 1)) out << "h\n";
     return out.str();
 }
 

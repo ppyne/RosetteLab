@@ -66,6 +66,9 @@ core::BezierPath layer_path(const document::CurveLayer& layer)
     if (const auto* parameters = std::get_if<curves::DropletRosetteParameters>(&layer.parameters)) {
         return curves::generate_droplet_rosette_bezier(*parameters);
     }
+    if (const auto* parameters = std::get_if<document::ImportedSvgParameters>(&layer.parameters)) {
+        return parameters->geometry;
+    }
     return {};
 }
 
@@ -76,7 +79,10 @@ QPainterPath painter_path(const core::BezierPath& curve, const document::FillRul
         const auto& segment = curve.segments[index];
         if (index == 0 || std::find(
                 curve.subpath_starts.begin(), curve.subpath_starts.end(), index) != curve.subpath_starts.end()) {
-            if (index != 0 && curve.closed) path.closeSubpath();
+            const auto subpath = static_cast<std::size_t>(std::distance(
+                curve.subpath_starts.begin(), std::lower_bound(
+                    curve.subpath_starts.begin(), curve.subpath_starts.end(), index)));
+            if (index != 0 && core::subpath_is_closed(curve, subpath - 1)) path.closeSubpath();
             path.moveTo(segment.start.x, segment.start.y);
         }
         path.cubicTo(
@@ -84,7 +90,8 @@ QPainterPath painter_path(const core::BezierPath& curve, const document::FillRul
             segment.control2.x, segment.control2.y,
             segment.end.x, segment.end.y);
     }
-    if (curve.closed) path.closeSubpath();
+    const std::size_t subpath_count = curve.subpath_starts.empty() ? 1 : curve.subpath_starts.size();
+    if (core::subpath_is_closed(curve, subpath_count - 1)) path.closeSubpath();
     path.setFillRule(fill_rule == document::FillRule::EvenOdd ? Qt::OddEvenFill : Qt::WindingFill);
     return path;
 }

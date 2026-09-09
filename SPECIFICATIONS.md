@@ -45,7 +45,10 @@ The main window contains three primary regions:
    - Both glyph controls have stable dimensions, tooltips, keyboard access, and accessible names; changing state must never resize the layer panel.
    - Supports add, duplicate, rename, and delete operations.
    - The primary **Add new layer…** command opens a curve-type selector rather than creating a predetermined family directly.
-   - The selector lists Polar rose, Ellipse, Hypotrochoid, Epitrochoid, Lissajous, Harmonograph, and Droplet Rosette; only implemented families are enabled.
+   - **Imported SVG...** opens a native file chooser immediately and creates one layer from the selected local SVG.
+   - The selector lists Polar rose, Ellipse, Hypotrochoid, Epitrochoid, Lissajous,
+     Harmonograph, Droplet Rosette, Text, and Imported SVG; only implemented types
+     are enabled.
    - Creating a layer prompts for its name, prefilled as `Curve type N`, where the type is the English curve-family name and (N) is the next number for that family (for example, `Polar rose 1`, `Polar rose 2`, or `Lissajous 1`).
    - Default names do not change when mathematical parameters change.
    - A user-defined name remains unchanged until explicitly renamed.
@@ -402,6 +405,32 @@ Requirements:
 Polyline output is permitted only when a Bézier approximation is unavailable, would be less faithful, is explicitly requested for a specialized export, or is used internally as a temporary reference for validation. It must not be the normal representation of supported smooth curve families.
 
 User-facing precision presets map to documented geometric tolerances, with an optional custom tolerance.
+
+### 7.2 Imported SVG geometry
+
+An **Imported SVG** layer imports reusable geometry from a local `.svg` file. Its
+layer-specific interface contains no geometry-parameter or preset block: only
+**Layer transform**, **Copies**, and **Appearance** are shown. The file's base name
+becomes the initial layer name.
+
+Only SVG `path`, `line`, `circle`, and `rect` elements are retained. Their geometry
+is converted to cubic Bézier subpaths; all colors, strokes, fills, opacity, CSS,
+IDs, metadata, scripts, text, images, clipping, masks, filters, and element or group
+transforms are discarded. The resulting layer receives RosetteLab's default
+appearance and can subsequently use all ordinary Appearance and Copies controls.
+An SVG containing none of the supported drawable elements is rejected with a clear
+error. DTD and entity declarations are rejected and the existing 100 MB SVG safety
+limit applies.
+
+The combined imported geometry is always translated so that its geometric bounds
+are centred on the document origin. Automatic resizing is strictly homothetic: one
+uniform factor is applied to both axes and the aspect ratio is never changed. If the
+geometry exceeds either page dimension, it is reduced to fit within 90% of both page
+dimensions. If its largest relative extent is below 10% of the corresponding page
+dimension, it is enlarged until that extent reaches 25%. Geometry between those
+thresholds is centred without resizing. The normalized Bézier geometry is stored in
+the native RosetteLab SVG project, so reopening the project never depends on the
+original external file.
 
 ## 8. Drawing and appearance
 

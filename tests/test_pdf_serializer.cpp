@@ -122,6 +122,18 @@ int main(const int argc, char** argv)
     require(!contains(scaled_pdf, "2 0 0 3 0 0 cm\n"),
             "PDF should not scale strokes through its transformation matrix");
 
+    rosettelab::document::Document imported_document;
+    rosettelab::document::ImportedSvgParameters imported;
+    imported.geometry.subpath_starts = {0};
+    imported.geometry.subpath_closed = {true};
+    imported.geometry.segments.push_back({{-10, 0}, {-5, -5}, {5, -5}, {10, 0}});
+    static_cast<void>(imported_document.add_imported_svg(imported));
+    const auto imported_pdf = rosettelab::pdf::serialize_vector_pdf(imported_document);
+    require(contains(imported_pdf, "-10 0 m\n-5 -5 5 -5 10 0 c\nh\n"),
+            "PDF should export stored imported SVG geometry as vectors");
+    require(!contains(imported_pdf, "/Subtype /Image"),
+            "imported SVG geometry must not be rasterized in PDF");
+
     layer.appearance.cyclic_palette.enabled = true;
     layer.appearance.cyclic_palette.scope = rosettelab::document::PaletteScope::Copies;
     layer.appearance.cyclic_palette.target = rosettelab::document::PaletteTarget::Fill;

@@ -278,6 +278,29 @@ void test_clean_svg_contains_only_visible_rendered_content()
             "clean SVG should retain visible blend modes");
 }
 
+void test_imported_svg_layer_uses_stored_geometry()
+{
+    rosettelab::document::Document document;
+    rosettelab::document::ImportedSvgParameters parameters;
+    parameters.geometry.subpath_starts = {0, 1};
+    parameters.geometry.subpath_closed = {false, true};
+    parameters.geometry.segments = {
+        {{-10, 0}, {-5, 0}, {5, 0}, {10, 0}},
+        {{0, -10}, {10, -10}, {10, 10}, {0, -10}},
+    };
+    auto& layer = document.add_imported_svg(parameters, "Imported mark");
+    layer.appearance.fill_enabled = true;
+    const auto native = rosettelab::svg::serialize_rosettelab_svg(document);
+    require(contains(native, "rosettelab:type=\"imported-svg\""),
+            "native SVG should identify imported SVG layers");
+    require(contains(native, "<rosettelab:imported-svg/>"),
+            "native SVG should retain self-contained imported geometry metadata");
+    const auto clean = rosettelab::svg::serialize_clean_svg(document);
+    require(contains(clean, "M -10 0 C -5 0 5 0 10 0 M 0 -10"),
+            "clean SVG should render the stored imported geometry");
+    require(contains(clean, " Z\""), "closed imported subpaths should remain closed");
+}
+
 } // namespace
 
 int main()
@@ -294,6 +317,7 @@ int main()
         test_utf8_text_layer_is_standard_svg_text();
         test_vectorized_text_layer_uses_paths_in_clean_svg();
         test_clean_svg_contains_only_visible_rendered_content();
+        test_imported_svg_layer_uses_stored_geometry();
         std::cout << "All RosetteLab SVG serializer tests passed\n";
         return 0;
     } catch (const std::exception& error) {

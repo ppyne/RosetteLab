@@ -51,6 +51,7 @@ private:
     void add_harmonograph();
     void add_droplet_rosette();
     void add_text();
+    void add_imported_svg();
     void choose_text_color();
     void update_text_outline(document::TextParameters& parameters);
     void rebuild_text_outlines();
@@ -156,6 +157,7 @@ private:
     QScrollArea* preview_scroll_{};
     bool applying_zoom_{false};
     QGroupBox* curve_group_{};
+    QGroupBox* preset_group_{};
     QGroupBox* ellipse_group_{};
     QDoubleSpinBox* ellipse_radius_x_{};
     QDoubleSpinBox* ellipse_radius_y_{};

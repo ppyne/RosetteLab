@@ -1,4 +1,5 @@
 #include "ui/main_window.hpp"
+#include "svg/svg_shape_importer.hpp"
 
 #include "ui/color_editor_dialog.hpp"
 #include "ui/color_preview_button.hpp"
@@ -74,6 +75,7 @@ constexpr auto open_directory_setting = "paths/openDirectory";
 constexpr auto save_as_directory_setting = "paths/saveAsDirectory";
 constexpr auto export_directory_setting = "paths/exportDirectory";
 constexpr auto palette_directory_setting = "paths/paletteDirectory";
+constexpr auto svg_import_directory_setting = "paths/svgImportDirectory";
 
 QString remembered_directory(const char* setting)
 {
@@ -216,16 +218,16 @@ MainWindow::MainWindow(QWidget* parent)
     parameters_layout->addWidget(document_group);
     style_color_button(page_background_button_, page_background_);
 
-    auto* preset_group = new QGroupBox("Preset", parameters_panel);
-    auto* preset_layout = new QHBoxLayout(preset_group);
-    preset_ = new QComboBox(preset_group);
+    preset_group_ = new QGroupBox("Preset", parameters_panel);
+    auto* preset_layout = new QHBoxLayout(preset_group_);
+    preset_ = new QComboBox(preset_group_);
     preset_->setObjectName("presetSelector");
-    restore_preset_button_ = new QPushButton("Restore preset", preset_group);
+    restore_preset_button_ = new QPushButton("Restore preset", preset_group_);
     restore_preset_button_->setObjectName("restorePresetButton");
     restore_preset_button_->setEnabled(false);
     preset_layout->addWidget(preset_, 1);
     preset_layout->addWidget(restore_preset_button_);
-    parameters_layout->addWidget(preset_group);
+    parameters_layout->addWidget(preset_group_);
 
     curve_group_ = new QGroupBox("Curve parameters", parameters_panel);
     auto* form = new QFormLayout(curve_group_);
@@ -703,6 +705,7 @@ MainWindow::MainWindow(QWidget* parent)
     add_menu->addAction("Harmonograph", this, [this] { add_harmonograph(); });
     add_menu->addAction("Droplet Rosette", this, [this] { add_droplet_rosette(); });
     add_menu->addAction("Text", this, [this] { add_text(); });
+    add_menu->addAction("Imported SVG...", this, [this] { add_imported_svg(); });
     add_button->setMenu(add_menu);
     layers_layout->addWidget(add_button);
 
@@ -1692,6 +1695,35 @@ void MainWindow::add_text()
     mark_document_modified();
 }
 
+void MainWindow::add_imported_svg()
+{
+    const auto path = QFileDialog::getOpenFileName(
+        this, "Import SVG shape", remembered_directory(svg_import_directory_setting),
+        "Scalable Vector Graphics (*.svg)");
+    if (path.isEmpty()) return;
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        QMessageBox::critical(this, "Unable to import SVG", "RosetteLab could not read the selected file.");
+        return;
+    }
+    try {
+        document::ImportedSvgParameters parameters;
+        parameters.geometry = svg::import_svg_shapes(
+            file.readAll(), document_.settings().page_width, document_.settings().page_height);
+        auto name = QFileInfo(path).completeBaseName().trimmed();
+        if (name.isEmpty()) name = QString::fromStdString(
+            document_.suggested_default_name(document::CurveType::ImportedSvg));
+        auto& layer = document_.add_imported_svg(parameters, name.toUtf8().toStdString());
+        auto* item = add_layer_row(layer);
+        layers_->setCurrentItem(item);
+        remember_selected_directory(svg_import_directory_setting, path);
+        preview_->update();
+        mark_document_modified();
+    } catch (const std::exception& exception) {
+        QMessageBox::critical(this, "Unable to import SVG", QString::fromUtf8(exception.what()));
+    }
+}
+
 QListWidgetItem* MainWindow::add_layer_row(const document::CurveLayer& layer, const int row)
 {
     auto* item = new QListWidgetItem;
@@ -1759,6 +1791,8 @@ void MainWindow::load_active_layer()
     const auto* harmonograph_parameters = std::get_if<curves::HarmonographParameters>(&layer->parameters);
     const auto* droplet_parameters = std::get_if<curves::DropletRosetteParameters>(&layer->parameters);
     auto* text_parameters = std::get_if<document::TextParameters>(&layer->parameters);
+    const bool imported_svg = std::holds_alternative<document::ImportedSvgParameters>(layer->parameters);
+    preset_group_->setVisible(!imported_svg);
     curve_group_->setVisible(parameters != nullptr);
     ellipse_group_->setVisible(ellipse_parameters != nullptr);
     trochoid_group_->setVisible(trochoid_parameters != nullptr);
@@ -2595,6 +2629,7 @@ void MainWindow::refresh_preset_choices()
         add("Eightfold vortex", "droplet-8");
         break;
     case document::CurveType::Text:
+    case document::CurveType::ImportedSvg:
         break;
     case document::CurveType::Count: break;
     }

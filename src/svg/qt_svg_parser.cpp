@@ -1,4 +1,5 @@
 #include "svg/qt_svg_parser.hpp"
+#include "svg/svg_shape_importer.hpp"
 
 #include "rosettelab/svg/svg_serializer.hpp"
 
@@ -252,6 +253,11 @@ void parse_curve_metadata(const QXmlStreamAttributes&, document::TextParameters&
     throw parse_error("Text layers do not use curve metadata");
 }
 
+void parse_curve_metadata(const QXmlStreamAttributes&, document::ImportedSvgParameters&)
+{
+    throw parse_error("Imported SVG layers do not use curve metadata");
+}
+
 void parse_path_appearance(
     const QXmlStreamAttributes& attributes,
     const QString& metadata_ns,
@@ -301,6 +307,7 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
     else if (type == "harmonograph") layer.type = document::CurveType::Harmonograph;
     else if (type == "droplet-rosette") layer.type = document::CurveType::DropletRosette;
     else if (type == "text") layer.type = document::CurveType::Text;
+    else if (type == "imported-svg") layer.type = document::CurveType::ImportedSvg;
     else throw parse_error("Unsupported RosetteLab curve type");
     layer.visible = parse_boolean(
         required_metadata_attribute(group_attributes, metadata_ns, "visible"), "visible");
@@ -404,12 +411,15 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
         parameters = curves::DropletRosetteParameters{};
     } else if (layer.type == document::CurveType::Text) {
         parameters = document::TextParameters{};
+    } else if (layer.type == document::CurveType::ImportedSvg) {
+        parameters = document::ImportedSvgParameters{};
     } else {
         parameters = curves::TrochoidParameters{};
     }
     bool found_curve = false;
     bool found_path = false;
     bool found_text = false;
+    bool found_imported_svg = false;
     while (reader.readNextStartElement()) {
         if (reader.namespaceUri() == metadata_ns && reader.name() == "text" &&
             layer.type == document::CurveType::Text) {
@@ -430,6 +440,10 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
             layer.appearance.blend_mode = parse_blend_mode(required_attribute(attributes, "blend-mode"));
             text.text = reader.readElementText().toUtf8().toStdString();
             found_text = true;
+        } else if (reader.namespaceUri() == metadata_ns && reader.name() == "imported-svg" &&
+                   layer.type == document::CurveType::ImportedSvg) {
+            found_imported_svg = true;
+            reader.skipCurrentElement();
         } else if (reader.namespaceUri() == metadata_ns && reader.name() == "curve") {
             std::visit([&reader](auto& value) {
                 parse_curve_metadata(reader.attributes(), value);
@@ -439,6 +453,10 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
         } else if (reader.namespaceUri() == "http://www.w3.org/2000/svg" && reader.name() == "path") {
             if (!found_path && layer.type != document::CurveType::Text) {
                 parse_path_appearance(reader.attributes(), metadata_ns, layer.appearance);
+                if (layer.type == document::CurveType::ImportedSvg) {
+                    std::get<document::ImportedSvgParameters>(parameters).geometry =
+                        parse_svg_path_data(required_attribute(reader.attributes(), "d"));
+                }
                 found_path = true;
             }
             reader.skipCurrentElement();
@@ -466,7 +484,10 @@ document::CurveLayer parse_layer(QXmlStreamReader& reader, const QString& metada
             reader.skipCurrentElement();
         }
     }
-    if (layer.type == document::CurveType::Text ? !found_text : (!found_curve || !found_path)) {
+    const bool missing = layer.type == document::CurveType::Text ? !found_text
+        : layer.type == document::CurveType::ImportedSvg ? (!found_imported_svg || !found_path)
+        : (!found_curve || !found_path);
+    if (missing) {
         throw parse_error("RosetteLab layer is missing curve metadata or rendered path");
     }
     layer.parameters = parameters;

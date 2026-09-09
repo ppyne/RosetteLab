@@ -28,6 +28,7 @@ enum class CurveType : std::size_t {
     Harmonograph,
     DropletRosette,
     Text,
+    ImportedSvg,
     Count,
 };
 
@@ -49,6 +50,12 @@ struct TextParameters {
     friend bool operator==(const TextParameters&, const TextParameters&) = default;
 };
 
+struct ImportedSvgParameters {
+    core::BezierPath geometry;
+
+    friend bool operator==(const ImportedSvgParameters&, const ImportedSvgParameters&) = default;
+};
+
 using CurveParameters = std::variant<
     curves::PolarRoseParameters,
     curves::EllipseParameters,
@@ -56,7 +63,8 @@ using CurveParameters = std::variant<
     curves::LissajousParameters,
     curves::HarmonographParameters,
     curves::DropletRosetteParameters,
-    TextParameters>;
+    TextParameters,
+    ImportedSvgParameters>;
 
 struct LayerTransform {
     double position_x{0.0};
@@ -170,6 +178,9 @@ public:
         std::optional<std::string> name = std::nullopt);
     [[nodiscard]] CurveLayer& add_text(
         const TextParameters& parameters = {},
+        std::optional<std::string> name = std::nullopt);
+    [[nodiscard]] CurveLayer& add_imported_svg(
+        const ImportedSvgParameters& parameters,
         std::optional<std::string> name = std::nullopt);
     [[nodiscard]] CurveLayer& add_trochoid(
         CurveType type,

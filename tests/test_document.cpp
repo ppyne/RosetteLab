@@ -98,6 +98,21 @@ void test_text_names_and_utf8_parameters()
             "text parameters should retain UTF-8 content and styling");
 }
 
+void test_imported_svg_names_and_geometry()
+{
+    rosettelab::document::Document document;
+    rosettelab::document::ImportedSvgParameters parameters;
+    parameters.geometry.subpath_starts = {0};
+    parameters.geometry.subpath_closed = {false};
+    parameters.geometry.segments.push_back({{0, 0}, {1, 0}, {2, 0}, {3, 0}});
+    const auto& layer = document.add_imported_svg(parameters);
+    require(layer.name == "Imported SVG 1", "imported SVG should have its own name sequence");
+    require(layer.type == rosettelab::document::CurveType::ImportedSvg,
+            "imported SVG should retain its layer type");
+    require(std::get<rosettelab::document::ImportedSvgParameters>(layer.parameters) == parameters,
+            "imported SVG should retain its normalized geometry");
+}
+
 void test_trochoid_names_and_parameters()
 {
     rosettelab::document::Document document;
@@ -252,6 +267,7 @@ int main()
         test_lissajous_names_and_parameters();
         test_droplet_rosette_names_and_parameters();
         test_text_names_and_utf8_parameters();
+        test_imported_svg_names_and_geometry();
         test_trochoid_names_and_parameters();
         test_custom_name_and_layer_state();
         test_layer_reordering();

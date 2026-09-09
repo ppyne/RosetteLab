@@ -26,6 +26,8 @@ std::string curve_type_name(const CurveType type)
         return "Droplet Rosette";
     case CurveType::Text:
         return "Text";
+    case CurveType::ImportedSvg:
+        return "Imported SVG";
     case CurveType::Count:
         break;
     }
@@ -131,6 +133,19 @@ CurveLayer& Document::add_text(
     return layers_.back();
 }
 
+CurveLayer& Document::add_imported_svg(
+    const ImportedSvgParameters& parameters, std::optional<std::string> name)
+{
+    if (parameters.geometry.segments.empty()) {
+        throw std::invalid_argument("Imported SVG geometry must not be empty");
+    }
+    const auto default_name = next_default_name(CurveType::ImportedSvg);
+    if (!name.has_value() || name->empty()) name = default_name;
+    layers_.push_back({next_id_++, std::move(*name), CurveType::ImportedSvg,
+                       parameters, true, false, {}, {}, {}, "", false});
+    return layers_.back();
+}
+
 std::string Document::suggested_default_name(const CurveType type) const
 {
     const auto index = static_cast<std::size_t>(type);
@@ -192,6 +207,9 @@ bool Document::import_layer(CurveLayer layer)
          std::holds_alternative<curves::DropletRosetteParameters>(layer.parameters)) ||
         (layer.type == CurveType::Text &&
          std::holds_alternative<TextParameters>(layer.parameters)) ||
+        (layer.type == CurveType::ImportedSvg &&
+         std::holds_alternative<ImportedSvgParameters>(layer.parameters) &&
+         !std::get<ImportedSvgParameters>(layer.parameters).geometry.segments.empty()) ||
         ((layer.type == CurveType::Hypotrochoid || layer.type == CurveType::Epitrochoid) &&
          std::holds_alternative<curves::TrochoidParameters>(layer.parameters));
     if (!compatible) {

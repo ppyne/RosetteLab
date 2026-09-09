@@ -54,6 +54,7 @@ if(ROSETTELAB_BUILD_GUI)
             src/ui/layer_list_item_widget.cpp
             src/ui/preview_widget.cpp
             src/svg/qt_svg_parser.cpp
+            src/svg/svg_shape_importer.cpp
             icons/rosettelab.qrc
         )
 
@@ -149,6 +150,7 @@ if(ROSETTELAB_BUILD_GUI)
 
             add_executable(rosettelab_qt_svg_tests
                 src/svg/qt_svg_parser.cpp
+                src/svg/svg_shape_importer.cpp
                 tests/test_qt_svg_parser.cpp
             )
             target_include_directories(rosettelab_qt_svg_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -163,6 +165,7 @@ if(ROSETTELAB_BUILD_GUI)
                 src/ui/layer_list_item_widget.cpp
                 src/ui/preview_widget.cpp
                 src/svg/qt_svg_parser.cpp
+                src/svg/svg_shape_importer.cpp
                 tests/test_main_window.cpp
             )
             target_include_directories(rosettelab_main_window_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
