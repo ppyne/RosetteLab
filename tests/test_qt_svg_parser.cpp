@@ -202,15 +202,20 @@ void test_save_open_round_trip()
             "Droplet Rosette parameters should round-trip");
     const auto& restored_palette = loaded.layers()[4].appearance.cyclic_palette;
     const auto& expected_palette = droplet_layer.appearance.cyclic_palette;
-    require(restored_palette.enabled == expected_palette.enabled &&
-            restored_palette.scope == expected_palette.scope &&
-            restored_palette.target == expected_palette.target &&
-            restored_palette.offset == expected_palette.offset &&
-            restored_palette.colors.size() == expected_palette.colors.size() &&
-            std::equal(
+    require(restored_palette.enabled == expected_palette.enabled,
+            "Cyclic palette enabled state should round-trip");
+    require(restored_palette.scope == expected_palette.scope,
+            "Cyclic palette scope should round-trip");
+    require(restored_palette.target == expected_palette.target,
+            "Cyclic palette target should round-trip");
+    require(restored_palette.offset == expected_palette.offset,
+            "Cyclic palette offset should round-trip");
+    require(restored_palette.colors.size() == expected_palette.colors.size(),
+            "Cyclic palette color count should round-trip");
+    require(std::equal(
                 restored_palette.colors.begin(), restored_palette.colors.end(),
                 expected_palette.colors.begin(), color_close),
-            "Cyclic palette should round-trip within 8-bit SVG precision");
+            "Cyclic palette colors should round-trip within 8-bit SVG precision");
     const auto& restored_text = std::get<rosettelab::document::TextParameters>(loaded.layers()[5].parameters);
     require(restored_text.text == text_parameters.text &&
             restored_text.font_family == text_parameters.font_family &&
