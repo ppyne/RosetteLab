@@ -43,6 +43,7 @@ void test_native_svg_contains_geometry_and_metadata()
     parameters.numerator = 1;
     parameters.denominator = 3;
     layer.appearance.stroke = {1.0, 0.0, 0.5, 0.25};
+    layer.appearance.stroke_width = 0.6;
     layer.appearance.fill_enabled = true;
     layer.appearance.fill = {0.0, 0.5, 1.0, 0.75};
     layer.appearance.fill_rule = rosettelab::document::FillRule::EvenOdd;
@@ -73,6 +74,8 @@ void test_native_svg_contains_geometry_and_metadata()
     require(contains(svg, " C "), "rendered path should use cubic Bezier commands");
     require(contains(svg, "stroke=\"#FF0080\""), "stroke RGB should be serialized");
     require(contains(svg, "stroke-opacity=\"0.25\""), "stroke alpha should be serialized");
+    require(contains(svg, "stroke-width=\"0.6\" vector-effect=\"non-scaling-stroke\""),
+            "layer and copy scaling must not change the SVG stroke width");
     require(contains(svg, "fill-rule=\"evenodd\""), "fill rule should be serialized");
     require(contains(svg, "mix-blend-mode:multiply"), "blend mode should be serialized");
     require(contains(svg, "rosettelab:position-x=\"12.5\""), "layer X position should be stored");

@@ -100,6 +100,28 @@ int main(const int argc, char** argv)
     require(contains(rgb, "startxref\n"), "the cross-reference offset should be emitted");
     require_valid_xref(rgb);
 
+    rosettelab::document::Document scaled_document;
+    rosettelab::curves::EllipseParameters scaled_ellipse;
+    scaled_ellipse.radius_x = 10.0;
+    scaled_ellipse.radius_y = 20.0;
+    auto& scaled_layer = scaled_document.add_ellipse(scaled_ellipse);
+    scaled_layer.appearance.stroke_width = 0.6;
+    scaled_layer.transform.scale_x = 2.0;
+    scaled_layer.transform.scale_y = 3.0;
+    scaled_layer.copies.count = 2;
+    scaled_layer.copies.scale_step = 0.5;
+    const auto scaled_pdf = rosettelab::pdf::serialize_vector_pdf(scaled_document);
+    require(count_occurrences(scaled_pdf, "0.6 w\n") == 2,
+            "each scaled PDF copy should retain the configured 0.6 stroke width");
+    require(count_occurrences(scaled_pdf, "1 0 0 1 0 0 cm\n") == 2,
+            "layer and copy scales should not affect the PDF graphics-state line width");
+    require(contains(scaled_pdf, "20 0 m\n"),
+            "layer scale should be baked into PDF path geometry");
+    require(contains(scaled_pdf, "10 0 m\n"),
+            "scale per copy should be baked into each PDF path geometry");
+    require(!contains(scaled_pdf, "2 0 0 3 0 0 cm\n"),
+            "PDF should not scale strokes through its transformation matrix");
+
     layer.appearance.cyclic_palette.enabled = true;
     layer.appearance.cyclic_palette.scope = rosettelab::document::PaletteScope::Copies;
     layer.appearance.cyclic_palette.target = rosettelab::document::PaletteTarget::Fill;

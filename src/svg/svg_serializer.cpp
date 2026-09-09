@@ -180,6 +180,7 @@ void write_rendered_path(
         output
            << " stroke-opacity=\"" << number(std::clamp(resolved.stroke.alpha, 0.0, 1.0)) << "\""
            << " stroke-width=\"" << number(std::max(0.0, appearance.stroke_width)) << "\""
+           << " vector-effect=\"non-scaling-stroke\""
            << " fill=\"" << (resolved.fill_enabled ? rgb_hex(resolved.fill) : "none") << "\"";
     if (resolved.fill_enabled) {
         output << " fill-opacity=\"" << number(std::clamp(resolved.fill.alpha, 0.0, 1.0)) << "\"";

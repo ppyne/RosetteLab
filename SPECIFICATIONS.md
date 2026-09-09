@@ -416,6 +416,14 @@ User-facing precision presets map to documented geometric tolerances, with an op
 
 Disabling Stroke removes the contour from the canvas, thumbnails, SVG rendering, and exports while preserving its editable color, alpha, and width. Stroke color and width controls are disabled visually until Stroke is re-enabled. The enabled state and inactive stroke color round-trip through RosetteLab SVG metadata and participate in Undo/Redo.
 
+Stroke width is expressed in final document units and is invariant under both the
+layer's Scale X/Scale Y transform and **Copies > Scale per copy**. For example, a
+stroke width of `0.6` remains `0.6` in the preview and in SVG and vector PDF exports,
+regardless of uniform or non-uniform geometry scaling. SVG output uses the standard
+`vector-effect="non-scaling-stroke"`; vector PDF output applies scale to path
+coordinates while leaving the graphics-state line width unchanged. No rasterization
+is introduced by this behavior.
+
 ### 8.2 Fill
 
 - none or color;

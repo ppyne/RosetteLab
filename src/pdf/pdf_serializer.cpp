@@ -100,7 +100,10 @@ std::string color_operands(const document::RgbaColor& color, const bool stroke, 
     return out.str();
 }
 
-std::string path_commands(const core::BezierPath& path)
+std::string path_commands(
+    const core::BezierPath& path,
+    const double scale_x = 1.0,
+    const double scale_y = 1.0)
 {
     if (path.segments.empty()) return {};
     std::ostringstream out;
@@ -112,11 +115,15 @@ std::string path_commands(const core::BezierPath& path)
         const auto& segment = path.segments[index];
         if (starts_new_subpath(index)) {
             if (index != 0 && path.closed) out << "h\n";
-            out << number(segment.start.x) << ' ' << number(segment.start.y) << " m\n";
+            out << number(segment.start.x * scale_x) << ' '
+                << number(segment.start.y * scale_y) << " m\n";
         }
-        out << number(segment.control1.x) << ' ' << number(segment.control1.y) << ' '
-            << number(segment.control2.x) << ' ' << number(segment.control2.y) << ' '
-            << number(segment.end.x) << ' ' << number(segment.end.y) << " c\n";
+        out << number(segment.control1.x * scale_x) << ' '
+            << number(segment.control1.y * scale_y) << ' '
+            << number(segment.control2.x * scale_x) << ' '
+            << number(segment.control2.y * scale_y) << ' '
+            << number(segment.end.x * scale_x) << ' '
+            << number(segment.end.y * scale_y) << " c\n";
     }
     if (path.closed) out << "h\n";
     return out.str();
@@ -208,8 +215,10 @@ std::string serialize_vector_pdf(const document::Document& document, const Expor
             const double sy = layer.transform.scale_y * placement.scale;
             const double c = std::cos(angle);
             const double s = std::sin(angle);
-            content << "q\n" << number(c * sx) << ' ' << number(s * sx) << ' '
-                << number(-s * sy) << ' ' << number(c * sy) << ' '
+            // Scale the geometry rather than the PDF graphics state so that the
+            // configured line width remains constant, matching the preview.
+            content << "q\n" << number(c) << ' ' << number(s) << ' '
+                << number(-s) << ' ' << number(c) << ' '
                 << number(placement.position_x) << ' ' << number(placement.position_y) << " cm\n";
             for (std::size_t part = 0; part < parts.size(); ++part) {
                 const std::size_t palette_index = color_subpaths ? part : static_cast<std::size_t>(copy);
@@ -225,7 +234,7 @@ std::string serialize_vector_pdf(const document::Document& document, const Expor
                     content << color_operands(resolved.stroke, true, options.color_model)
                             << number(std::max(0.0, resolved.stroke_width)) << " w\n";
                 if (resolved.fill_enabled) content << color_operands(resolved.fill, false, options.color_model);
-                content << path_commands(parts[part]) << paint_operator(resolved);
+                content << path_commands(parts[part], sx, sy) << paint_operator(resolved);
             }
             content << "Q\n";
         }
